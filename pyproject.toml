@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "klarivision"
+version = "0.1.0"
+description = "Turkish music performance analysis and education platform"
+requires-python = ">=3.11"
+dependencies = [
+    "numpy>=1.26",
+    "scipy>=1.11",
+    "soundfile>=0.12",
+    "imageio-ffmpeg>=0.6",
+]
+
+[project.scripts]
+klarivision-analyze = "klarivision.cli:main"
+klarivision-app = "klarivision.local_app:main"
+
+[project.optional-dependencies]
+pitch-pyin = [
+    "librosa==0.11.0",
+    "numba>=0.60",
+]
+dev = ["pytest>=8"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
