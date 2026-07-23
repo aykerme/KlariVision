@@ -7,7 +7,9 @@ It is the verified reference layer for all later musical interpretations.
 from __future__ import annotations
 
 import json
+import math
 from pathlib import Path
+from statistics import median
 
 
 NATURAL_NOTES = (
@@ -19,8 +21,54 @@ NATURAL_NOTES = (
     ("Sol5", 783.99), ("La5", 880.00),
 )
 
-VIEWER_VERSION = "0.2.0"
-"""Stable baseline: measured sounding frequency and natural-note grid only."""
+VIEWER_VERSION = "0.3.0-preview"
+"""Higher-resolution pYIN preview with conservative display cleanup."""
+
+MINIMUM_CONFIDENCE = 0.20
+"""Suppress pYIN candidates with weak periodicity evidence."""
+
+
+def _cents(frequency_hz: float) -> float:
+    return 1200 * math.log2(frequency_hz / 440)
+
+
+def prepare_display_frames(payload: dict[str, object]) -> list[dict[str, float]]:
+    """Clean only clearly unreliable single-frame pitch candidates for display.
+
+    The original pYIN JSON remains untouched.  A candidate must be voiced and
+    reasonably confident; isolated jumps that immediately return to the same
+    pitch are omitted rather than being mistaken for a musical ornament.
+    """
+    raw_frames = payload.get("frames", [])
+    candidates = [
+        {"t": float(frame["time_seconds"]), "hz": float(frame["frequency_hz"])}
+        for frame in raw_frames
+        if isinstance(frame, dict)
+        and frame.get("voiced")
+        and frame.get("frequency_hz") is not None
+        and float(frame["frequency_hz"]) > 112
+        and float(frame.get("confidence", 0)) >= MINIMUM_CONFIDENCE
+    ]
+    kept: list[dict[str, float]] = []
+    for index, frame in enumerate(candidates):
+        if 0 < index < len(candidates) - 1:
+            before, after = candidates[index - 1], candidates[index + 1]
+            nearby = after["t"] - before["t"] <= 0.025
+            jump = abs(_cents(frame["hz"]) - _cents(before["hz"])) > 110
+            returns = abs(_cents(after["hz"]) - _cents(before["hz"])) < 35
+            if nearby and jump and returns:
+                continue
+        kept.append(frame)
+
+    smoothed: list[dict[str, float]] = []
+    for index, frame in enumerate(kept):
+        neighbourhood = kept[max(0, index - 1) : index + 2]
+        contiguous = neighbourhood[-1]["t"] - neighbourhood[0]["t"] <= 0.025
+        if len(neighbourhood) == 3 and contiguous:
+            values = [_cents(point["hz"]) for point in neighbourhood]
+            frame = {"t": frame["t"], "hz": 440 * 2 ** (median(values) / 1200)}
+        smoothed.append(frame)
+    return smoothed
 
 
 def build_frequency_viewer(
@@ -32,11 +80,7 @@ def build_frequency_viewer(
 ) -> None:
     """Write a self-contained viewer of the measured, sounding frequency."""
     payload = json.loads(pitch_json_path.read_text(encoding="utf-8"))
-    frames = [
-        {"t": frame["time_seconds"], "hz": frame["frequency_hz"]}
-        for frame in payload.get("frames", [])
-        if frame.get("frequency_hz") is not None and frame["frequency_hz"] > 112
-    ]
+    frames = prepare_display_frames(payload)
     media = (
         f'<video id="media" controls src="{video_relative_path}"></video>'
         if video_relative_path
@@ -50,7 +94,7 @@ def build_frequency_viewer(
 :root{{color-scheme:light}}*{{box-sizing:border-box}}body{{margin:0;background:#f5f6f8;color:#17212b;font:14px system-ui,-apple-system,sans-serif}}main{{max-width:1180px;margin:auto;padding:22px}}h1{{font-size:21px;margin:0 0 4px}}p{{margin:0 0 16px;color:#56616e}}.media{{position:sticky;top:0;background:#f5f6f8;padding:10px 0 14px;z-index:2}}video,audio{{display:block;max-width:100%;width:660px;max-height:330px}}.panel{{background:#fff;border:1px solid #dbe0e6;border-radius:12px;padding:14px}}.tools{{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:10px}}button{{border:1px solid #b9c3cf;background:#fff;border-radius:7px;padding:6px 10px;font:inherit;cursor:pointer}}button:hover{{background:#eef5fb}}input{{width:100px}}canvas{{display:block;width:100%;height:580px;border:1px solid #dbe0e6;border-radius:8px;touch-action:none}}.note{{font-size:12px;color:#66717f}}.legend{{margin-left:auto;color:#56616e;font-size:12px}}@media(max-width:650px){{main{{padding:12px}}canvas{{height:470px}}}}
 </style><main>
 <h1>KlariVision {VIEWER_VERSION} · Pitch konturu</h1>
-<p>Bu ekran yalnızca pYIN'in ölçtüğü fiziksel frekansı (Hz) gösterir. Makam, karar, Sol klarnet yazılı notası ve süsleme katmanları bilinçli olarak kapalıdır.</p>
+<p>Bu ekran yalnızca pYIN'in ölçtüğü fiziksel frekansı (Hz) gösterir. Düşük güvenli ve tek-karelik hatalı adaylar gösterilmez; makam, karar, Sol klarnet yazılı notası ve süsleme katmanları kapalıdır.</p>
 <div class="media">{media}</div>
 <section class="panel"><div class="tools">
 <button id="minus">− Zaman</button><button id="plus">+ Zaman</button>
@@ -70,7 +114,7 @@ function draw(){{const w=canvas.clientWidth,h=canvas.clientHeight,cw=w-left-righ
 ctx.fillStyle='#fff';ctx.fillRect(0,0,w,h);ctx.strokeStyle='#e2e6eb';ctx.lineWidth=1;
 for(const [name,hz] of notes){{const yy=y(hz);if(yy<marginTop-5||yy>h-bottom+5)continue;ctx.beginPath();ctx.moveTo(left,yy);ctx.lineTo(w-right,yy);ctx.stroke();ctx.fillStyle='#3d4854';ctx.textAlign='right';ctx.font='12px system-ui';ctx.fillText(`${{name}}  (${{hz.toFixed(2)}} Hz)`,left-9,yy+4)}}
 for(let t=Math.ceil(viewStart);t<=viewStart+windowSeconds;t++){{const xx=x(t);ctx.strokeStyle='#edf0f3';ctx.beginPath();ctx.moveTo(xx,marginTop);ctx.lineTo(xx,h-bottom);ctx.stroke();ctx.fillStyle='#687482';ctx.textAlign='center';ctx.fillText(`${{t}} sn`,xx,h-12)}}
-ctx.save();ctx.beginPath();ctx.rect(left,marginTop,cw,ch);ctx.clip();ctx.strokeStyle='#111820';ctx.lineWidth=2;ctx.beginPath();let previous=null;for(const p of frames){{if(p.t<viewStart-.05||p.t>viewStart+windowSeconds+.05)continue;const xx=x(p.t),yy=y(p.hz);if(!previous||p.t-previous.t>.055)ctx.moveTo(xx,yy);else ctx.lineTo(xx,yy);previous=p}}ctx.stroke();
+ctx.save();ctx.beginPath();ctx.rect(left,marginTop,cw,ch);ctx.clip();ctx.strokeStyle='#111820';ctx.lineWidth=1.7;ctx.lineJoin='round';ctx.lineCap='round';ctx.beginPath();let previous=null;for(const p of frames){{if(p.t<viewStart-.05||p.t>viewStart+windowSeconds+.05)continue;const xx=x(p.t),yy=y(p.hz);if(!previous||p.t-previous.t>.030)ctx.moveTo(xx,yy);else ctx.lineTo(xx,yy);previous=p}}ctx.stroke();
 const current=media.currentTime||0;if(current>=viewStart&&current<=viewStart+windowSeconds){{const xx=x(current);ctx.strokeStyle='#7755b8';ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(xx,marginTop);ctx.lineTo(xx,h-bottom);ctx.stroke()}}ctx.restore();ctx.strokeStyle='#aeb8c3';ctx.strokeRect(left,marginTop,cw,ch)}}
 function clampStart(){{viewStart=Math.max(0,Math.min(viewStart,Math.max(0,duration-windowSeconds)))}}
 function tick(){{if(!media.paused&&followPlayback){{const t=media.currentTime;if(t>viewStart+windowSeconds*.5)viewStart=t-windowSeconds*.5;if(t<viewStart)viewStart=t;clampStart()}}draw();requestAnimationFrame(tick)}}
