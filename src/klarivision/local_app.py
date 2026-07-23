@@ -18,7 +18,8 @@ from urllib.parse import quote
 
 import imageio_ffmpeg
 
-from .contour_viewer import KARAR_TONES, MAKAM_PROFILES, build_viewer, main_note_levels
+from .contour_viewer import KARAR_TONES, MAKAM_PROFILES
+from .frequency_viewer import build_frequency_viewer
 from .pitch.models import AudioSource
 from .pitch.pyin import PyinPitchExtractor
 from .pitch.serialize import write_json
@@ -73,13 +74,10 @@ def analyse_upload(source: Path, makam: str, karar: str) -> str:
     _to_wav(source, wav)
     track = PyinPitchExtractor().extract(AudioSource(wav))
     write_json(track, pitch_json)
-    build_viewer(
+    build_frequency_viewer(
         pitch_json,
         os.path.relpath(wav, start=viewer.parent).replace(os.sep, "/"),
         viewer,
-        default_makam=makam,
-        default_karar=karar,
-        display_levels=main_note_levels(),
         video_relative_path=(
             os.path.relpath(source, start=viewer.parent).replace(os.sep, "/")
             if source.suffix.lower() in VIDEO_SUFFIXES
