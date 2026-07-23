@@ -17,7 +17,7 @@ def test_frequency_viewer_uses_physical_hertz_grid(tmp_path) -> None:
 
     html = output.read_text(encoding="utf-8")
     assert "Duyulan frekans" in html
-    assert "KlariVision 0.3.1-preview" in html
+    assert "KlariVision 0.3.2-preview" in html
     assert '"Si2",123.47' in html
     assert "makam, karar, Sol klarnet yazılı notası" in html
     assert "followPlayback" in html
@@ -25,6 +25,7 @@ def test_frequency_viewer_uses_physical_hertz_grid(tmp_path) -> None:
     assert 'id="vertical-out"' in html
     assert 'id="vertical-follow"' in html
     assert "verticalSpan" in html
+    assert "function followValues()" in html
 
 
 def test_frequency_viewer_can_embed_video(tmp_path) -> None:
