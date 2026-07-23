@@ -21,7 +21,7 @@ NATURAL_NOTES = (
     ("Sol5", 783.99), ("La5", 880.00),
 )
 
-VIEWER_VERSION = "0.3.0-preview"
+VIEWER_VERSION = "0.3.1-preview"
 """Higher-resolution pYIN preview with conservative display cleanup."""
 
 MINIMUM_CONFIDENCE = 0.20
@@ -99,17 +99,22 @@ def build_frequency_viewer(
 <section class="panel"><div class="tools">
 <button id="minus">− Zaman</button><button id="plus">+ Zaman</button>
 <label>Görünür süre <input id="window" type="number" min="2" max="60" step="1" value="12"> sn</label>
-<button id="reset">Başa dön</button><span class="legend">Tekerlek: zaman yakınlaştır · sürükle: zaman kaydır</span>
+<button id="vertical-out">− Dikey</button><button id="vertical-in">+ Dikey</button>
+<label><input id="vertical-follow" type="checkbox"> Eğriyi dikey takip et</label>
+<button id="reset">Başa dön</button><span class="legend">Tekerlek: zaman yakınlaştır · Shift+tekerlek: dikey yakınlaştır · sürükle: zaman kaydır</span>
 </div><canvas id="chart"></canvas><p class="note">Yatay çizgiler eşit aralıklı, ana nota frekanslarıdır. Çizgi kesintileri pYIN'in ses algılamadığı bölümleri gösterir.</p></section>
 </main><script>
 const frames={json.dumps(frames, ensure_ascii=False, separators=(',', ':'))};
 const notes={json.dumps(NATURAL_NOTES, ensure_ascii=False, separators=(',', ':'))};
 const media=document.getElementById('media'),canvas=document.getElementById('chart'),ctx=canvas.getContext('2d');
 const winInput=document.getElementById('window');let windowSeconds=12,viewStart=0,drag=null,followPlayback=true;
+const verticalFollowInput=document.getElementById('vertical-follow');let verticalSpan=2400,verticalCenter=0,verticalReady=false;
 const duration=Math.max(...frames.map(p=>p.t),0); const left=110,right=20,marginTop=22,bottom=34;
 function cents(hz){{return 1200*Math.log2(hz/440)}}
 function resize(){{const dpr=devicePixelRatio||1,w=canvas.clientWidth,h=canvas.clientHeight;canvas.width=w*dpr;canvas.height=h*dpr;ctx.setTransform(dpr,0,0,dpr,0,0);draw()}}
-function range(){{const visible=frames.filter(p=>p.t>=viewStart&&p.t<=viewStart+windowSeconds);const values=visible.map(p=>cents(p.hz));if(!values.length)return [cents(110),cents(880)];let lo=Math.min(...values)-190,hi=Math.max(...values)+190;return [Math.min(lo,cents(880)-300),Math.max(hi,cents(110)+300)]}}
+function visibleValues(){{return frames.filter(p=>p.t>=viewStart&&p.t<=viewStart+windowSeconds).map(p=>cents(p.hz))}}
+function middle(values){{if(!values.length)return 0;const ordered=[...values].sort((a,b)=>a-b),half=Math.floor(ordered.length/2);return ordered.length%2?ordered[half]:(ordered[half-1]+ordered[half])/2}}
+function range(){{const values=visibleValues();if(!verticalReady){{verticalCenter=middle(values.length?values:frames.map(p=>cents(p.hz)));verticalReady=true}}if(verticalFollowInput.checked&&values.length)verticalCenter+=((middle(values)-verticalCenter)*.08);return [verticalCenter-verticalSpan/2,verticalCenter+verticalSpan/2]}}
 function draw(){{const w=canvas.clientWidth,h=canvas.clientHeight,cw=w-left-right,ch=h-marginTop-bottom,[lo,hi]=range();ctx.clearRect(0,0,w,h);const x=t=>left+(t-viewStart)/windowSeconds*cw,y=hz=>marginTop+(hi-cents(hz))/(hi-lo)*ch;
 ctx.fillStyle='#fff';ctx.fillRect(0,0,w,h);ctx.strokeStyle='#e2e6eb';ctx.lineWidth=1;
 for(const [name,hz] of notes){{const yy=y(hz);if(yy<marginTop-5||yy>h-bottom+5)continue;ctx.beginPath();ctx.moveTo(left,yy);ctx.lineTo(w-right,yy);ctx.stroke();ctx.fillStyle='#3d4854';ctx.textAlign='right';ctx.font='12px system-ui';ctx.fillText(`${{name}}  (${{hz.toFixed(2)}} Hz)`,left-9,yy+4)}}
@@ -119,8 +124,10 @@ const current=media.currentTime||0;if(current>=viewStart&&current<=viewStart+win
 function clampStart(){{viewStart=Math.max(0,Math.min(viewStart,Math.max(0,duration-windowSeconds)))}}
 function tick(){{if(!media.paused&&followPlayback){{const t=media.currentTime;if(t>viewStart+windowSeconds*.5)viewStart=t-windowSeconds*.5;if(t<viewStart)viewStart=t;clampStart()}}draw();requestAnimationFrame(tick)}}
 function setWindow(value){{windowSeconds=Math.max(2,Math.min(60,value));winInput.value=windowSeconds;clampStart();draw()}}
+function setVerticalSpan(value,anchor){{const previous=verticalSpan;verticalSpan=Math.max(200,Math.min(4800,value));if(anchor!==undefined){{const ratio=(verticalCenter+previous/2-anchor)/previous;verticalCenter=anchor+(ratio-.5)*verticalSpan}}draw()}}
 document.getElementById('minus').onclick=()=>setWindow(windowSeconds*1.35);document.getElementById('plus').onclick=()=>setWindow(windowSeconds/1.35);document.getElementById('reset').onclick=()=>{{viewStart=0;media.currentTime=0;followPlayback=true;draw()}};winInput.onchange=()=>setWindow(Number(winInput.value));
-canvas.addEventListener('wheel',e=>{{e.preventDefault();const rect=canvas.getBoundingClientRect(),ratio=(e.clientX-rect.left-left)/(rect.width-left-right),anchor=viewStart+ratio*windowSeconds;setWindow(windowSeconds*(e.deltaY>0?1.2:1/1.2));viewStart=anchor-ratio*windowSeconds;clampStart();followPlayback=false;draw()}},{{passive:false}});
+document.getElementById('vertical-out').onclick=()=>setVerticalSpan(verticalSpan*1.35);document.getElementById('vertical-in').onclick=()=>setVerticalSpan(verticalSpan/1.35);verticalFollowInput.onchange=()=>draw();
+canvas.addEventListener('wheel',e=>{{e.preventDefault();const rect=canvas.getBoundingClientRect();if(e.shiftKey){{const ratio=(e.clientY-rect.top-marginTop)/(rect.height-marginTop-bottom),[lo,hi]=range(),anchor=hi-ratio*(hi-lo);setVerticalSpan(verticalSpan*(e.deltaY>0?1.2:1/1.2),anchor);return}}const ratio=(e.clientX-rect.left-left)/(rect.width-left-right),anchor=viewStart+ratio*windowSeconds;setWindow(windowSeconds*(e.deltaY>0?1.2:1/1.2));viewStart=anchor-ratio*windowSeconds;clampStart();followPlayback=false;draw()}},{{passive:false}});
 canvas.addEventListener('pointerdown',e=>{{drag={{x:e.clientX,start:viewStart}};canvas.setPointerCapture(e.pointerId);followPlayback=false}});canvas.addEventListener('pointermove',e=>{{if(!drag)return;viewStart=drag.start-(e.clientX-drag.x)/(canvas.clientWidth-left-right)*windowSeconds;clampStart();draw()}});canvas.addEventListener('pointerup',()=>drag=null);media.addEventListener('seeking',()=>{{followPlayback=true}});addEventListener('resize',resize);resize();requestAnimationFrame(tick);
 </script></html>""",
         encoding="utf-8",
