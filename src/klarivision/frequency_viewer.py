@@ -19,6 +19,9 @@ NATURAL_NOTES = (
     ("Sol5", 783.99), ("La5", 880.00),
 )
 
+VIEWER_VERSION = "0.2.0"
+"""Stable baseline: measured sounding frequency and natural-note grid only."""
+
 
 def build_frequency_viewer(
     pitch_json_path: Path,
@@ -42,11 +45,11 @@ def build_frequency_viewer(
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(
         f"""<!doctype html><html lang="tr"><meta charset="utf-8">
-<title>KlariVision — Duyulan frekans</title>
+<title>KlariVision {VIEWER_VERSION} — Duyulan frekans</title>
 <style>
 :root{{color-scheme:light}}*{{box-sizing:border-box}}body{{margin:0;background:#f5f6f8;color:#17212b;font:14px system-ui,-apple-system,sans-serif}}main{{max-width:1180px;margin:auto;padding:22px}}h1{{font-size:21px;margin:0 0 4px}}p{{margin:0 0 16px;color:#56616e}}.media{{position:sticky;top:0;background:#f5f6f8;padding:10px 0 14px;z-index:2}}video,audio{{display:block;max-width:100%;width:660px;max-height:330px}}.panel{{background:#fff;border:1px solid #dbe0e6;border-radius:12px;padding:14px}}.tools{{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:10px}}button{{border:1px solid #b9c3cf;background:#fff;border-radius:7px;padding:6px 10px;font:inherit;cursor:pointer}}button:hover{{background:#eef5fb}}input{{width:100px}}canvas{{display:block;width:100%;height:580px;border:1px solid #dbe0e6;border-radius:8px;touch-action:none}}.note{{font-size:12px;color:#66717f}}.legend{{margin-left:auto;color:#56616e;font-size:12px}}@media(max-width:650px){{main{{padding:12px}}canvas{{height:470px}}}}
 </style><main>
-<h1>Pitch konturu · duyulan frekans</h1>
+<h1>KlariVision {VIEWER_VERSION} · Pitch konturu</h1>
 <p>Bu ekran yalnızca pYIN'in ölçtüğü fiziksel frekansı (Hz) gösterir. Makam, karar, Sol klarnet yazılı notası ve süsleme katmanları bilinçli olarak kapalıdır.</p>
 <div class="media">{media}</div>
 <section class="panel"><div class="tools">

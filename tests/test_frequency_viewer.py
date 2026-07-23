@@ -16,7 +16,8 @@ def test_frequency_viewer_uses_physical_hertz_grid(tmp_path) -> None:
     build_frequency_viewer(pitch_json, "audio.wav", output)
 
     html = output.read_text(encoding="utf-8")
-    assert "duyulan frekans" in html
+    assert "Duyulan frekans" in html
+    assert "KlariVision 0.2.0" in html
     assert '"Si2",123.47' in html
     assert "Makam, karar, Sol klarnet yazılı notası" in html
     assert "followPlayback" in html

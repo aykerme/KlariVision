@@ -1,5 +1,16 @@
 # KlariVision
 
+## Sürüm
+
+Mevcut stabil temel: **v0.2.0**. Bu sürüm pYIN ile ölçülen duyulan frekansı ve
+ana nota frekanslarını gösterir; makam, karar, transpozisyon ve süsleme
+katmanları bu temel görünümden ayrıdır.
+
+## Kod inceleme
+
+- `KlariVision.code-workspace`: Projeyi Visual Studio Code ile tek çalışma alanı olarak açar.
+- `scripts/build_code_review.py`: Kaynak, test, betik ve belgeleri tek yerel HTML sayfasında toplar.
+
 **Türk müziği icrasında perde hareketini ve süslemeleri görünür kılan analiz ve eğitim platformu.**
 
 KlariVision'ın ilk hedefi bir ses dosyasındaki baskın melodik çizgiyi çıkarıp zamanla birlikte göstermektir. Sonraki katmanlar bu çizgi üzerinden nota/perde eşleme, makam bağlamı ve süsleme analizi ekleyecektir.
