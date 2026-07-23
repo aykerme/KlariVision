@@ -23,6 +23,7 @@ from .frequency_viewer import build_frequency_viewer
 from .pitch.models import AudioSource
 from .pitch.pyin import PyinPitchExtractor
 from .pitch.serialize import write_json
+from .pitch.vamp_pyin import VampPyinPitchExtractor
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -62,17 +63,20 @@ def _to_wav(source: Path, destination: Path) -> None:
     )
 
 
-def analyse_upload(source: Path, makam: str, karar: str) -> str:
+def analyse_upload(source: Path, makam: str, karar: str, engine: str = "vamp") -> str:
     """Analyse one local media file and return its project-relative viewer URL."""
     if makam not in MAKAM_PROFILES or karar not in KARAR_TONES:
         raise ValueError("Geçersiz makam veya karar sesi seçimi.")
 
     analysis_id = f"{_safe_stem(source.name)}-{uuid.uuid4().hex[:8]}"
     wav = AUDIO_DIR / f"{analysis_id}.wav"
-    pitch_json = OUTPUTS_DIR / f"{analysis_id}.pyin.json"
+    if engine not in {"vamp", "python"}:
+        raise ValueError("Geçersiz pitch motoru seçimi.")
+    pitch_json = OUTPUTS_DIR / f"{analysis_id}.{engine}.json"
     viewer = OUTPUTS_DIR / f"{analysis_id}.html"
     _to_wav(source, wav)
-    track = PyinPitchExtractor().extract(AudioSource(wav))
+    extractor = VampPyinPitchExtractor() if engine == "vamp" else PyinPitchExtractor()
+    track = extractor.extract(AudioSource(wav))
     write_json(track, pitch_json)
     build_frequency_viewer(
         pitch_json,
@@ -107,6 +111,7 @@ label{{display:block;font-weight:650;margin:16px 0 6px}}input,select,button{{fon
 <label for="recording">Video veya ses dosyası</label><input id="recording" name="recording" type="file" accept="video/*,audio/*,.wav,.mp3,.m4a" required>
 <label for="makam">Makam</label><select id="makam" name="makam">{makam_options}</select>
 <label for="karar">Karar sesi</label><select id="karar" name="karar">{karar_options}</select>
+<label for="engine">Pitch motoru</label><select id="engine" name="engine"><option value="vamp">Hızlı pYIN (Vamp)</option><option value="python">Ayrıntılı pYIN (Python)</option></select>
 <button type="submit">Pitch analizini oluştur</button>
 </form>"""
 
@@ -143,7 +148,12 @@ class KlariVisionHandler(SimpleHTTPRequestHandler):
             saved = IMPORTS_DIR / f"{_safe_stem(recording.filename)}-{uuid.uuid4().hex[:8]}{suffix}"
             with saved.open("wb") as target:
                 shutil.copyfileobj(recording.file, target)
-            result_url = analyse_upload(saved, form.getfirst("makam", "huzzam"), form.getfirst("karar", "dugah"))
+            result_url = analyse_upload(
+                saved,
+                form.getfirst("makam", "huzzam"),
+                form.getfirst("karar", "dugah"),
+                form.getfirst("engine", "vamp"),
+            )
         except Exception as error:  # User-facing local app; preserve the server process after an error.
             self._send_html(_form_page(f"Analiz oluşturulamadı: {error}"), status=400)
             return

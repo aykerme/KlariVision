@@ -11,6 +11,13 @@ katmanları bu temel görünümden ayrıdır.
 - `KlariVision.code-workspace`: Projeyi Visual Studio Code ile tek çalışma alanı olarak açar.
 - `scripts/build_code_review.py`: Kaynak, test, betik ve belgeleri tek yerel HTML sayfasında toplar.
 
+## Pitch motorları
+
+- **Hızlı pYIN (Vamp)**: Varsayılan seçenek. Yerel Sonic Annotator ve Vamp pYIN
+  eklentisini kullanır; uzun kayıtlar için tasarlanmıştır.
+- **Ayrıntılı pYIN (Python)**: Librosa tabanlı deneysel yol. Daha maliyetli
+  parametre araştırmaları için korunur.
+
 **Türk müziği icrasında perde hareketini ve süslemeleri görünür kılan analiz ve eğitim platformu.**
 
 KlariVision'ın ilk hedefi bir ses dosyasındaki baskın melodik çizgiyi çıkarıp zamanla birlikte göstermektir. Sonraki katmanlar bu çizgi üzerinden nota/perde eşleme, makam bağlamı ve süsleme analizi ekleyecektir.

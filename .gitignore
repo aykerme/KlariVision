@@ -4,6 +4,7 @@ __pycache__/
 .venv/
 .python/
 .tools/
+tools/sonic-annotator/sonic-annotator
 .uv-cache/
 .pytest_cache/
 *.egg-info/
