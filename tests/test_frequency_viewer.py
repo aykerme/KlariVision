@@ -16,9 +16,9 @@ def test_frequency_viewer_uses_physical_hertz_grid(tmp_path) -> None:
 
     html = output.read_text(encoding="utf-8")
     assert "Duyulan frekans" in html
-    assert "KlariVision 0.3.16-preview" in html
+    assert "KlariVision 0.3.17-preview" in html
     assert '"minor"' in html
-    assert "eğri ve Hz değerleri sabit kalır" in html
+    assert "440 Hz ve 220 Hz, Re olarak görünür" in html
     assert "followPlayback" in html
     assert 'id="vertical-in"' in html
     assert 'id="vertical-out"' in html
@@ -41,7 +41,7 @@ def test_frequency_viewer_uses_physical_hertz_grid(tmp_path) -> None:
     assert 'id="scale-mode"' in html
     assert 'id="tonic"' in html
     assert 'id="sol-clarinet"' in html
-    assert "SOL_CLARINET_NOTE_OFFSET=-5" in html
+    assert "SOL_CLARINET_NOTE_OFFSET=-7" in html
     assert "function labelOffset()" in html
     assert "yy=y(p.hz)" in html
     assert "function scaleNotes()" in html

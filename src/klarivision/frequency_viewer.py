@@ -21,6 +21,7 @@ SCALE_LABELS = {
         "5": ("Fa", "Sol", "La", "Si♭", "Do", "Re", "Mi"),
         "7": ("Sol", "La", "Si", "Do", "Re", "Mi", "Fa♯"),
         "9": ("La", "Si", "Do♯", "Re", "Mi", "Fa♯", "Sol♯"),
+        "10": ("Si♭", "Do", "Re", "Mi♭", "Fa", "Sol", "La"),
         "11": ("Si", "Do♯", "Re♯", "Mi", "Fa♯", "Sol♯", "La♯"),
         "6": ("Fa♯", "Sol♯", "La♯", "Si", "Do♯", "Re♯", "Mi♯"),
     },
@@ -31,12 +32,13 @@ SCALE_LABELS = {
         "5": ("Fa", "Sol", "La♭", "Si♭", "Do", "Re♭", "Mi♭"),
         "7": ("Sol", "La", "Si♭", "Do", "Re", "Mi♭", "Fa"),
         "9": ("La", "Si", "Do", "Re", "Mi", "Fa", "Sol"),
+        "10": ("Si♭", "Do", "Re♭", "Mi♭", "Fa", "Sol♭", "La♭"),
         "11": ("Si", "Do♯", "Re", "Mi", "Fa♯", "Sol", "La"),
         "6": ("Fa♯", "Sol♯", "La", "Si", "Do♯", "Re", "Mi"),
     },
 }
 
-VIEWER_VERSION = "0.3.16-preview"
+VIEWER_VERSION = "0.3.17-preview"
 """Higher-resolution pYIN preview with conservative display cleanup."""
 
 MINIMUM_CONFIDENCE = 0.20
@@ -109,7 +111,7 @@ def build_frequency_viewer(
 :root{{color-scheme:light}}*{{box-sizing:border-box}}body{{margin:0;background:#f5f6f8;color:#17212b;font:14px system-ui,-apple-system,sans-serif}}main{{max-width:1180px;margin:auto;padding:22px}}h1{{font-size:21px;margin:0 0 4px}}p{{margin:0 0 16px;color:#56616e}}.media{{position:sticky;top:0;background:#f5f6f8;padding:10px 0 14px;z-index:2}}video,audio{{display:block;max-width:100%;width:660px;max-height:330px}}.panel{{background:#fff;border:1px solid #dbe0e6;border-radius:12px;padding:14px}}.tools{{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:10px}}button{{border:1px solid #b9c3cf;background:#fff;border-radius:7px;padding:6px 10px;font:inherit;cursor:pointer}}button:hover{{background:#eef5fb}}button[aria-pressed="true"]{{background:#dceefe;border-color:#4785be;color:#173d62;box-shadow:inset 0 0 0 1px #8bb7de}}input{{width:100px}}select{{font:inherit;padding:5px 7px;border:1px solid #b9c3cf;border-radius:7px;background:#fff}}.chart-scroll{{display:grid;grid-template-columns:minmax(0,1fr) 18px;grid-template-rows:580px 18px;gap:5px}}canvas{{display:block;width:100%;height:100%;border:1px solid #dbe0e6;border-radius:8px;touch-action:none}}#time-scroll{{grid-column:1;grid-row:2;width:100%;margin:0;accent-color:#7755b8}}#vertical-scroll{{grid-column:2;grid-row:1;width:18px;height:100%;margin:0;writing-mode:vertical-lr;direction:rtl;accent-color:#7755b8}}.note{{font-size:12px;color:#66717f}}.legend{{margin-left:auto;color:#56616e;font-size:12px}}@media(max-width:650px){{main{{padding:12px}}.chart-scroll{{grid-template-rows:470px 18px}}}}
 </style><main>
 <h1>KlariVision {VIEWER_VERSION} · Pitch konturu</h1>
-<p>Pitch eğrisi pYIN'in ölçtüğü fiziksel frekanstır (Hz). Sol klarnet seçeneği yalnızca yazılı nota adını −22 komaya göre değiştirir; eğri ve Hz değerleri sabit kalır.</p>
+<p>Pitch eğrisi pYIN'in ölçtüğü fiziksel frekanstır (Hz). Sol klarnet seçeneği yalnızca yazılı nota adını değiştirir; örneğin 440 Hz ve 220 Hz, Re olarak görünür. Eğri ve Hz değerleri sabit kalır.</p>
 <div class="media">{media}</div>
 <section class="panel"><div class="tools">
 <button id="minus">− Zaman</button><button id="plus">+ Zaman</button>
@@ -130,7 +132,7 @@ const scaleMode=document.getElementById('scale-mode'),tonicInput=document.getEle
 const winInput=document.getElementById('window');let windowSeconds=12,viewStart=-6,drag=null,followPlayback=true;
 const verticalFollowInput=document.getElementById('vertical-follow');let verticalSpan=2400,verticalCenter=0,verticalReady=false;
 let duration=Math.max(...frames.map(p=>p.t),0),loopA=0,loopB=duration,loopEnabled=false,loopBManual=false; const left=220,right=20,marginTop=22,bottom=34;
-const SOL_CLARINET_NOTE_OFFSET=-5;function labelOffset(){{return solClarinetInput.checked?SOL_CLARINET_NOTE_OFFSET:0}}function cents(hz){{return 1200*Math.log2(hz/440)}}
+const SOL_CLARINET_NOTE_OFFSET=-7;function labelOffset(){{return solClarinetInput.checked?SOL_CLARINET_NOTE_OFFSET:0}}function cents(hz){{return 1200*Math.log2(hz/440)}}
 function notesForMode(mode,intervals){{const tonic=Number(tonicInput.value),offset=labelOffset(),names=scaleLabels[mode][String((tonic+offset+12)%12)],namesByPitchClass=new Map(intervals.map((interval,index)=>[(tonic+interval)%12,names[index]])),result=[];for(let midi=24;midi<=108;midi++){{const name=namesByPitchClass.get(midi%12);if(!name)continue;const labelMidi=midi+offset,octave=Math.floor(labelMidi/12)-1,hz=440*Math.pow(2,(midi-69)/12);result.push([`${{name}}${{octave}}`,hz])}}return result}}
 function nihaventNotes(){{return notesForMode('minor',[0,2,3,5,7,8,10])}}
 function scaleNotes(){{if(scaleMode.value==='nihavent')return nihaventNotes();return notesForMode(scaleMode.value,scaleMode.value==='major'?[0,2,4,5,7,9,11]:[0,2,3,5,7,8,10])}}
