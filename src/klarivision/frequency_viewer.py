@@ -36,9 +36,20 @@ SCALE_LABELS = {
         "11": ("Si", "Do♯", "Re", "Mi", "Fa♯", "Sol", "La"),
         "6": ("Fa♯", "Sol♯", "La", "Si", "Do♯", "Re", "Mi"),
     },
+    "nihavent": {
+        "0": ("Do", "Re", "Mi♭", "Fa", "Sol", "La♭", "Si"),
+        "2": ("Re", "Mi", "Fa", "Sol", "La", "Si♭", "Do♯"),
+        "4": ("Mi", "Fa♯", "Sol", "La", "Si", "Do", "Re♯"),
+        "5": ("Fa", "Sol", "La♭", "Si♭", "Do", "Re♭", "Mi"),
+        "7": ("Sol", "La", "Si♭", "Do", "Re", "Mi♭", "Fa♯"),
+        "9": ("La", "Si", "Do", "Re", "Mi", "Fa", "Sol♯"),
+        "10": ("Si♭", "Do", "Re♭", "Mi♭", "Fa", "Sol♭", "La"),
+        "11": ("Si", "Do♯", "Re", "Mi", "Fa♯", "Sol", "La♯"),
+        "6": ("Fa♯", "Sol♯", "La", "Si", "Do♯", "Re", "Mi♯"),
+    },
 }
 
-VIEWER_VERSION = "0.3.17-preview"
+VIEWER_VERSION = "0.3.18-preview"
 """Higher-resolution pYIN preview with conservative display cleanup."""
 
 MINIMUM_CONFIDENCE = 0.20
@@ -134,7 +145,7 @@ const verticalFollowInput=document.getElementById('vertical-follow');let vertica
 let duration=Math.max(...frames.map(p=>p.t),0),loopA=0,loopB=duration,loopEnabled=false,loopBManual=false; const left=220,right=20,marginTop=22,bottom=34;
 const SOL_CLARINET_NOTE_OFFSET=-7;function labelOffset(){{return solClarinetInput.checked?SOL_CLARINET_NOTE_OFFSET:0}}function cents(hz){{return 1200*Math.log2(hz/440)}}
 function notesForMode(mode,intervals){{const tonic=Number(tonicInput.value),offset=labelOffset(),names=scaleLabels[mode][String((tonic+offset+12)%12)],namesByPitchClass=new Map(intervals.map((interval,index)=>[(tonic+interval)%12,names[index]])),result=[];for(let midi=24;midi<=108;midi++){{const name=namesByPitchClass.get(midi%12);if(!name)continue;const labelMidi=midi+offset,octave=Math.floor(labelMidi/12)-1,hz=440*Math.pow(2,(midi-69)/12);result.push([`${{name}}${{octave}}`,hz])}}return result}}
-function nihaventNotes(){{return notesForMode('minor',[0,2,3,5,7,8,10])}}
+function nihaventNotes(){{return notesForMode('nihavent',[0,2,3,5,7,8,11])}}
 function scaleNotes(){{if(scaleMode.value==='nihavent')return nihaventNotes();return notesForMode(scaleMode.value,scaleMode.value==='major'?[0,2,4,5,7,9,11]:[0,2,3,5,7,8,10])}}
 function formatTime(time){{return `${{time.toFixed(2)}} sn`}}
 function updateLoopButtons(){{setAButton.textContent=`A: ${{formatTime(loopA)}}`;setBButton.textContent=`B: ${{loopBManual?formatTime(loopB):'Son'}}`;loopButton.setAttribute('aria-pressed',String(loopEnabled));}}
