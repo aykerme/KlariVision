@@ -21,7 +21,7 @@ NATURAL_NOTES = (
     ("Sol5", 783.99), ("La5", 880.00),
 )
 
-VIEWER_VERSION = "0.3.6-preview"
+VIEWER_VERSION = "0.3.7-preview"
 """Higher-resolution pYIN preview with conservative display cleanup."""
 
 MINIMUM_CONFIDENCE = 0.20
@@ -137,7 +137,7 @@ document.getElementById('vertical-out').onclick=()=>setVerticalSpan(verticalSpan
 setAButton.onclick=()=>{{loopA=Math.min(media.currentTime||0,loopB);updateLoopButtons();draw()}};setBButton.onclick=()=>{{loopB=Math.max(media.currentTime||0,loopA);loopBManual=true;updateLoopButtons();draw()}};loopButton.onclick=()=>{{loopEnabled=!loopEnabled;if(loopEnabled){{if(loopB-loopA<.02){{loopA=0;loopB=duration;loopBManual=false}}media.currentTime=loopA;media.play()}}else if(media.currentTime<duration)media.play();updateLoopButtons();draw()}};
 timeScroll.addEventListener('input',()=>{{media.currentTime=Number(timeScroll.value)/1000;followPlayback=true;centerOnPlayhead();draw()}});verticalScroll.addEventListener('input',()=>{{verticalCenter=Number(verticalScroll.value);verticalReady=true;verticalFollowInput.checked=false;draw()}});
 canvas.addEventListener('wheel',e=>{{e.preventDefault();const rect=canvas.getBoundingClientRect();if(e.shiftKey){{const ratio=(e.clientY-rect.top-marginTop)/(rect.height-marginTop-bottom),[lo,hi]=range(),anchor=hi-ratio*(hi-lo);setVerticalSpan(verticalSpan*(e.deltaY>0?1.2:1/1.2),anchor);return}}setWindow(windowSeconds*(e.deltaY>0?1.2:1/1.2));followPlayback=true;}},{{passive:false}});
-canvas.addEventListener('pointerdown',e=>{{drag={{x:e.clientX,time:media.currentTime||0}};canvas.setPointerCapture(e.pointerId);followPlayback=true}});canvas.addEventListener('pointermove',e=>{{if(!drag)return;const change=(e.clientX-drag.x)/(canvas.clientWidth-left-right)*windowSeconds;media.currentTime=Math.max(0,Math.min(duration,drag.time-change));centerOnPlayhead();draw()}});canvas.addEventListener('pointerup',()=>drag=null);media.addEventListener('seeking',()=>{{followPlayback=true;centerOnPlayhead()}});media.addEventListener('loadedmetadata',()=>{{if(Number.isFinite(media.duration)){{duration=Math.max(duration,media.duration);if(!loopBManual)loopB=duration}}updateLoopButtons();centerOnPlayhead();draw()}});updateLoopButtons();addEventListener('resize',resize);centerOnPlayhead();resize();requestAnimationFrame(tick);
+canvas.addEventListener('pointerdown',e=>{{drag={{x:e.clientX,time:media.currentTime||0,moved:false}};canvas.setPointerCapture(e.pointerId);followPlayback=true}});canvas.addEventListener('pointermove',e=>{{if(!drag)return;const change=(e.clientX-drag.x)/(canvas.clientWidth-left-right)*windowSeconds;if(!drag.moved&&Math.abs(e.clientX-drag.x)<4)return;drag.moved=true;media.currentTime=Math.max(0,Math.min(duration,drag.time-change));centerOnPlayhead();draw()}});canvas.addEventListener('pointerup',()=>{{if(drag&&!drag.moved){{if(media.paused)media.play().catch(()=>{{}});else media.pause()}}drag=null}});media.addEventListener('seeking',()=>{{followPlayback=true;centerOnPlayhead()}});media.addEventListener('loadedmetadata',()=>{{if(Number.isFinite(media.duration)){{duration=Math.max(duration,media.duration);if(!loopBManual)loopB=duration}}updateLoopButtons();centerOnPlayhead();draw()}});updateLoopButtons();addEventListener('resize',resize);centerOnPlayhead();resize();requestAnimationFrame(tick);
 </script></html>""",
         encoding="utf-8",
     )
