@@ -20,12 +20,11 @@ katmanları bu temel görünümden ayrıdır.
 
 ## Türk müziği perde referansı
 
-Türk Müziği eksenindeki perde adları, parantez içindeki Do–Re–Mi karşılıkları
-ve yatay frekans çizgileri doğrudan
-`data/reference/perde-esleme.xlsx` dosyasının **Perde Eşleme** sayfasından
-okunur. Pitch eğrisi gerçek sesi ölçtüğünden grafik, bu sayfadaki **Duyulan
-Hz** sütununu kullanır; **Sol klarnet yazılı Hz** değeri ileride yazılı nota
-görünümü için ayrıca saklanır.
+`data/reference/perde-esleme.xlsx` dosyasının **Perde Eşleme** sayfası,
+gelecekteki Türk müziği notasyon görünümü için yerel kaynak dosyadır. Pitch
+eğrisi gerçek sesi ölçtüğünden, bu görünüm eklendiğinde **Duyulan Hz** sütunu
+kullanılacak; **Sol klarnet yazılı Hz** değeri yazılı nota görünümü için
+ayrıca saklanacaktır.
 
 **Türk müziği icrasında perde hareketini ve süslemeleri görünür kılan analiz ve eğitim platformu.**
 

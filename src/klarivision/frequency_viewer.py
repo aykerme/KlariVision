@@ -11,7 +11,6 @@ import math
 from pathlib import Path
 from statistics import median
 
-from klarivision.pitch_reference import DEFAULT_REFERENCE_PATH, load_turkish_pitch_reference
 
 
 SCALE_LABELS = {
@@ -35,7 +34,7 @@ SCALE_LABELS = {
     },
 }
 
-VIEWER_VERSION = "0.3.13-preview"
+VIEWER_VERSION = "0.3.14-preview"
 """Higher-resolution pYIN preview with conservative display cleanup."""
 
 MINIMUM_CONFIDENCE = 0.20
@@ -91,14 +90,10 @@ def build_frequency_viewer(
     output_path: Path,
     *,
     video_relative_path: str | None = None,
-    turkish_reference_path: Path | None = None,
 ) -> None:
     """Write a self-contained viewer of the measured, sounding frequency."""
     payload = json.loads(pitch_json_path.read_text(encoding="utf-8"))
     frames = prepare_display_frames(payload)
-    turkish_reference = load_turkish_pitch_reference(
-        turkish_reference_path or DEFAULT_REFERENCE_PATH
-    )
     media = (
         f'<video id="media" controls src="{video_relative_path}"></video>'
         if video_relative_path
@@ -112,21 +107,20 @@ def build_frequency_viewer(
 :root{{color-scheme:light}}*{{box-sizing:border-box}}body{{margin:0;background:#f5f6f8;color:#17212b;font:14px system-ui,-apple-system,sans-serif}}main{{max-width:1180px;margin:auto;padding:22px}}h1{{font-size:21px;margin:0 0 4px}}p{{margin:0 0 16px;color:#56616e}}.media{{position:sticky;top:0;background:#f5f6f8;padding:10px 0 14px;z-index:2}}video,audio{{display:block;max-width:100%;width:660px;max-height:330px}}.panel{{background:#fff;border:1px solid #dbe0e6;border-radius:12px;padding:14px}}.tools{{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:10px}}button{{border:1px solid #b9c3cf;background:#fff;border-radius:7px;padding:6px 10px;font:inherit;cursor:pointer}}button:hover{{background:#eef5fb}}button[aria-pressed="true"]{{background:#dceefe;border-color:#4785be;color:#173d62;box-shadow:inset 0 0 0 1px #8bb7de}}input{{width:100px}}select{{font:inherit;padding:5px 7px;border:1px solid #b9c3cf;border-radius:7px;background:#fff}}.chart-scroll{{display:grid;grid-template-columns:minmax(0,1fr) 18px;grid-template-rows:580px 18px;gap:5px}}canvas{{display:block;width:100%;height:100%;border:1px solid #dbe0e6;border-radius:8px;touch-action:none}}#time-scroll{{grid-column:1;grid-row:2;width:100%;margin:0;accent-color:#7755b8}}#vertical-scroll{{grid-column:2;grid-row:1;width:18px;height:100%;margin:0;writing-mode:vertical-lr;direction:rtl;accent-color:#7755b8}}.note{{font-size:12px;color:#66717f}}.legend{{margin-left:auto;color:#56616e;font-size:12px}}@media(max-width:650px){{main{{padding:12px}}.chart-scroll{{grid-template-rows:470px 18px}}}}
 </style><main>
 <h1>KlariVision {VIEWER_VERSION} · Pitch konturu</h1>
-<p>Pitch eğrisi pYIN'in ölçtüğü fiziksel frekanstır (Hz). Türk Müziği ekseni, <code>data/reference/perde-esleme.xlsx</code> dosyasındaki Do–Re–Mi karşılığı ve <em>Duyulan Hz</em> sütunundan gelir; frekans ölçümü transpoze edilmez.</p>
+<p>Pitch eğrisi pYIN'in ölçtüğü fiziksel frekanstır (Hz). Sol eksen, seçilen dizinin frekans başvurusudur; frekans ölçümü transpoze edilmez.</p>
 <div class="media">{media}</div>
 <section class="panel"><div class="tools">
 <button id="minus">− Zaman</button><button id="plus">+ Zaman</button>
 <label>Görünür süre <input id="window" type="number" min="2" max="60" step="1" value="12"> sn</label>
 <button id="vertical-out">− Dikey</button><button id="vertical-in">+ Dikey</button>
 <label><input id="vertical-follow" type="checkbox"> Eğriyi dikey takip et</label>
-<label>Eksen <select id="scale-mode"><option value="major">Majör</option><option value="minor">Minör</option><option value="nihavent">Nihavent · 1. dizi</option><option value="turkish">Türk Müziği</option></select></label>
+<label>Eksen <select id="scale-mode"><option value="major">Majör</option><option value="minor">Minör</option><option value="nihavent">Nihavent · 1. dizi</option></select></label>
 <label>Karar <select id="tonic"><option value="0">Do</option><option value="2">Re</option><option value="4">Mi</option><option value="5">Fa</option><option value="7">Sol</option><option value="9">La</option><option value="11">Si</option></select></label>
 <button id="set-a">A: 0.00 sn</button><button id="set-b">B: Son</button><button id="loop" aria-pressed="false">Loop</button><button id="reset">Başa dön</button><span class="legend">Tekerlek: imleç çevresinde zaman yakınlaştır · Shift+tekerlek: dikey yakınlaştır · sürükle: kayıtta gezin</span>
 </div><div class="chart-scroll"><canvas id="chart"></canvas><input id="vertical-scroll" type="range" aria-label="Dikey grafiği kaydır"><input id="time-scroll" type="range" aria-label="Kayıtta gezin"><span></span></div><p class="note">Yatay çubuk kayıtta gezinir; sağdaki çubuk dikey merkezi değiştirir. Çizgi kesintileri pYIN'in ses algılamadığı bölümleri gösterir.</p></section>
 </main><script>
 const frames={json.dumps(frames, ensure_ascii=False, separators=(',', ':'))};
 const scaleLabels={json.dumps(SCALE_LABELS, ensure_ascii=False, separators=(',', ':'))};
-const turkishReferenceNotes={json.dumps([record.__dict__ for record in turkish_reference], ensure_ascii=False, separators=(',', ':'))};
 const media=document.getElementById('media'),canvas=document.getElementById('chart'),ctx=canvas.getContext('2d'),timeScroll=document.getElementById('time-scroll'),verticalScroll=document.getElementById('vertical-scroll');
 const setAButton=document.getElementById('set-a'),setBButton=document.getElementById('set-b'),loopButton=document.getElementById('loop');
 const scaleMode=document.getElementById('scale-mode'),tonicInput=document.getElementById('tonic');
@@ -134,9 +128,8 @@ const winInput=document.getElementById('window');let windowSeconds=12,viewStart=
 const verticalFollowInput=document.getElementById('vertical-follow');let verticalSpan=2400,verticalCenter=0,verticalReady=false;
 let duration=Math.max(...frames.map(p=>p.t),0),loopA=0,loopB=duration,loopEnabled=false,loopBManual=false; const left=220,right=20,marginTop=22,bottom=34;
 function cents(hz){{return 1200*Math.log2(hz/440)}}
-function turkishNotes(){{return turkishReferenceNotes.map(note=>[note.solfege||'—',note.heard_hz])}}
-function nihaventNotes(){{const tonic=Number(tonicInput.value),intervals=[0,2,3,5,7,8,10],westernNames=scaleLabels.minor[String(tonic)],perdeNames=['Rast (karar)','Dügâh','Kürdî','Çârgâh','Nevâ (güçlü)','Nîm Hisar','Acem'],namesByPitchClass=new Map(intervals.map((interval,index)=>[(tonic+interval)%12,[perdeNames[index],westernNames[index]]])),result=[];for(let midi=24;midi<=108;midi++){{const entry=namesByPitchClass.get(midi%12);if(!entry)continue;const octave=Math.floor(midi/12)-1,hz=440*Math.pow(2,(midi-69)/12);result.push([`${{entry[0]}} · ${{entry[1]}}${{octave}}`,hz])}}return result}}
-function scaleNotes(){{if(scaleMode.value==='turkish')return turkishNotes();if(scaleMode.value==='nihavent')return nihaventNotes();const tonic=Number(tonicInput.value),intervals=scaleMode.value==='major'?[0,2,4,5,7,9,11]:[0,2,3,5,7,8,10],names=scaleLabels[scaleMode.value][String(tonic)],namesByPitchClass=new Map(intervals.map((interval,index)=>[(tonic+interval)%12,names[index]])),result=[];for(let midi=24;midi<=108;midi++){{const name=namesByPitchClass.get(midi%12);if(!name)continue;const octave=Math.floor(midi/12)-1,hz=440*Math.pow(2,(midi-69)/12);result.push([`${{name}}${{octave}}`,hz])}}return result}}
+function nihaventNotes(){{const tonic=Number(tonicInput.value),intervals=[0,2,3,5,7,8,10],names=scaleLabels.minor[String(tonic)],namesByPitchClass=new Map(intervals.map((interval,index)=>[(tonic+interval)%12,names[index]])),result=[];for(let midi=24;midi<=108;midi++){{const name=namesByPitchClass.get(midi%12);if(!name)continue;const octave=Math.floor(midi/12)-1,hz=440*Math.pow(2,(midi-69)/12);result.push([`${{name}}${{octave}}`,hz])}}return result}}
+function scaleNotes(){{if(scaleMode.value==='nihavent')return nihaventNotes();const tonic=Number(tonicInput.value),intervals=scaleMode.value==='major'?[0,2,4,5,7,9,11]:[0,2,3,5,7,8,10],names=scaleLabels[scaleMode.value][String(tonic)],namesByPitchClass=new Map(intervals.map((interval,index)=>[(tonic+interval)%12,names[index]])),result=[];for(let midi=24;midi<=108;midi++){{const name=namesByPitchClass.get(midi%12);if(!name)continue;const octave=Math.floor(midi/12)-1,hz=440*Math.pow(2,(midi-69)/12);result.push([`${{name}}${{octave}}`,hz])}}return result}}
 function formatTime(time){{return `${{time.toFixed(2)}} sn`}}
 function updateLoopButtons(){{setAButton.textContent=`A: ${{formatTime(loopA)}}`;setBButton.textContent=`B: ${{loopBManual?formatTime(loopB):'Son'}}`;loopButton.setAttribute('aria-pressed',String(loopEnabled));}}
 function resize(){{const dpr=devicePixelRatio||1,w=canvas.clientWidth,h=canvas.clientHeight;canvas.width=w*dpr;canvas.height=h*dpr;ctx.setTransform(dpr,0,0,dpr,0,0);draw()}}
@@ -159,7 +152,7 @@ function setWindow(value){{windowSeconds=Math.max(2,Math.min(60,value));winInput
 function setVerticalSpan(value,anchor){{const previous=verticalSpan;verticalSpan=Math.max(200,Math.min(4800,value));if(anchor!==undefined){{const ratio=(verticalCenter+previous/2-anchor)/previous;verticalCenter=anchor+(ratio-.5)*verticalSpan}}draw()}}
 document.getElementById('minus').onclick=()=>setWindow(windowSeconds*1.35);document.getElementById('plus').onclick=()=>setWindow(windowSeconds/1.35);document.getElementById('reset').onclick=()=>{{media.currentTime=0;followPlayback=true;centerOnPlayhead();draw()}};winInput.onchange=()=>setWindow(Number(winInput.value));
 document.getElementById('vertical-out').onclick=()=>setVerticalSpan(verticalSpan*1.35);document.getElementById('vertical-in').onclick=()=>setVerticalSpan(verticalSpan/1.35);verticalFollowInput.onchange=()=>draw();
-scaleMode.onchange=()=>{{tonicInput.disabled=scaleMode.value==='turkish';draw()}};tonicInput.onchange=()=>draw();
+scaleMode.onchange=()=>draw();tonicInput.onchange=()=>draw();
 setAButton.onclick=()=>{{loopA=Math.min(media.currentTime||0,loopB);updateLoopButtons();draw()}};setBButton.onclick=()=>{{loopB=Math.max(media.currentTime||0,loopA);loopBManual=true;updateLoopButtons();draw()}};loopButton.onclick=()=>{{loopEnabled=!loopEnabled;if(loopEnabled){{if(loopB-loopA<.02){{loopA=0;loopB=duration;loopBManual=false}}media.currentTime=loopA;media.play()}}else if(media.currentTime<duration)media.play();updateLoopButtons();draw()}};
 timeScroll.addEventListener('input',()=>{{media.currentTime=Number(timeScroll.value)/1000;followPlayback=true;centerOnPlayhead();draw()}});verticalScroll.addEventListener('input',()=>{{verticalCenter=Number(verticalScroll.value);verticalReady=true;verticalFollowInput.checked=false;draw()}});
 canvas.addEventListener('wheel',e=>{{e.preventDefault();const rect=canvas.getBoundingClientRect();if(e.shiftKey){{const ratio=(e.clientY-rect.top-marginTop)/(rect.height-marginTop-bottom),[lo,hi]=range(),anchor=hi-ratio*(hi-lo);setVerticalSpan(verticalSpan*(e.deltaY>0?1.2:1/1.2),anchor);return}}setWindow(windowSeconds*(e.deltaY>0?1.2:1/1.2));followPlayback=true;}},{{passive:false}});
