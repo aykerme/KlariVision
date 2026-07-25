@@ -55,6 +55,7 @@ def test_frequency_viewer_uses_physical_hertz_grid(tmp_path) -> None:
     assert "turkishReferenceNotes" in html
     assert '"name":"Yegâh"' in html
     assert '"heard_hz":293.344891' in html
+    assert "return turkishReferenceNotes.map(note=>[note.solfege||'—',note.heard_hz])" in html
     assert "Duyulan Hz" in html
     assert 'value="nihavent"' in html
     assert "function nihaventNotes()" in html
