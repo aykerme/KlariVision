@@ -17,7 +17,7 @@ def test_frequency_viewer_uses_physical_hertz_grid(tmp_path) -> None:
 
     html = output.read_text(encoding="utf-8")
     assert "Duyulan frekans" in html
-    assert "KlariVision 0.3.4-preview" in html
+    assert "KlariVision 0.3.5-preview" in html
     assert '"Si2",123.47' in html
     assert "makam, karar, Sol klarnet yazılı notası" in html
     assert "followPlayback" in html
@@ -29,6 +29,9 @@ def test_frequency_viewer_uses_physical_hertz_grid(tmp_path) -> None:
     assert "function centerOnPlayhead()" in html
     assert "viewStart=-6" in html
     assert "loadedmetadata" in html
+    assert 'id="time-scroll"' in html
+    assert 'id="vertical-scroll"' in html
+    assert "function updateScrollbars()" in html
 
 
 def test_frequency_viewer_can_embed_video(tmp_path) -> None:

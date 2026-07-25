@@ -21,7 +21,7 @@ NATURAL_NOTES = (
     ("Sol5", 783.99), ("La5", 880.00),
 )
 
-VIEWER_VERSION = "0.3.4-preview"
+VIEWER_VERSION = "0.3.5-preview"
 """Higher-resolution pYIN preview with conservative display cleanup."""
 
 MINIMUM_CONFIDENCE = 0.20
@@ -91,7 +91,7 @@ def build_frequency_viewer(
         f"""<!doctype html><html lang="tr"><meta charset="utf-8">
 <title>KlariVision {VIEWER_VERSION} — Duyulan frekans</title>
 <style>
-:root{{color-scheme:light}}*{{box-sizing:border-box}}body{{margin:0;background:#f5f6f8;color:#17212b;font:14px system-ui,-apple-system,sans-serif}}main{{max-width:1180px;margin:auto;padding:22px}}h1{{font-size:21px;margin:0 0 4px}}p{{margin:0 0 16px;color:#56616e}}.media{{position:sticky;top:0;background:#f5f6f8;padding:10px 0 14px;z-index:2}}video,audio{{display:block;max-width:100%;width:660px;max-height:330px}}.panel{{background:#fff;border:1px solid #dbe0e6;border-radius:12px;padding:14px}}.tools{{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:10px}}button{{border:1px solid #b9c3cf;background:#fff;border-radius:7px;padding:6px 10px;font:inherit;cursor:pointer}}button:hover{{background:#eef5fb}}input{{width:100px}}canvas{{display:block;width:100%;height:580px;border:1px solid #dbe0e6;border-radius:8px;touch-action:none}}.note{{font-size:12px;color:#66717f}}.legend{{margin-left:auto;color:#56616e;font-size:12px}}@media(max-width:650px){{main{{padding:12px}}canvas{{height:470px}}}}
+:root{{color-scheme:light}}*{{box-sizing:border-box}}body{{margin:0;background:#f5f6f8;color:#17212b;font:14px system-ui,-apple-system,sans-serif}}main{{max-width:1180px;margin:auto;padding:22px}}h1{{font-size:21px;margin:0 0 4px}}p{{margin:0 0 16px;color:#56616e}}.media{{position:sticky;top:0;background:#f5f6f8;padding:10px 0 14px;z-index:2}}video,audio{{display:block;max-width:100%;width:660px;max-height:330px}}.panel{{background:#fff;border:1px solid #dbe0e6;border-radius:12px;padding:14px}}.tools{{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:10px}}button{{border:1px solid #b9c3cf;background:#fff;border-radius:7px;padding:6px 10px;font:inherit;cursor:pointer}}button:hover{{background:#eef5fb}}input{{width:100px}}.chart-scroll{{display:grid;grid-template-columns:minmax(0,1fr) 18px;grid-template-rows:580px 18px;gap:5px}}canvas{{display:block;width:100%;height:100%;border:1px solid #dbe0e6;border-radius:8px;touch-action:none}}#time-scroll{{grid-column:1;grid-row:2;width:100%;margin:0;accent-color:#7755b8}}#vertical-scroll{{grid-column:2;grid-row:1;width:18px;height:100%;margin:0;writing-mode:vertical-lr;direction:rtl;accent-color:#7755b8}}.note{{font-size:12px;color:#66717f}}.legend{{margin-left:auto;color:#56616e;font-size:12px}}@media(max-width:650px){{main{{padding:12px}}.chart-scroll{{grid-template-rows:470px 18px}}}}
 </style><main>
 <h1>KlariVision {VIEWER_VERSION} · Pitch konturu</h1>
 <p>Bu ekran yalnızca pYIN'in ölçtüğü fiziksel frekansı (Hz) gösterir. Düşük güvenli ve tek-karelik hatalı adaylar gösterilmez; makam, karar, Sol klarnet yazılı notası ve süsleme katmanları kapalıdır.</p>
@@ -102,11 +102,11 @@ def build_frequency_viewer(
 <button id="vertical-out">− Dikey</button><button id="vertical-in">+ Dikey</button>
 <label><input id="vertical-follow" type="checkbox"> Eğriyi dikey takip et</label>
 <button id="reset">Başa dön</button><span class="legend">Tekerlek: imleç çevresinde zaman yakınlaştır · Shift+tekerlek: dikey yakınlaştır · sürükle: kayıtta gezin</span>
-</div><canvas id="chart"></canvas><p class="note">Yatay çizgiler eşit aralıklı, ana nota frekanslarıdır. Çizgi kesintileri pYIN'in ses algılamadığı bölümleri gösterir.</p></section>
+</div><div class="chart-scroll"><canvas id="chart"></canvas><input id="vertical-scroll" type="range" aria-label="Dikey grafiği kaydır"><input id="time-scroll" type="range" aria-label="Kayıtta gezin"><span></span></div><p class="note">Yatay çubuk kayıtta gezinir; sağdaki çubuk dikey merkezi değiştirir. Çizgi kesintileri pYIN'in ses algılamadığı bölümleri gösterir.</p></section>
 </main><script>
 const frames={json.dumps(frames, ensure_ascii=False, separators=(',', ':'))};
 const notes={json.dumps(NATURAL_NOTES, ensure_ascii=False, separators=(',', ':'))};
-const media=document.getElementById('media'),canvas=document.getElementById('chart'),ctx=canvas.getContext('2d');
+const media=document.getElementById('media'),canvas=document.getElementById('chart'),ctx=canvas.getContext('2d'),timeScroll=document.getElementById('time-scroll'),verticalScroll=document.getElementById('vertical-scroll');
 const winInput=document.getElementById('window');let windowSeconds=12,viewStart=-6,drag=null,followPlayback=true;
 const verticalFollowInput=document.getElementById('vertical-follow');let verticalSpan=2400,verticalCenter=0,verticalReady=false;
 let duration=Math.max(...frames.map(p=>p.t),0); const left=110,right=20,marginTop=22,bottom=34;
@@ -116,12 +116,13 @@ function visibleValues(){{return frames.filter(p=>p.t>=viewStart&&p.t<=viewStart
 function middle(values){{if(!values.length)return 0;const ordered=[...values].sort((a,b)=>a-b),half=Math.floor(ordered.length/2);return ordered.length%2?ordered[half]:(ordered[half-1]+ordered[half])/2}}
 function followValues(){{const time=media.currentTime||0;return frames.filter(p=>Math.abs(p.t-time)<=.25).map(p=>cents(p.hz))}}
 function range(){{const values=visibleValues();if(!verticalReady){{verticalCenter=middle(values.length?values:frames.map(p=>cents(p.hz)));verticalReady=true}}const target=verticalFollowInput.checked?followValues():values;if(verticalFollowInput.checked&&target.length)verticalCenter+=((middle(target)-verticalCenter)*.14);return [verticalCenter-verticalSpan/2,verticalCenter+verticalSpan/2]}}
+function updateScrollbars(){{timeScroll.min=0;timeScroll.max=Math.max(1,Math.round(duration*1000));timeScroll.value=Math.round((media.currentTime||0)*1000);const values=frames.map(p=>cents(p.hz));if(!values.length)return;verticalScroll.min=Math.floor(Math.min(...values)-verticalSpan/2);verticalScroll.max=Math.ceil(Math.max(...values)+verticalSpan/2);verticalScroll.value=Math.round(verticalCenter)}}
 function draw(){{const w=canvas.clientWidth,h=canvas.clientHeight,cw=w-left-right,ch=h-marginTop-bottom,[lo,hi]=range();ctx.clearRect(0,0,w,h);const x=t=>left+(t-viewStart)/windowSeconds*cw,y=hz=>marginTop+(hi-cents(hz))/(hi-lo)*ch;
 ctx.fillStyle='#fff';ctx.fillRect(0,0,w,h);ctx.strokeStyle='#e2e6eb';ctx.lineWidth=1;
 for(const [name,hz] of notes){{const yy=y(hz);if(yy<marginTop-5||yy>h-bottom+5)continue;ctx.beginPath();ctx.moveTo(left,yy);ctx.lineTo(w-right,yy);ctx.stroke();ctx.fillStyle='#3d4854';ctx.textAlign='right';ctx.font='12px system-ui';ctx.fillText(`${{name}}  (${{hz.toFixed(2)}} Hz)`,left-9,yy+4)}}
 for(let t=Math.max(0,Math.ceil(viewStart));t<=Math.min(duration,viewStart+windowSeconds);t++){{const xx=x(t);ctx.strokeStyle='#edf0f3';ctx.beginPath();ctx.moveTo(xx,marginTop);ctx.lineTo(xx,h-bottom);ctx.stroke();ctx.fillStyle='#687482';ctx.textAlign='center';ctx.fillText(`${{t}} sn`,xx,h-12)}}
 ctx.save();ctx.beginPath();ctx.rect(left,marginTop,cw,ch);ctx.clip();ctx.strokeStyle='#111820';ctx.lineWidth=1.7;ctx.lineJoin='round';ctx.lineCap='round';ctx.beginPath();let previous=null;for(const p of frames){{if(p.t<viewStart-.05||p.t>viewStart+windowSeconds+.05)continue;const xx=x(p.t),yy=y(p.hz);if(!previous||p.t-previous.t>.030)ctx.moveTo(xx,yy);else ctx.lineTo(xx,yy);previous=p}}ctx.stroke();
-const current=media.currentTime||0;if(current>=viewStart&&current<=viewStart+windowSeconds){{const xx=x(current);ctx.strokeStyle='#7755b8';ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(xx,marginTop);ctx.lineTo(xx,h-bottom);ctx.stroke()}}ctx.restore();ctx.strokeStyle='#aeb8c3';ctx.strokeRect(left,marginTop,cw,ch)}}
+const current=media.currentTime||0;if(current>=viewStart&&current<=viewStart+windowSeconds){{const xx=x(current);ctx.strokeStyle='#7755b8';ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(xx,marginTop);ctx.lineTo(xx,h-bottom);ctx.stroke()}}ctx.restore();ctx.strokeStyle='#aeb8c3';ctx.strokeRect(left,marginTop,cw,ch);updateScrollbars()}}
 function clampStart(){{viewStart=Math.max(-windowSeconds/2,Math.min(viewStart,duration-windowSeconds/2))}}
 function centerOnPlayhead(){{viewStart=(media.currentTime||0)-windowSeconds/2;clampStart()}}
 function tick(){{if(followPlayback)centerOnPlayhead();draw();requestAnimationFrame(tick)}}
@@ -129,6 +130,7 @@ function setWindow(value){{windowSeconds=Math.max(2,Math.min(60,value));winInput
 function setVerticalSpan(value,anchor){{const previous=verticalSpan;verticalSpan=Math.max(200,Math.min(4800,value));if(anchor!==undefined){{const ratio=(verticalCenter+previous/2-anchor)/previous;verticalCenter=anchor+(ratio-.5)*verticalSpan}}draw()}}
 document.getElementById('minus').onclick=()=>setWindow(windowSeconds*1.35);document.getElementById('plus').onclick=()=>setWindow(windowSeconds/1.35);document.getElementById('reset').onclick=()=>{{media.currentTime=0;followPlayback=true;centerOnPlayhead();draw()}};winInput.onchange=()=>setWindow(Number(winInput.value));
 document.getElementById('vertical-out').onclick=()=>setVerticalSpan(verticalSpan*1.35);document.getElementById('vertical-in').onclick=()=>setVerticalSpan(verticalSpan/1.35);verticalFollowInput.onchange=()=>draw();
+timeScroll.addEventListener('input',()=>{{media.currentTime=Number(timeScroll.value)/1000;followPlayback=true;centerOnPlayhead();draw()}});verticalScroll.addEventListener('input',()=>{{verticalCenter=Number(verticalScroll.value);verticalReady=true;verticalFollowInput.checked=false;draw()}});
 canvas.addEventListener('wheel',e=>{{e.preventDefault();const rect=canvas.getBoundingClientRect();if(e.shiftKey){{const ratio=(e.clientY-rect.top-marginTop)/(rect.height-marginTop-bottom),[lo,hi]=range(),anchor=hi-ratio*(hi-lo);setVerticalSpan(verticalSpan*(e.deltaY>0?1.2:1/1.2),anchor);return}}setWindow(windowSeconds*(e.deltaY>0?1.2:1/1.2));followPlayback=true;}},{{passive:false}});
 canvas.addEventListener('pointerdown',e=>{{drag={{x:e.clientX,time:media.currentTime||0}};canvas.setPointerCapture(e.pointerId);followPlayback=true}});canvas.addEventListener('pointermove',e=>{{if(!drag)return;const change=(e.clientX-drag.x)/(canvas.clientWidth-left-right)*windowSeconds;media.currentTime=Math.max(0,Math.min(duration,drag.time-change));centerOnPlayhead();draw()}});canvas.addEventListener('pointerup',()=>drag=null);media.addEventListener('seeking',()=>{{followPlayback=true;centerOnPlayhead()}});media.addEventListener('loadedmetadata',()=>{{if(Number.isFinite(media.duration))duration=Math.max(duration,media.duration);centerOnPlayhead();draw()}});addEventListener('resize',resize);centerOnPlayhead();resize();requestAnimationFrame(tick);
 </script></html>""",
