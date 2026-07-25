@@ -21,7 +21,7 @@ NATURAL_NOTES = (
     ("Sol5", 783.99), ("La5", 880.00),
 )
 
-VIEWER_VERSION = "0.3.3-preview"
+VIEWER_VERSION = "0.3.4-preview"
 """Higher-resolution pYIN preview with conservative display cleanup."""
 
 MINIMUM_CONFIDENCE = 0.20
@@ -109,7 +109,7 @@ const notes={json.dumps(NATURAL_NOTES, ensure_ascii=False, separators=(',', ':')
 const media=document.getElementById('media'),canvas=document.getElementById('chart'),ctx=canvas.getContext('2d');
 const winInput=document.getElementById('window');let windowSeconds=12,viewStart=-6,drag=null,followPlayback=true;
 const verticalFollowInput=document.getElementById('vertical-follow');let verticalSpan=2400,verticalCenter=0,verticalReady=false;
-const duration=Math.max(...frames.map(p=>p.t),0); const left=110,right=20,marginTop=22,bottom=34;
+let duration=Math.max(...frames.map(p=>p.t),0); const left=110,right=20,marginTop=22,bottom=34;
 function cents(hz){{return 1200*Math.log2(hz/440)}}
 function resize(){{const dpr=devicePixelRatio||1,w=canvas.clientWidth,h=canvas.clientHeight;canvas.width=w*dpr;canvas.height=h*dpr;ctx.setTransform(dpr,0,0,dpr,0,0);draw()}}
 function visibleValues(){{return frames.filter(p=>p.t>=viewStart&&p.t<=viewStart+windowSeconds).map(p=>cents(p.hz))}}
@@ -130,7 +130,7 @@ function setVerticalSpan(value,anchor){{const previous=verticalSpan;verticalSpan
 document.getElementById('minus').onclick=()=>setWindow(windowSeconds*1.35);document.getElementById('plus').onclick=()=>setWindow(windowSeconds/1.35);document.getElementById('reset').onclick=()=>{{media.currentTime=0;followPlayback=true;centerOnPlayhead();draw()}};winInput.onchange=()=>setWindow(Number(winInput.value));
 document.getElementById('vertical-out').onclick=()=>setVerticalSpan(verticalSpan*1.35);document.getElementById('vertical-in').onclick=()=>setVerticalSpan(verticalSpan/1.35);verticalFollowInput.onchange=()=>draw();
 canvas.addEventListener('wheel',e=>{{e.preventDefault();const rect=canvas.getBoundingClientRect();if(e.shiftKey){{const ratio=(e.clientY-rect.top-marginTop)/(rect.height-marginTop-bottom),[lo,hi]=range(),anchor=hi-ratio*(hi-lo);setVerticalSpan(verticalSpan*(e.deltaY>0?1.2:1/1.2),anchor);return}}setWindow(windowSeconds*(e.deltaY>0?1.2:1/1.2));followPlayback=true;}},{{passive:false}});
-canvas.addEventListener('pointerdown',e=>{{drag={{x:e.clientX,time:media.currentTime||0}};canvas.setPointerCapture(e.pointerId);followPlayback=true}});canvas.addEventListener('pointermove',e=>{{if(!drag)return;const change=(e.clientX-drag.x)/(canvas.clientWidth-left-right)*windowSeconds;media.currentTime=Math.max(0,Math.min(duration,drag.time-change));centerOnPlayhead();draw()}});canvas.addEventListener('pointerup',()=>drag=null);media.addEventListener('seeking',()=>{{followPlayback=true;centerOnPlayhead()}});addEventListener('resize',resize);centerOnPlayhead();resize();requestAnimationFrame(tick);
+canvas.addEventListener('pointerdown',e=>{{drag={{x:e.clientX,time:media.currentTime||0}};canvas.setPointerCapture(e.pointerId);followPlayback=true}});canvas.addEventListener('pointermove',e=>{{if(!drag)return;const change=(e.clientX-drag.x)/(canvas.clientWidth-left-right)*windowSeconds;media.currentTime=Math.max(0,Math.min(duration,drag.time-change));centerOnPlayhead();draw()}});canvas.addEventListener('pointerup',()=>drag=null);media.addEventListener('seeking',()=>{{followPlayback=true;centerOnPlayhead()}});media.addEventListener('loadedmetadata',()=>{{if(Number.isFinite(media.duration))duration=Math.max(duration,media.duration);centerOnPlayhead();draw()}});addEventListener('resize',resize);centerOnPlayhead();resize();requestAnimationFrame(tick);
 </script></html>""",
         encoding="utf-8",
     )
