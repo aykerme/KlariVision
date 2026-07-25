@@ -18,6 +18,15 @@ katmanları bu temel görünümden ayrıdır.
 - **Ayrıntılı pYIN (Python)**: Librosa tabanlı deneysel yol. Daha maliyetli
   parametre araştırmaları için korunur.
 
+## Türk müziği perde referansı
+
+Türk Müziği eksenindeki perde adları, parantez içindeki Do–Re–Mi karşılıkları
+ve yatay frekans çizgileri doğrudan
+`data/reference/perde-esleme.xlsx` dosyasının **Perde Eşleme** sayfasından
+okunur. Pitch eğrisi gerçek sesi ölçtüğünden grafik, bu sayfadaki **Duyulan
+Hz** sütununu kullanır; **Sol klarnet yazılı Hz** değeri ileride yazılı nota
+görünümü için ayrıca saklanır.
+
 **Türk müziği icrasında perde hareketini ve süslemeleri görünür kılan analiz ve eğitim platformu.**
 
 KlariVision'ın ilk hedefi bir ses dosyasındaki baskın melodik çizgiyi çıkarıp zamanla birlikte göstermektir. Sonraki katmanlar bu çizgi üzerinden nota/perde eşleme, makam bağlamı ve süsleme analizi ekleyecektir.

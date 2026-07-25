@@ -1,6 +1,7 @@
 import json
 
 from klarivision.frequency_viewer import build_frequency_viewer, prepare_display_frames
+from test_pitch_reference import write_reference_workbook
 
 
 def test_frequency_viewer_uses_physical_hertz_grid(tmp_path) -> None:
@@ -12,12 +13,19 @@ def test_frequency_viewer_uses_physical_hertz_grid(tmp_path) -> None:
         encoding="utf-8",
     )
     output = tmp_path / "viewer.html"
+    reference_path = tmp_path / "perde-esleme.xlsx"
+    write_reference_workbook(reference_path)
 
-    build_frequency_viewer(pitch_json, "audio.wav", output)
+    build_frequency_viewer(
+        pitch_json,
+        "audio.wav",
+        output,
+        turkish_reference_path=reference_path,
+    )
 
     html = output.read_text(encoding="utf-8")
     assert "Duyulan frekans" in html
-    assert "KlariVision 0.3.12-preview" in html
+    assert "KlariVision 0.3.13-preview" in html
     assert '"minor"' in html
     assert "frekans ölçümü transpoze edilmez" in html
     assert "followPlayback" in html
@@ -43,10 +51,11 @@ def test_frequency_viewer_uses_physical_hertz_grid(tmp_path) -> None:
     assert 'id="tonic"' in html
     assert "function scaleNotes()" in html
     assert 'value="turkish"' in html
-    assert 'id="turkish-details"' in html
     assert "function turkishNotes()" in html
-    assert "220*Math.pow(2,koma/53)" in html
-    assert '"Yegâh","Re",true' in html
+    assert "turkishReferenceNotes" in html
+    assert '"name":"Yegâh"' in html
+    assert '"heard_hz":293.344891' in html
+    assert "Duyulan Hz" in html
     assert 'value="nihavent"' in html
     assert "function nihaventNotes()" in html
     assert "Rast (karar)" in html
@@ -56,8 +65,16 @@ def test_frequency_viewer_can_embed_video(tmp_path) -> None:
     pitch_json = tmp_path / "pitch.json"
     pitch_json.write_text(json.dumps({"frames": []}), encoding="utf-8")
     output = tmp_path / "viewer.html"
+    reference_path = tmp_path / "perde-esleme.xlsx"
+    write_reference_workbook(reference_path)
 
-    build_frequency_viewer(pitch_json, "audio.wav", output, video_relative_path="video.mp4")
+    build_frequency_viewer(
+        pitch_json,
+        "audio.wav",
+        output,
+        video_relative_path="video.mp4",
+        turkish_reference_path=reference_path,
+    )
 
     assert '<video id="media" controls src="video.mp4"></video>' in output.read_text(encoding="utf-8")
 
