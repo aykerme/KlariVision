@@ -17,7 +17,7 @@ def test_frequency_viewer_uses_physical_hertz_grid(tmp_path) -> None:
 
     html = output.read_text(encoding="utf-8")
     assert "Duyulan frekans" in html
-    assert "KlariVision 0.3.11-preview" in html
+    assert "KlariVision 0.3.12-preview" in html
     assert '"minor"' in html
     assert "frekans ölçümü transpoze edilmez" in html
     assert "followPlayback" in html
@@ -46,6 +46,7 @@ def test_frequency_viewer_uses_physical_hertz_grid(tmp_path) -> None:
     assert 'id="turkish-details"' in html
     assert "function turkishNotes()" in html
     assert "220*Math.pow(2,koma/53)" in html
+    assert '"Yegâh","Re",true' in html
     assert 'value="nihavent"' in html
     assert "function nihaventNotes()" in html
     assert "Rast (karar)" in html

@@ -34,37 +34,37 @@ SCALE_LABELS = {
 }
 
 # Arel-Ezgi-Uzdilek 53-koma reference octave used in the video the user supplied.
-# The reference is Neva (Re) = 220 Hz; frequency is 220 * 2 ** (koma / 53).
+# The reference is Yegâh (Re) = 220 Hz; frequency is 220 * 2 ** (koma / 53).
 # Names and comma positions follow the source's one-octave frequency table.
 TURKISH_53_COMMA_NOTES = (
-    (0, "Nevâ", "Re", True),
+    (0, "Yegâh", "Re", True),
     (4, "Nîm Hisar", "", False),
     (5, "Hisar", "", False),
     (8, "Dik Hisar", "", False),
-    (9, "Hüseynî", "Mi", True),
-    (13, "Acem", "Fa", True),
+    (9, "Hüseynî-Aşîran", "Mi", True),
+    (13, "Acem-Aşîran", "Fa", True),
     (14, "Dik Acem", "", False),
     (17, "Eviç", "Fa♯", False),
     (18, "Mahur", "", False),
     (21, "Dik Mahur", "", False),
-    (22, "Gerdâniye", "Sol", True),
+    (22, "Rast", "Sol", True),
     (26, "Nîm Şehnâz", "", False),
     (27, "Şehnâz", "", False),
     (30, "Dik Şehnâz", "", False),
-    (31, "Muhayyer", "La", True),
+    (31, "Dügâh", "La", True),
     (35, "Sünbüle", "", False),
     (36, "Dik Sünbüle", "", False),
     (39, "Tiz Segâh", "", False),
-    (40, "Tiz Bûselik", "Si", True),
-    (44, "Tiz Çârgâh", "Do", True),
+    (40, "Segâh", "Si", True),
+    (44, "Çârgâh", "Do", True),
     (45, "Tiz Dik Çârgâh", "", False),
     (48, "Tiz Nîm Hicaz", "", False),
     (49, "Tiz Hicaz", "", False),
     (52, "Tiz Dik Hicaz", "", False),
-    (53, "Tiz Nevâ", "Re", True),
+    (53, "Nevâ", "Re", True),
 )
 
-VIEWER_VERSION = "0.3.11-preview"
+VIEWER_VERSION = "0.3.12-preview"
 """Higher-resolution pYIN preview with conservative display cleanup."""
 
 MINIMUM_CONFIDENCE = 0.20
