@@ -12,16 +12,28 @@ from pathlib import Path
 from statistics import median
 
 
-NATURAL_NOTES = (
-    ("La2", 110.00), ("Si2", 123.47), ("Do3", 130.81), ("Re3", 146.83),
-    ("Mi3", 164.81), ("Fa3", 174.61), ("Sol3", 196.00), ("La3", 220.00),
-    ("Si3", 246.94), ("Do4", 261.63), ("Re4", 293.66), ("Mi4", 329.63),
-    ("Fa4", 349.23), ("Sol4", 392.00), ("La4", 440.00), ("Si4", 493.88),
-    ("Do5", 523.25), ("Re5", 587.33), ("Mi5", 659.25), ("Fa5", 698.46),
-    ("Sol5", 783.99), ("La5", 880.00),
-)
+SCALE_LABELS = {
+    "major": {
+        "0": ("Do", "Re", "Mi", "Fa", "Sol", "La", "Si"),
+        "2": ("Re", "Mi", "Fa♯", "Sol", "La", "Si", "Do♯"),
+        "4": ("Mi", "Fa♯", "Sol♯", "La", "Si", "Do♯", "Re♯"),
+        "5": ("Fa", "Sol", "La", "Si♭", "Do", "Re", "Mi"),
+        "7": ("Sol", "La", "Si", "Do", "Re", "Mi", "Fa♯"),
+        "9": ("La", "Si", "Do♯", "Re", "Mi", "Fa♯", "Sol♯"),
+        "11": ("Si", "Do♯", "Re♯", "Mi", "Fa♯", "Sol♯", "La♯"),
+    },
+    "minor": {
+        "0": ("Do", "Re", "Mi♭", "Fa", "Sol", "La♭", "Si♭"),
+        "2": ("Re", "Mi", "Fa", "Sol", "La", "Si♭", "Do"),
+        "4": ("Mi", "Fa♯", "Sol", "La", "Si", "Do", "Re"),
+        "5": ("Fa", "Sol", "La♭", "Si♭", "Do", "Re♭", "Mi♭"),
+        "7": ("Sol", "La", "Si♭", "Do", "Re", "Mi♭", "Fa"),
+        "9": ("La", "Si", "Do", "Re", "Mi", "Fa", "Sol"),
+        "11": ("Si", "Do♯", "Re", "Mi", "Fa♯", "Sol", "La"),
+    },
+}
 
-VIEWER_VERSION = "0.3.7-preview"
+VIEWER_VERSION = "0.3.8-preview"
 """Higher-resolution pYIN preview with conservative display cleanup."""
 
 MINIMUM_CONFIDENCE = 0.20
@@ -91,27 +103,31 @@ def build_frequency_viewer(
         f"""<!doctype html><html lang="tr"><meta charset="utf-8">
 <title>KlariVision {VIEWER_VERSION} — Duyulan frekans</title>
 <style>
-:root{{color-scheme:light}}*{{box-sizing:border-box}}body{{margin:0;background:#f5f6f8;color:#17212b;font:14px system-ui,-apple-system,sans-serif}}main{{max-width:1180px;margin:auto;padding:22px}}h1{{font-size:21px;margin:0 0 4px}}p{{margin:0 0 16px;color:#56616e}}.media{{position:sticky;top:0;background:#f5f6f8;padding:10px 0 14px;z-index:2}}video,audio{{display:block;max-width:100%;width:660px;max-height:330px}}.panel{{background:#fff;border:1px solid #dbe0e6;border-radius:12px;padding:14px}}.tools{{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:10px}}button{{border:1px solid #b9c3cf;background:#fff;border-radius:7px;padding:6px 10px;font:inherit;cursor:pointer}}button:hover{{background:#eef5fb}}button[aria-pressed="true"]{{background:#dceefe;border-color:#4785be;color:#173d62;box-shadow:inset 0 0 0 1px #8bb7de}}input{{width:100px}}.chart-scroll{{display:grid;grid-template-columns:minmax(0,1fr) 18px;grid-template-rows:580px 18px;gap:5px}}canvas{{display:block;width:100%;height:100%;border:1px solid #dbe0e6;border-radius:8px;touch-action:none}}#time-scroll{{grid-column:1;grid-row:2;width:100%;margin:0;accent-color:#7755b8}}#vertical-scroll{{grid-column:2;grid-row:1;width:18px;height:100%;margin:0;writing-mode:vertical-lr;direction:rtl;accent-color:#7755b8}}.note{{font-size:12px;color:#66717f}}.legend{{margin-left:auto;color:#56616e;font-size:12px}}@media(max-width:650px){{main{{padding:12px}}.chart-scroll{{grid-template-rows:470px 18px}}}}
+:root{{color-scheme:light}}*{{box-sizing:border-box}}body{{margin:0;background:#f5f6f8;color:#17212b;font:14px system-ui,-apple-system,sans-serif}}main{{max-width:1180px;margin:auto;padding:22px}}h1{{font-size:21px;margin:0 0 4px}}p{{margin:0 0 16px;color:#56616e}}.media{{position:sticky;top:0;background:#f5f6f8;padding:10px 0 14px;z-index:2}}video,audio{{display:block;max-width:100%;width:660px;max-height:330px}}.panel{{background:#fff;border:1px solid #dbe0e6;border-radius:12px;padding:14px}}.tools{{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:10px}}button{{border:1px solid #b9c3cf;background:#fff;border-radius:7px;padding:6px 10px;font:inherit;cursor:pointer}}button:hover{{background:#eef5fb}}button[aria-pressed="true"]{{background:#dceefe;border-color:#4785be;color:#173d62;box-shadow:inset 0 0 0 1px #8bb7de}}input{{width:100px}}select{{font:inherit;padding:5px 7px;border:1px solid #b9c3cf;border-radius:7px;background:#fff}}.chart-scroll{{display:grid;grid-template-columns:minmax(0,1fr) 18px;grid-template-rows:580px 18px;gap:5px}}canvas{{display:block;width:100%;height:100%;border:1px solid #dbe0e6;border-radius:8px;touch-action:none}}#time-scroll{{grid-column:1;grid-row:2;width:100%;margin:0;accent-color:#7755b8}}#vertical-scroll{{grid-column:2;grid-row:1;width:18px;height:100%;margin:0;writing-mode:vertical-lr;direction:rtl;accent-color:#7755b8}}.note{{font-size:12px;color:#66717f}}.legend{{margin-left:auto;color:#56616e;font-size:12px}}@media(max-width:650px){{main{{padding:12px}}.chart-scroll{{grid-template-rows:470px 18px}}}}
 </style><main>
 <h1>KlariVision {VIEWER_VERSION} · Pitch konturu</h1>
-<p>Bu ekran yalnızca pYIN'in ölçtüğü fiziksel frekansı (Hz) gösterir. Düşük güvenli ve tek-karelik hatalı adaylar gösterilmez; makam, karar, Sol klarnet yazılı notası ve süsleme katmanları kapalıdır.</p>
+<p>Pitch eğrisi pYIN'in ölçtüğü fiziksel frekanstır (Hz). Sol eksen, seçilen majör/minör gam ve karar sesine göre yalnızca görsel bir başvurudur; frekans ölçümü transpoze edilmez.</p>
 <div class="media">{media}</div>
 <section class="panel"><div class="tools">
 <button id="minus">− Zaman</button><button id="plus">+ Zaman</button>
 <label>Görünür süre <input id="window" type="number" min="2" max="60" step="1" value="12"> sn</label>
 <button id="vertical-out">− Dikey</button><button id="vertical-in">+ Dikey</button>
 <label><input id="vertical-follow" type="checkbox"> Eğriyi dikey takip et</label>
+<label>Gam <select id="scale-mode"><option value="major">Majör</option><option value="minor">Minör</option></select></label>
+<label>Karar <select id="tonic"><option value="0">Do</option><option value="2">Re</option><option value="4">Mi</option><option value="5">Fa</option><option value="7">Sol</option><option value="9">La</option><option value="11">Si</option></select></label>
 <button id="set-a">A: 0.00 sn</button><button id="set-b">B: Son</button><button id="loop" aria-pressed="false">Loop</button><button id="reset">Başa dön</button><span class="legend">Tekerlek: imleç çevresinde zaman yakınlaştır · Shift+tekerlek: dikey yakınlaştır · sürükle: kayıtta gezin</span>
 </div><div class="chart-scroll"><canvas id="chart"></canvas><input id="vertical-scroll" type="range" aria-label="Dikey grafiği kaydır"><input id="time-scroll" type="range" aria-label="Kayıtta gezin"><span></span></div><p class="note">Yatay çubuk kayıtta gezinir; sağdaki çubuk dikey merkezi değiştirir. Çizgi kesintileri pYIN'in ses algılamadığı bölümleri gösterir.</p></section>
 </main><script>
 const frames={json.dumps(frames, ensure_ascii=False, separators=(',', ':'))};
-const notes={json.dumps(NATURAL_NOTES, ensure_ascii=False, separators=(',', ':'))};
+const scaleLabels={json.dumps(SCALE_LABELS, ensure_ascii=False, separators=(',', ':'))};
 const media=document.getElementById('media'),canvas=document.getElementById('chart'),ctx=canvas.getContext('2d'),timeScroll=document.getElementById('time-scroll'),verticalScroll=document.getElementById('vertical-scroll');
 const setAButton=document.getElementById('set-a'),setBButton=document.getElementById('set-b'),loopButton=document.getElementById('loop');
+const scaleMode=document.getElementById('scale-mode'),tonicInput=document.getElementById('tonic');
 const winInput=document.getElementById('window');let windowSeconds=12,viewStart=-6,drag=null,followPlayback=true;
 const verticalFollowInput=document.getElementById('vertical-follow');let verticalSpan=2400,verticalCenter=0,verticalReady=false;
 let duration=Math.max(...frames.map(p=>p.t),0),loopA=0,loopB=duration,loopEnabled=false,loopBManual=false; const left=110,right=20,marginTop=22,bottom=34;
 function cents(hz){{return 1200*Math.log2(hz/440)}}
+function scaleNotes(){{const tonic=Number(tonicInput.value),intervals=scaleMode.value==='major'?[0,2,4,5,7,9,11]:[0,2,3,5,7,8,10],names=scaleLabels[scaleMode.value][String(tonic)],namesByPitchClass=new Map(intervals.map((interval,index)=>[(tonic+interval)%12,names[index]])),result=[];for(let midi=24;midi<=108;midi++){{const name=namesByPitchClass.get(midi%12);if(!name)continue;const octave=Math.floor(midi/12)-1,hz=440*Math.pow(2,(midi-69)/12);result.push([`${{name}}${{octave}}`,hz])}}return result}}
 function formatTime(time){{return `${{time.toFixed(2)}} sn`}}
 function updateLoopButtons(){{setAButton.textContent=`A: ${{formatTime(loopA)}}`;setBButton.textContent=`B: ${{loopBManual?formatTime(loopB):'Son'}}`;loopButton.setAttribute('aria-pressed',String(loopEnabled));}}
 function resize(){{const dpr=devicePixelRatio||1,w=canvas.clientWidth,h=canvas.clientHeight;canvas.width=w*dpr;canvas.height=h*dpr;ctx.setTransform(dpr,0,0,dpr,0,0);draw()}}
@@ -122,7 +138,7 @@ function range(){{const values=visibleValues();if(!verticalReady){{verticalCente
 function updateScrollbars(){{timeScroll.min=0;timeScroll.max=Math.max(1,Math.round(duration*1000));timeScroll.value=Math.round((media.currentTime||0)*1000);const values=frames.map(p=>cents(p.hz));if(!values.length)return;verticalScroll.min=Math.floor(Math.min(...values)-verticalSpan/2);verticalScroll.max=Math.ceil(Math.max(...values)+verticalSpan/2);verticalScroll.value=Math.round(verticalCenter)}}
 function draw(){{const w=canvas.clientWidth,h=canvas.clientHeight,cw=w-left-right,ch=h-marginTop-bottom,[lo,hi]=range();ctx.clearRect(0,0,w,h);const x=t=>left+(t-viewStart)/windowSeconds*cw,y=hz=>marginTop+(hi-cents(hz))/(hi-lo)*ch;
 ctx.fillStyle='#fff';ctx.fillRect(0,0,w,h);ctx.strokeStyle='#e2e6eb';ctx.lineWidth=1;
-for(const [name,hz] of notes){{const yy=y(hz);if(yy<marginTop-5||yy>h-bottom+5)continue;ctx.beginPath();ctx.moveTo(left,yy);ctx.lineTo(w-right,yy);ctx.stroke();ctx.fillStyle='#3d4854';ctx.textAlign='right';ctx.font='12px system-ui';ctx.fillText(`${{name}}  (${{hz.toFixed(2)}} Hz)`,left-9,yy+4)}}
+for(const [name,hz] of scaleNotes()){{const yy=y(hz);if(yy<marginTop-5||yy>h-bottom+5)continue;ctx.beginPath();ctx.moveTo(left,yy);ctx.lineTo(w-right,yy);ctx.stroke();ctx.fillStyle='#3d4854';ctx.textAlign='right';ctx.font='12px system-ui';ctx.fillText(`${{name}}  (${{hz.toFixed(2)}} Hz)`,left-9,yy+4)}}
 for(let t=Math.max(0,Math.ceil(viewStart));t<=Math.min(duration,viewStart+windowSeconds);t++){{const xx=x(t);ctx.strokeStyle='#edf0f3';ctx.beginPath();ctx.moveTo(xx,marginTop);ctx.lineTo(xx,h-bottom);ctx.stroke();ctx.fillStyle='#687482';ctx.textAlign='center';ctx.fillText(`${{t}} sn`,xx,h-12)}}
 if(loopEnabled){{const start=Math.max(left,x(loopA)),end=Math.min(w-right,x(loopB));if(end>start){{ctx.fillStyle='rgba(112,181,235,.20)';ctx.fillRect(start,marginTop,end-start,ch)}}}}
 ctx.save();ctx.beginPath();ctx.rect(left,marginTop,cw,ch);ctx.clip();ctx.strokeStyle='#111820';ctx.lineWidth=1.7;ctx.lineJoin='round';ctx.lineCap='round';ctx.beginPath();let previous=null;for(const p of frames){{if(p.t<viewStart-.05||p.t>viewStart+windowSeconds+.05)continue;const xx=x(p.t),yy=y(p.hz);if(!previous||p.t-previous.t>.030)ctx.moveTo(xx,yy);else ctx.lineTo(xx,yy);previous=p}}ctx.stroke();
@@ -134,6 +150,7 @@ function setWindow(value){{windowSeconds=Math.max(2,Math.min(60,value));winInput
 function setVerticalSpan(value,anchor){{const previous=verticalSpan;verticalSpan=Math.max(200,Math.min(4800,value));if(anchor!==undefined){{const ratio=(verticalCenter+previous/2-anchor)/previous;verticalCenter=anchor+(ratio-.5)*verticalSpan}}draw()}}
 document.getElementById('minus').onclick=()=>setWindow(windowSeconds*1.35);document.getElementById('plus').onclick=()=>setWindow(windowSeconds/1.35);document.getElementById('reset').onclick=()=>{{media.currentTime=0;followPlayback=true;centerOnPlayhead();draw()}};winInput.onchange=()=>setWindow(Number(winInput.value));
 document.getElementById('vertical-out').onclick=()=>setVerticalSpan(verticalSpan*1.35);document.getElementById('vertical-in').onclick=()=>setVerticalSpan(verticalSpan/1.35);verticalFollowInput.onchange=()=>draw();
+scaleMode.onchange=()=>draw();tonicInput.onchange=()=>draw();
 setAButton.onclick=()=>{{loopA=Math.min(media.currentTime||0,loopB);updateLoopButtons();draw()}};setBButton.onclick=()=>{{loopB=Math.max(media.currentTime||0,loopA);loopBManual=true;updateLoopButtons();draw()}};loopButton.onclick=()=>{{loopEnabled=!loopEnabled;if(loopEnabled){{if(loopB-loopA<.02){{loopA=0;loopB=duration;loopBManual=false}}media.currentTime=loopA;media.play()}}else if(media.currentTime<duration)media.play();updateLoopButtons();draw()}};
 timeScroll.addEventListener('input',()=>{{media.currentTime=Number(timeScroll.value)/1000;followPlayback=true;centerOnPlayhead();draw()}});verticalScroll.addEventListener('input',()=>{{verticalCenter=Number(verticalScroll.value);verticalReady=true;verticalFollowInput.checked=false;draw()}});
 canvas.addEventListener('wheel',e=>{{e.preventDefault();const rect=canvas.getBoundingClientRect();if(e.shiftKey){{const ratio=(e.clientY-rect.top-marginTop)/(rect.height-marginTop-bottom),[lo,hi]=range(),anchor=hi-ratio*(hi-lo);setVerticalSpan(verticalSpan*(e.deltaY>0?1.2:1/1.2),anchor);return}}setWindow(windowSeconds*(e.deltaY>0?1.2:1/1.2));followPlayback=true;}},{{passive:false}});
