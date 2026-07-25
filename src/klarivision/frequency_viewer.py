@@ -37,34 +37,34 @@ SCALE_LABELS = {
 # The reference is Neva (Re) = 220 Hz; frequency is 220 * 2 ** (koma / 53).
 # Names and comma positions follow the source's one-octave frequency table.
 TURKISH_53_COMMA_NOTES = (
-    (0, "Nevâ", "Re"),
-    (4, "Nîm Hisar", ""),
-    (5, "Hisar", ""),
-    (8, "Dik Hisar", ""),
-    (9, "Hüseynî", "Mi"),
-    (13, "Acem", "Fa"),
-    (14, "Dik Acem", ""),
-    (17, "Eviç", "Fa♯"),
-    (18, "Mahur", ""),
-    (21, "Dik Mahur", ""),
-    (22, "Gerdâniye", "Sol"),
-    (26, "Nîm Şehnâz", ""),
-    (27, "Şehnâz", ""),
-    (30, "Dik Şehnâz", ""),
-    (31, "Muhayyer", "La"),
-    (35, "Sünbüle", ""),
-    (36, "Dik Sünbüle", ""),
-    (39, "Tiz Segâh", ""),
-    (40, "Tiz Bûselik", "Si"),
-    (44, "Tiz Çârgâh", "Do"),
-    (45, "Tiz Dik Çârgâh", ""),
-    (48, "Tiz Nîm Hicaz", ""),
-    (49, "Tiz Hicaz", ""),
-    (52, "Tiz Dik Hicaz", ""),
-    (53, "Tiz Nevâ", "Re"),
+    (0, "Nevâ", "Re", True),
+    (4, "Nîm Hisar", "", False),
+    (5, "Hisar", "", False),
+    (8, "Dik Hisar", "", False),
+    (9, "Hüseynî", "Mi", True),
+    (13, "Acem", "Fa", True),
+    (14, "Dik Acem", "", False),
+    (17, "Eviç", "Fa♯", False),
+    (18, "Mahur", "", False),
+    (21, "Dik Mahur", "", False),
+    (22, "Gerdâniye", "Sol", True),
+    (26, "Nîm Şehnâz", "", False),
+    (27, "Şehnâz", "", False),
+    (30, "Dik Şehnâz", "", False),
+    (31, "Muhayyer", "La", True),
+    (35, "Sünbüle", "", False),
+    (36, "Dik Sünbüle", "", False),
+    (39, "Tiz Segâh", "", False),
+    (40, "Tiz Bûselik", "Si", True),
+    (44, "Tiz Çârgâh", "Do", True),
+    (45, "Tiz Dik Çârgâh", "", False),
+    (48, "Tiz Nîm Hicaz", "", False),
+    (49, "Tiz Hicaz", "", False),
+    (52, "Tiz Dik Hicaz", "", False),
+    (53, "Tiz Nevâ", "Re", True),
 )
 
-VIEWER_VERSION = "0.3.9-preview"
+VIEWER_VERSION = "0.3.10-preview"
 """Higher-resolution pYIN preview with conservative display cleanup."""
 
 MINIMUM_CONFIDENCE = 0.20
@@ -144,8 +144,9 @@ def build_frequency_viewer(
 <label>Görünür süre <input id="window" type="number" min="2" max="60" step="1" value="12"> sn</label>
 <button id="vertical-out">− Dikey</button><button id="vertical-in">+ Dikey</button>
 <label><input id="vertical-follow" type="checkbox"> Eğriyi dikey takip et</label>
-<label>Eksen <select id="scale-mode"><option value="major">Majör</option><option value="minor">Minör</option><option value="turkish">Türk Müziği · 53 koma</option></select></label>
+<label>Eksen <select id="scale-mode"><option value="major">Majör</option><option value="minor">Minör</option><option value="turkish">Türk Müziği</option></select></label>
 <label>Karar <select id="tonic"><option value="0">Do</option><option value="2">Re</option><option value="4">Mi</option><option value="5">Fa</option><option value="7">Sol</option><option value="9">La</option><option value="11">Si</option></select></label>
+<label><input id="turkish-details" type="checkbox" disabled> Ara koma perdeleri</label>
 <button id="set-a">A: 0.00 sn</button><button id="set-b">B: Son</button><button id="loop" aria-pressed="false">Loop</button><button id="reset">Başa dön</button><span class="legend">Tekerlek: imleç çevresinde zaman yakınlaştır · Shift+tekerlek: dikey yakınlaştır · sürükle: kayıtta gezin</span>
 </div><div class="chart-scroll"><canvas id="chart"></canvas><input id="vertical-scroll" type="range" aria-label="Dikey grafiği kaydır"><input id="time-scroll" type="range" aria-label="Kayıtta gezin"><span></span></div><p class="note">Yatay çubuk kayıtta gezinir; sağdaki çubuk dikey merkezi değiştirir. Çizgi kesintileri pYIN'in ses algılamadığı bölümleri gösterir.</p></section>
 </main><script>
@@ -154,12 +155,12 @@ const scaleLabels={json.dumps(SCALE_LABELS, ensure_ascii=False, separators=(',',
 const turkishCommaNotes={json.dumps(TURKISH_53_COMMA_NOTES, ensure_ascii=False, separators=(',', ':'))};
 const media=document.getElementById('media'),canvas=document.getElementById('chart'),ctx=canvas.getContext('2d'),timeScroll=document.getElementById('time-scroll'),verticalScroll=document.getElementById('vertical-scroll');
 const setAButton=document.getElementById('set-a'),setBButton=document.getElementById('set-b'),loopButton=document.getElementById('loop');
-const scaleMode=document.getElementById('scale-mode'),tonicInput=document.getElementById('tonic');
+const scaleMode=document.getElementById('scale-mode'),tonicInput=document.getElementById('tonic'),turkishDetailsInput=document.getElementById('turkish-details');
 const winInput=document.getElementById('window');let windowSeconds=12,viewStart=-6,drag=null,followPlayback=true;
 const verticalFollowInput=document.getElementById('vertical-follow');let verticalSpan=2400,verticalCenter=0,verticalReady=false;
 let duration=Math.max(...frames.map(p=>p.t),0),loopA=0,loopB=duration,loopEnabled=false,loopBManual=false; const left=110,right=20,marginTop=22,bottom=34;
 function cents(hz){{return 1200*Math.log2(hz/440)}}
-function turkishNotes(){{return turkishCommaNotes.map(([koma,name,solfege])=>{{const label=solfege?`${{name}} (${{solfege}}) · ${{koma}} koma`:`${{name}} · ${{koma}} koma`;return [label,220*Math.pow(2,koma/53)]}})}}
+function turkishNotes(){{const showDetails=turkishDetailsInput.checked;return turkishCommaNotes.filter(([, , ,primary])=>showDetails||primary).map(([koma,name,solfege])=>{{const label=showDetails?`${{name}}${{solfege?` (${{solfege}})`:''}} · ${{koma}} koma`:`${{name}}${{solfege?` (${{solfege}})`:''}}`;return [label,220*Math.pow(2,koma/53)]}})}}
 function scaleNotes(){{if(scaleMode.value==='turkish')return turkishNotes();const tonic=Number(tonicInput.value),intervals=scaleMode.value==='major'?[0,2,4,5,7,9,11]:[0,2,3,5,7,8,10],names=scaleLabels[scaleMode.value][String(tonic)],namesByPitchClass=new Map(intervals.map((interval,index)=>[(tonic+interval)%12,names[index]])),result=[];for(let midi=24;midi<=108;midi++){{const name=namesByPitchClass.get(midi%12);if(!name)continue;const octave=Math.floor(midi/12)-1,hz=440*Math.pow(2,(midi-69)/12);result.push([`${{name}}${{octave}}`,hz])}}return result}}
 function formatTime(time){{return `${{time.toFixed(2)}} sn`}}
 function updateLoopButtons(){{setAButton.textContent=`A: ${{formatTime(loopA)}}`;setBButton.textContent=`B: ${{loopBManual?formatTime(loopB):'Son'}}`;loopButton.setAttribute('aria-pressed',String(loopEnabled));}}
@@ -183,7 +184,7 @@ function setWindow(value){{windowSeconds=Math.max(2,Math.min(60,value));winInput
 function setVerticalSpan(value,anchor){{const previous=verticalSpan;verticalSpan=Math.max(200,Math.min(4800,value));if(anchor!==undefined){{const ratio=(verticalCenter+previous/2-anchor)/previous;verticalCenter=anchor+(ratio-.5)*verticalSpan}}draw()}}
 document.getElementById('minus').onclick=()=>setWindow(windowSeconds*1.35);document.getElementById('plus').onclick=()=>setWindow(windowSeconds/1.35);document.getElementById('reset').onclick=()=>{{media.currentTime=0;followPlayback=true;centerOnPlayhead();draw()}};winInput.onchange=()=>setWindow(Number(winInput.value));
 document.getElementById('vertical-out').onclick=()=>setVerticalSpan(verticalSpan*1.35);document.getElementById('vertical-in').onclick=()=>setVerticalSpan(verticalSpan/1.35);verticalFollowInput.onchange=()=>draw();
-scaleMode.onchange=()=>{{const isTurkish=scaleMode.value==='turkish';tonicInput.disabled=isTurkish;draw()}};tonicInput.onchange=()=>draw();
+scaleMode.onchange=()=>{{const isTurkish=scaleMode.value==='turkish';tonicInput.disabled=isTurkish;turkishDetailsInput.disabled=!isTurkish;if(!isTurkish)turkishDetailsInput.checked=false;draw()}};tonicInput.onchange=()=>draw();turkishDetailsInput.onchange=()=>draw();
 setAButton.onclick=()=>{{loopA=Math.min(media.currentTime||0,loopB);updateLoopButtons();draw()}};setBButton.onclick=()=>{{loopB=Math.max(media.currentTime||0,loopA);loopBManual=true;updateLoopButtons();draw()}};loopButton.onclick=()=>{{loopEnabled=!loopEnabled;if(loopEnabled){{if(loopB-loopA<.02){{loopA=0;loopB=duration;loopBManual=false}}media.currentTime=loopA;media.play()}}else if(media.currentTime<duration)media.play();updateLoopButtons();draw()}};
 timeScroll.addEventListener('input',()=>{{media.currentTime=Number(timeScroll.value)/1000;followPlayback=true;centerOnPlayhead();draw()}});verticalScroll.addEventListener('input',()=>{{verticalCenter=Number(verticalScroll.value);verticalReady=true;verticalFollowInput.checked=false;draw()}});
 canvas.addEventListener('wheel',e=>{{e.preventDefault();const rect=canvas.getBoundingClientRect();if(e.shiftKey){{const ratio=(e.clientY-rect.top-marginTop)/(rect.height-marginTop-bottom),[lo,hi]=range(),anchor=hi-ratio*(hi-lo);setVerticalSpan(verticalSpan*(e.deltaY>0?1.2:1/1.2),anchor);return}}setWindow(windowSeconds*(e.deltaY>0?1.2:1/1.2));followPlayback=true;}},{{passive:false}});
