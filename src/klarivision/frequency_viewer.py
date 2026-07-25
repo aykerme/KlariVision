@@ -64,7 +64,7 @@ TURKISH_53_COMMA_NOTES = (
     (53, "Tiz Nevâ", "Re", True),
 )
 
-VIEWER_VERSION = "0.3.10-preview"
+VIEWER_VERSION = "0.3.11-preview"
 """Higher-resolution pYIN preview with conservative display cleanup."""
 
 MINIMUM_CONFIDENCE = 0.20
@@ -144,7 +144,7 @@ def build_frequency_viewer(
 <label>Görünür süre <input id="window" type="number" min="2" max="60" step="1" value="12"> sn</label>
 <button id="vertical-out">− Dikey</button><button id="vertical-in">+ Dikey</button>
 <label><input id="vertical-follow" type="checkbox"> Eğriyi dikey takip et</label>
-<label>Eksen <select id="scale-mode"><option value="major">Majör</option><option value="minor">Minör</option><option value="turkish">Türk Müziği</option></select></label>
+<label>Eksen <select id="scale-mode"><option value="major">Majör</option><option value="minor">Minör</option><option value="nihavent">Nihavent · 1. dizi</option><option value="turkish">Türk Müziği</option></select></label>
 <label>Karar <select id="tonic"><option value="0">Do</option><option value="2">Re</option><option value="4">Mi</option><option value="5">Fa</option><option value="7">Sol</option><option value="9">La</option><option value="11">Si</option></select></label>
 <label><input id="turkish-details" type="checkbox" disabled> Ara koma perdeleri</label>
 <button id="set-a">A: 0.00 sn</button><button id="set-b">B: Son</button><button id="loop" aria-pressed="false">Loop</button><button id="reset">Başa dön</button><span class="legend">Tekerlek: imleç çevresinde zaman yakınlaştır · Shift+tekerlek: dikey yakınlaştır · sürükle: kayıtta gezin</span>
@@ -158,10 +158,11 @@ const setAButton=document.getElementById('set-a'),setBButton=document.getElement
 const scaleMode=document.getElementById('scale-mode'),tonicInput=document.getElementById('tonic'),turkishDetailsInput=document.getElementById('turkish-details');
 const winInput=document.getElementById('window');let windowSeconds=12,viewStart=-6,drag=null,followPlayback=true;
 const verticalFollowInput=document.getElementById('vertical-follow');let verticalSpan=2400,verticalCenter=0,verticalReady=false;
-let duration=Math.max(...frames.map(p=>p.t),0),loopA=0,loopB=duration,loopEnabled=false,loopBManual=false; const left=110,right=20,marginTop=22,bottom=34;
+let duration=Math.max(...frames.map(p=>p.t),0),loopA=0,loopB=duration,loopEnabled=false,loopBManual=false; const left=220,right=20,marginTop=22,bottom=34;
 function cents(hz){{return 1200*Math.log2(hz/440)}}
 function turkishNotes(){{const showDetails=turkishDetailsInput.checked;return turkishCommaNotes.filter(([, , ,primary])=>showDetails||primary).map(([koma,name,solfege])=>{{const label=showDetails?`${{name}}${{solfege?` (${{solfege}})`:''}} · ${{koma}} koma`:`${{name}}${{solfege?` (${{solfege}})`:''}}`;return [label,220*Math.pow(2,koma/53)]}})}}
-function scaleNotes(){{if(scaleMode.value==='turkish')return turkishNotes();const tonic=Number(tonicInput.value),intervals=scaleMode.value==='major'?[0,2,4,5,7,9,11]:[0,2,3,5,7,8,10],names=scaleLabels[scaleMode.value][String(tonic)],namesByPitchClass=new Map(intervals.map((interval,index)=>[(tonic+interval)%12,names[index]])),result=[];for(let midi=24;midi<=108;midi++){{const name=namesByPitchClass.get(midi%12);if(!name)continue;const octave=Math.floor(midi/12)-1,hz=440*Math.pow(2,(midi-69)/12);result.push([`${{name}}${{octave}}`,hz])}}return result}}
+function nihaventNotes(){{const tonic=Number(tonicInput.value),intervals=[0,2,3,5,7,8,10],westernNames=scaleLabels.minor[String(tonic)],perdeNames=['Rast (karar)','Dügâh','Kürdî','Çârgâh','Nevâ (güçlü)','Nîm Hisar','Acem'],namesByPitchClass=new Map(intervals.map((interval,index)=>[(tonic+interval)%12,[perdeNames[index],westernNames[index]]])),result=[];for(let midi=24;midi<=108;midi++){{const entry=namesByPitchClass.get(midi%12);if(!entry)continue;const octave=Math.floor(midi/12)-1,hz=440*Math.pow(2,(midi-69)/12);result.push([`${{entry[0]}} · ${{entry[1]}}${{octave}}`,hz])}}return result}}
+function scaleNotes(){{if(scaleMode.value==='turkish')return turkishNotes();if(scaleMode.value==='nihavent')return nihaventNotes();const tonic=Number(tonicInput.value),intervals=scaleMode.value==='major'?[0,2,4,5,7,9,11]:[0,2,3,5,7,8,10],names=scaleLabels[scaleMode.value][String(tonic)],namesByPitchClass=new Map(intervals.map((interval,index)=>[(tonic+interval)%12,names[index]])),result=[];for(let midi=24;midi<=108;midi++){{const name=namesByPitchClass.get(midi%12);if(!name)continue;const octave=Math.floor(midi/12)-1,hz=440*Math.pow(2,(midi-69)/12);result.push([`${{name}}${{octave}}`,hz])}}return result}}
 function formatTime(time){{return `${{time.toFixed(2)}} sn`}}
 function updateLoopButtons(){{setAButton.textContent=`A: ${{formatTime(loopA)}}`;setBButton.textContent=`B: ${{loopBManual?formatTime(loopB):'Son'}}`;loopButton.setAttribute('aria-pressed',String(loopEnabled));}}
 function resize(){{const dpr=devicePixelRatio||1,w=canvas.clientWidth,h=canvas.clientHeight;canvas.width=w*dpr;canvas.height=h*dpr;ctx.setTransform(dpr,0,0,dpr,0,0);draw()}}
@@ -172,7 +173,7 @@ function range(){{const values=visibleValues();if(!verticalReady){{verticalCente
 function updateScrollbars(){{timeScroll.min=0;timeScroll.max=Math.max(1,Math.round(duration*1000));timeScroll.value=Math.round((media.currentTime||0)*1000);const values=frames.map(p=>cents(p.hz));if(!values.length)return;verticalScroll.min=Math.floor(Math.min(...values)-verticalSpan/2);verticalScroll.max=Math.ceil(Math.max(...values)+verticalSpan/2);verticalScroll.value=Math.round(verticalCenter)}}
 function draw(){{const w=canvas.clientWidth,h=canvas.clientHeight,cw=w-left-right,ch=h-marginTop-bottom,[lo,hi]=range();ctx.clearRect(0,0,w,h);const x=t=>left+(t-viewStart)/windowSeconds*cw,y=hz=>marginTop+(hi-cents(hz))/(hi-lo)*ch;
 ctx.fillStyle='#fff';ctx.fillRect(0,0,w,h);ctx.strokeStyle='#e2e6eb';ctx.lineWidth=1;
-for(const [name,hz] of scaleNotes()){{const yy=y(hz);if(yy<marginTop-5||yy>h-bottom+5)continue;ctx.beginPath();ctx.moveTo(left,yy);ctx.lineTo(w-right,yy);ctx.stroke();ctx.fillStyle='#3d4854';ctx.textAlign='right';ctx.font='12px system-ui';ctx.fillText(`${{name}}  (${{hz.toFixed(2)}} Hz)`,left-9,yy+4)}}
+for(const [name,hz] of scaleNotes()){{const yy=y(hz);if(yy<marginTop-5||yy>h-bottom+5)continue;ctx.beginPath();ctx.moveTo(left,yy);ctx.lineTo(w-right,yy);ctx.stroke();ctx.fillStyle='#3d4854';ctx.textAlign='right';ctx.font='11px system-ui';ctx.fillText(`${{name}}  (${{hz.toFixed(2)}} Hz)`,left-9,yy+4)}}
 for(let t=Math.max(0,Math.ceil(viewStart));t<=Math.min(duration,viewStart+windowSeconds);t++){{const xx=x(t);ctx.strokeStyle='#edf0f3';ctx.beginPath();ctx.moveTo(xx,marginTop);ctx.lineTo(xx,h-bottom);ctx.stroke();ctx.fillStyle='#687482';ctx.textAlign='center';ctx.fillText(`${{t}} sn`,xx,h-12)}}
 if(loopEnabled){{const start=Math.max(left,x(loopA)),end=Math.min(w-right,x(loopB));if(end>start){{ctx.fillStyle='rgba(112,181,235,.20)';ctx.fillRect(start,marginTop,end-start,ch)}}}}
 ctx.save();ctx.beginPath();ctx.rect(left,marginTop,cw,ch);ctx.clip();ctx.strokeStyle='#111820';ctx.lineWidth=1.7;ctx.lineJoin='round';ctx.lineCap='round';ctx.beginPath();let previous=null;for(const p of frames){{if(p.t<viewStart-.05||p.t>viewStart+windowSeconds+.05)continue;const xx=x(p.t),yy=y(p.hz);if(!previous||p.t-previous.t>.030)ctx.moveTo(xx,yy);else ctx.lineTo(xx,yy);previous=p}}ctx.stroke();
