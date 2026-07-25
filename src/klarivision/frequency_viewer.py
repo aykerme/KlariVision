@@ -49,7 +49,7 @@ SCALE_LABELS = {
     },
 }
 
-VIEWER_VERSION = "0.3.19-preview"
+VIEWER_VERSION = "0.3.20-preview"
 """Higher-resolution pYIN preview with conservative display cleanup."""
 
 MINIMUM_CONFIDENCE = 0.20
@@ -144,7 +144,7 @@ const verticalFollowInput=document.getElementById('vertical-follow');let vertica
 let duration=Math.max(...frames.map(p=>p.t),0),loopA=0,loopB=duration,loopEnabled=false,loopBManual=false; const left=220,right=20,marginTop=22,bottom=34;
 function cents(hz){{return 1200*Math.log2(hz/440)}}
 function notesForMode(mode,intervals){{const tonic=Number(tonicInput.value),names=scaleLabels[mode][String(tonic)],namesByPitchClass=new Map(intervals.map((interval,index)=>[(tonic+interval)%12,names[index]])),result=[];for(let midi=24;midi<=108;midi++){{const name=namesByPitchClass.get(midi%12);if(!name)continue;const octave=Math.floor(midi/12)-1,hz=440*Math.pow(2,(midi-69)/12);result.push([`${{name}}${{octave}}`,hz])}}return result}}
-function nihaventNotes(){{return notesForMode('nihavent',[0,2,3,5,7,8,11])}}
+function nihaventNotes(){{return notesForMode('minor',[0,2,3,5,7,8,10])}}
 function scaleNotes(){{if(scaleMode.value==='nihavent')return nihaventNotes();return notesForMode(scaleMode.value,scaleMode.value==='major'?[0,2,4,5,7,9,11]:[0,2,3,5,7,8,10])}}
 function formatTime(time){{return `${{time.toFixed(2)}} sn`}}
 function updateLoopButtons(){{setAButton.textContent=`A: ${{formatTime(loopA)}}`;setBButton.textContent=`B: ${{loopBManual?formatTime(loopB):'Son'}}`;loopButton.setAttribute('aria-pressed',String(loopEnabled));}}
