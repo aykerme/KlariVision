@@ -60,7 +60,8 @@ def test_frequency_viewer_uses_physical_hertz_grid(tmp_path) -> None:
     assert 'value="nihavent"' in html
     assert ">Nihavend</option>" in html
     assert "function nihaventNotes()" in html
-    assert "notesForMode('minor',[0,2,3,5,7,8,10])" in html
+    assert "notesForMode('nihavent',[0,2,3,5,7,8,11],solClarinetTonic)" in html
+    assert "const solClarinetTonic=(Number(tonicInput.value)+5)%12" in html
     assert "Rast (karar)" not in html
 
 

@@ -148,8 +148,8 @@ const workspace=document.getElementById('workspace'),layoutMode=document.getElem
 const verticalFollowInput=document.getElementById('vertical-follow');let verticalSpan=2400,verticalCenter=0,verticalReady=false;
 let duration=Math.max(...frames.map(p=>p.t),0),loopA=0,loopB=duration,loopEnabled=false,loopBManual=false; const left=205,right=20,marginTop=22,bottom=34;
 function cents(hz){{return 1200*Math.log2(hz/440)}}
-function notesForMode(mode,intervals){{const tonic=Number(tonicInput.value),names=scaleLabels[mode][String(tonic)],namesByPitchClass=new Map(intervals.map((interval,index)=>[(tonic+interval)%12,names[index]])),result=[];for(let midi=24;midi<=108;midi++){{const name=namesByPitchClass.get(midi%12);if(!name)continue;const octave=Math.floor(midi/12)-1,hz=440*Math.pow(2,(midi-69)/12);result.push([`${{name}}${{octave}}`,hz])}}return result}}
-function nihaventNotes(){{return notesForMode('minor',[0,2,3,5,7,8,10])}}
+function notesForMode(mode,intervals,labelTonic=Number(tonicInput.value)){{const soundingTonic=Number(tonicInput.value),names=scaleLabels[mode][String(labelTonic)],namesByPitchClass=new Map(intervals.map((interval,index)=>[(soundingTonic+interval)%12,names[index]])),result=[];for(let midi=24;midi<=108;midi++){{const name=namesByPitchClass.get(midi%12);if(!name)continue;const octave=Math.floor(midi/12)-1,hz=440*Math.pow(2,(midi-69)/12);result.push([`${{name}}${{octave}}`,hz])}}return result}}
+function nihaventNotes(){{const solClarinetTonic=(Number(tonicInput.value)+5)%12;return notesForMode('nihavent',[0,2,3,5,7,8,11],solClarinetTonic)}}
 function turkishNotes(){{return turkishReference.map(note=>[note.display_notation,note.frequency_hz])}}
 function scaleNotes(){{if(scaleMode.value==='turkish')return turkishNotes();if(scaleMode.value==='nihavent')return nihaventNotes();return notesForMode(scaleMode.value,scaleMode.value==='major'?[0,2,4,5,7,9,11]:[0,2,3,5,7,8,10])}}
 function formatTime(time){{return `${{time.toFixed(2)}} sn`}}
