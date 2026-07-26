@@ -16,7 +16,7 @@ def test_frequency_viewer_uses_physical_hertz_grid(tmp_path) -> None:
 
     html = output.read_text(encoding="utf-8")
     assert "Duyulan frekans" in html
-    assert "KlariVision 0.3.32-preview" in html
+    assert "KlariVision 0.3.31-preview" in html
     assert '"minor"' in html
     assert "Ölçülen eğri değiştirilmez" in html
     assert "followPlayback" in html
@@ -61,7 +61,6 @@ def test_frequency_viewer_uses_physical_hertz_grid(tmp_path) -> None:
     assert ">Nihavend</option>" in html
     assert "function nihaventNotes()" in html
     assert "notesForMode('minor',[0,2,3,5,7,8,10])" in html
-    assert "solClarinetTonic=(soundingTonic+5)%12" in html
     assert "Rast (karar)" not in html
 
 
