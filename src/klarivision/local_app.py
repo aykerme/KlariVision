@@ -116,12 +116,17 @@ h1{{margin-bottom:6px}}p{{line-height:1.5}}form{{margin-top:24px;padding:24px;bo
 class KlariVisionHandler(SimpleHTTPRequestHandler):
     """Serve project files and accept one local recording upload at a time."""
 
+    _PUBLIC_PATH_PREFIXES = ("/outputs/", "/data/audio/", "/data/imports/")
+
     def __init__(self, *args: object, **kwargs: object) -> None:
         super().__init__(*args, directory=str(PROJECT_ROOT), **kwargs)
 
     def do_GET(self) -> None:  # noqa: N802
         if self.path in {"/", "/index.html"}:
             self._send_html(_form_page())
+            return
+        if not self.path.startswith(self._PUBLIC_PATH_PREFIXES):
+            self.send_error(404)
             return
         super().do_GET()
 
