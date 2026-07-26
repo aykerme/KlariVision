@@ -171,7 +171,7 @@ function clampStart(){{viewStart=Math.max(-windowSeconds/2,Math.min(viewStart,du
 function centerOnPlayhead(){{viewStart=(media.currentTime||0)-windowSeconds/2;clampStart()}}
 function loopStart(){{return Math.max(0,Math.min(loopA,Math.max(0,duration-.001)))}}
 function restartLoopAtA(){{media.currentTime=loopStart()}}
-function playLoopFromA(){{const start=loopStart(),resume=()=>{{if(loopEnabled)media.play().catch(()=>{{}})}};if(Math.abs((media.currentTime||0)-start)<.01){{resume();return}}media.addEventListener('seeked',resume,{{once:true}});media.currentTime=start}}
+function playLoopFromA(){{const start=loopStart();media.play().then(()=>{{if(loopEnabled)media.currentTime=start}}).catch(()=>{{}})}}
 function tick(){{if(loopEnabled&&!media.paused&&(media.currentTime||0)>=loopB)restartLoopAtA();if(followPlayback)centerOnPlayhead();draw();requestAnimationFrame(tick)}}
 function setWindow(value){{windowSeconds=Math.max(2,Math.min(60,value));winInput.value=windowSeconds;centerOnPlayhead();draw()}}
 function setVerticalSpan(value,anchor){{const previous=verticalSpan;verticalSpan=Math.max(200,Math.min(4800,value));if(anchor!==undefined){{const ratio=(verticalCenter+previous/2-anchor)/previous;verticalCenter=anchor+(ratio-.5)*verticalSpan}}draw()}}
