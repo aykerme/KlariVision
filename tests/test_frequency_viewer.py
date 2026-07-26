@@ -16,7 +16,7 @@ def test_frequency_viewer_uses_physical_hertz_grid(tmp_path) -> None:
 
     html = output.read_text(encoding="utf-8")
     assert "Duyulan frekans" in html
-    assert "KlariVision 0.3.25-preview" in html
+    assert "KlariVision 0.3.26-preview" in html
     assert '"minor"' in html
     assert "Ölçülen eğri değiştirilmez" in html
     assert "followPlayback" in html
@@ -30,6 +30,7 @@ def test_frequency_viewer_uses_physical_hertz_grid(tmp_path) -> None:
     assert 'id="chart-panel"' in html
     assert "function beginPanelAction(" in html
     assert "function enablePanel(" in html
+    assert "function separatePanels(" in html
     assert "verticalSpan" in html
     assert "function followValues()" in html
     assert "function centerOnPlayhead()" in html

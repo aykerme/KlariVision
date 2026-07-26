@@ -50,7 +50,7 @@ SCALE_LABELS = {
     },
 }
 
-VIEWER_VERSION = "0.3.25-preview"
+VIEWER_VERSION = "0.3.26-preview"
 """Higher-resolution pYIN preview with conservative display cleanup."""
 
 MINIMUM_CONFIDENCE = 0.20
@@ -145,7 +145,7 @@ const scaleMode=document.getElementById('scale-mode'),tonicInput=document.getEle
 const winInput=document.getElementById('window'),countdownInput=document.getElementById('countdown'),playToggle=document.getElementById('play-toggle'),countdownStatus=document.getElementById('countdown-status');let windowSeconds=12,viewStart=-6,drag=null,followPlayback=true,countdownTimer=null,countdownBypass=false;
 const workspace=document.getElementById('workspace'),mediaPanel=document.getElementById('media-panel'),chartPanel=document.getElementById('chart-panel');let panelAction=null,panelZ=2;
 const verticalFollowInput=document.getElementById('vertical-follow');let verticalSpan=2400,verticalCenter=0,verticalReady=false;
-let duration=Math.max(...frames.map(p=>p.t),0),loopA=0,loopB=duration,loopEnabled=false,loopBManual=false; const left=285,right=20,marginTop=22,bottom=34;
+let duration=Math.max(...frames.map(p=>p.t),0),loopA=0,loopB=duration,loopEnabled=false,loopBManual=false; const left=205,right=20,marginTop=22,bottom=34;
 function cents(hz){{return 1200*Math.log2(hz/440)}}
 function notesForMode(mode,intervals){{const tonic=Number(tonicInput.value),names=scaleLabels[mode][String(tonic)],namesByPitchClass=new Map(intervals.map((interval,index)=>[(tonic+interval)%12,names[index]])),result=[];for(let midi=24;midi<=108;midi++){{const name=namesByPitchClass.get(midi%12);if(!name)continue;const octave=Math.floor(midi/12)-1,hz=440*Math.pow(2,(midi-69)/12);result.push([`${{name}}${{octave}}`,hz])}}return result}}
 function nihaventNotes(){{return notesForMode('minor',[0,2,3,5,7,8,10])}}
@@ -177,9 +177,11 @@ function beginPlayback(){{if(!media.paused){{media.pause();return}}const seconds
 function panelMinimum(panel){{return panel===chartPanel?{{width:560,height:360}}:{{width:320,height:180}}}}
 function raisePanel(panel){{panel.style.zIndex=String(++panelZ)}}
 function keepWorkspaceTall(panel){{const needed=panel.offsetTop+panel.offsetHeight+18;if(needed>workspace.clientHeight)workspace.style.minHeight=`${{needed}}px`}}
+function panelsOverlap(first,second){{return first.offsetLeft<second.offsetLeft+second.offsetWidth&&first.offsetLeft+first.offsetWidth>second.offsetLeft&&first.offsetTop<second.offsetTop+second.offsetHeight&&first.offsetTop+first.offsetHeight>second.offsetTop}}
+function separatePanels(active){{const other=active===mediaPanel?chartPanel:mediaPanel;if(!panelsOverlap(active,other))return;const gap=16,candidates=[{{left:Math.max(0,other.offsetLeft-active.offsetWidth-gap),top:active.offsetTop}},{{left:other.offsetLeft+other.offsetWidth+gap,top:active.offsetTop}},{{left:active.offsetLeft,top:Math.max(0,other.offsetTop-active.offsetHeight-gap)}},{{left:active.offsetLeft,top:other.offsetTop+other.offsetHeight+gap}}];const current={{left:active.offsetLeft,top:active.offsetTop}};candidates.sort((a,b)=>(a.left-current.left)**2+(a.top-current.top)**2-(b.left-current.left)**2-(b.top-current.top)**2);const target=candidates[0];active.style.left=`${{target.left}}px`;active.style.top=`${{target.top}}px`;keepWorkspaceTall(active)}}
 function beginPanelAction(event,panel,mode){{event.preventDefault();raisePanel(panel);const rect=panel.getBoundingClientRect();panelAction={{panel,mode,startX:event.clientX,startY:event.clientY,left:panel.offsetLeft,top:panel.offsetTop,width:rect.width,height:rect.height}};panel.setPointerCapture(event.pointerId)}}
 function movePanel(event){{if(!panelAction)return;const a=panelAction,dx=event.clientX-a.startX,dy=event.clientY-a.startY,min=panelMinimum(a.panel);if(a.mode==='move'){{a.panel.style.left=`${{Math.max(0,a.left+dx)}}px`;a.panel.style.top=`${{Math.max(0,a.top+dy)}}px`}}else{{if(a.mode==='right'||a.mode==='corner')a.panel.style.width=`${{Math.max(min.width,a.width+dx)}}px`;if(a.mode==='bottom'||a.mode==='corner')a.panel.style.height=`${{Math.max(min.height,a.height+dy)}}px`}}keepWorkspaceTall(a.panel);if(a.panel===chartPanel)resize()}}
-function endPanelAction(event){{if(!panelAction)return;try{{panelAction.panel.releasePointerCapture(event.pointerId)}}catch(_error){{}}panelAction=null;resize()}}
+function endPanelAction(event){{if(!panelAction)return;const panel=panelAction.panel;try{{panel.releasePointerCapture(event.pointerId)}}catch(_error){{}}panelAction=null;separatePanels(panel);resize()}}
 function enablePanel(panel){{panel.querySelector('.panel-titlebar').addEventListener('pointerdown',event=>beginPanelAction(event,panel,'move'));panel.querySelectorAll('[data-resize]').forEach(handle=>handle.addEventListener('pointerdown',event=>beginPanelAction(event,panel,handle.dataset.resize)));panel.addEventListener('pointermove',movePanel);panel.addEventListener('pointerup',endPanelAction);panel.addEventListener('pointercancel',endPanelAction)}}
 document.getElementById('minus').onclick=()=>setWindow(windowSeconds*1.35);document.getElementById('plus').onclick=()=>setWindow(windowSeconds/1.35);document.getElementById('reset').onclick=()=>{{media.currentTime=0;followPlayback=true;centerOnPlayhead();draw()}};winInput.onchange=()=>setWindow(Number(winInput.value));
 document.getElementById('vertical-out').onclick=()=>setVerticalSpan(verticalSpan*1.35);document.getElementById('vertical-in').onclick=()=>setVerticalSpan(verticalSpan/1.35);verticalFollowInput.onchange=()=>draw();
