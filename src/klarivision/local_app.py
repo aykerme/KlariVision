@@ -6,6 +6,7 @@ import argparse
 import cgi
 import html
 import json
+import mimetypes
 import os
 import re
 import shutil
@@ -14,7 +15,7 @@ import unicodedata
 import uuid
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from urllib.parse import quote
+from urllib.parse import quote, unquote, urlparse
 
 import imageio_ffmpeg
 
@@ -31,6 +32,7 @@ IMPORTS_DIR = PROJECT_ROOT / "data" / "imports"
 AUDIO_DIR = PROJECT_ROOT / "data" / "audio"
 OUTPUTS_DIR = PROJECT_ROOT / "outputs"
 VIDEO_SUFFIXES = {".mp4", ".mov", ".m4v", ".webm"}
+MEDIA_SUFFIXES = VIDEO_SUFFIXES | {".wav", ".mp3", ".m4a"}
 
 
 def _safe_stem(filename: str) -> str:
@@ -39,6 +41,28 @@ def _safe_stem(filename: str) -> str:
     ascii_stem = unicodedata.normalize("NFKD", stem).encode("ascii", "ignore").decode()
     cleaned = re.sub(r"-+", "-", re.sub(r"[^a-zA-Z0-9_-]+", "-", ascii_stem)).strip("-").lower()
     return cleaned or "icra"
+
+
+def _parse_byte_range(value: str | None, size: int) -> tuple[int, int] | None:
+    """Return one RFC 7233 byte range, or ``None`` when no range was sent."""
+    if not value:
+        return None
+    match = re.fullmatch(r"bytes=(\d*)-(\d*)", value.strip())
+    if match is None or size <= 0:
+        raise ValueError("Geçersiz byte aralığı.")
+    first, last = match.groups()
+    if not first and not last:
+        raise ValueError("Geçersiz byte aralığı.")
+    if not first:
+        length = int(last)
+        if length <= 0:
+            raise ValueError("Geçersiz byte aralığı.")
+        return max(0, size - length), size - 1
+    start = int(first)
+    end = int(last) if last else size - 1
+    if start >= size or end < start:
+        raise ValueError("Karşılanamayan byte aralığı.")
+    return start, min(end, size - 1)
 
 
 def _to_wav(source: Path, destination: Path) -> None:
@@ -134,7 +158,60 @@ class KlariVisionHandler(SimpleHTTPRequestHandler):
         if not self.path.startswith(self._PUBLIC_PATH_PREFIXES):
             self.send_error(404)
             return
+        media_path = self._media_path()
+        if media_path is not None:
+            self._serve_media(media_path)
+            return
         super().do_GET()
+
+    def do_HEAD(self) -> None:  # noqa: N802
+        if not self.path.startswith(self._PUBLIC_PATH_PREFIXES):
+            self.send_error(404)
+            return
+        media_path = self._media_path()
+        if media_path is not None:
+            self._serve_media(media_path, head_only=True)
+            return
+        super().do_HEAD()
+
+    def _media_path(self) -> Path | None:
+        requested = unquote(urlparse(self.path).path).lstrip("/")
+        candidate = (PROJECT_ROOT / requested).resolve()
+        if PROJECT_ROOT not in candidate.parents or not candidate.is_file():
+            return None
+        return candidate if candidate.suffix.lower() in MEDIA_SUFFIXES else None
+
+    def _serve_media(self, path: Path, *, head_only: bool = False) -> None:
+        size = path.stat().st_size
+        try:
+            byte_range = _parse_byte_range(self.headers.get("Range"), size)
+        except ValueError:
+            self.send_response(416)
+            self.send_header("Content-Range", f"bytes */{size}")
+            self.end_headers()
+            return
+
+        start, end = byte_range if byte_range is not None else (0, size - 1)
+        length = end - start + 1
+        content_type = mimetypes.guess_type(str(path))[0] or "application/octet-stream"
+        self.send_response(206 if byte_range is not None else 200)
+        self.send_header("Content-Type", content_type)
+        self.send_header("Content-Length", str(length))
+        self.send_header("Accept-Ranges", "bytes")
+        if byte_range is not None:
+            self.send_header("Content-Range", f"bytes {start}-{end}/{size}")
+        self.end_headers()
+        if head_only:
+            return
+        with path.open("rb") as source:
+            source.seek(start)
+            remaining = length
+            while remaining:
+                chunk = source.read(min(64 * 1024, remaining))
+                if not chunk:
+                    break
+                self.wfile.write(chunk)
+                remaining -= len(chunk)
 
     def do_POST(self) -> None:  # noqa: N802
         if self.path != "/analyse":
