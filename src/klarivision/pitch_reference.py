@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, replace
 from pathlib import Path
+import re
 
 from openpyxl import load_workbook
 
@@ -29,6 +30,32 @@ class TurkishPitchReference:
     def accidental_notation(self) -> str:
         """The source notation before its explanatory parenthesis."""
         return self.koma_description.split(" (", maxsplit=1)[0].strip()
+
+    @property
+    def display_notation(self) -> str:
+        """Portable Sol-clarinet label such as ``Re ♭5`` or ``Fa ♯1``.
+
+        The workbook remains the source of truth.  This display-only form
+        avoids relying on rarely installed AEU music-symbol fonts while
+        retaining the direction and exact comma amount.
+        """
+        note_match = re.match(r"^(Do|Re|Mi|Fa|Sol|La|Si)\b", self.accidental_notation)
+        koma_match = re.search(r"(\d+)\s*Koma", self.koma_description, re.IGNORECASE)
+        if not note_match or not koma_match:
+            return self.accidental_notation
+
+        source_symbol = self.accidental_notation[len(note_match.group(0)) :]
+        if any(symbol in source_symbol for symbol in ("♯", "𝄰", "𝄱", "𝄵")):
+            accidental = "♯"
+        elif any(symbol in source_symbol for symbol in ("♭", "𝄳", "𝄴")):
+            accidental = "♭"
+        elif "Diyez" in self.koma_description:
+            accidental = "♯"
+        elif "Bemol" in self.koma_description:
+            accidental = "♭"
+        else:
+            return self.accidental_notation
+        return f"{note_match.group(0)} {accidental}{koma_match.group(1)}"
 
     @property
     def octave_label(self) -> str:

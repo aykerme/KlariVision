@@ -19,7 +19,7 @@ def write_reference_workbook(path) -> None:
             "Koma Açıklaması",
         ]
     )
-    sheet.append([220.0, "Yegâh", "Re", "La", "Re"])
+    sheet.append([220.0, "Yegâh", "Re", "La", "Re 𝄳 (1 Koma / Koma Bemol)"])
     sheet.append([440.0, "Neva", "Re", "La", "Re (üst oktav)"])
     workbook.save(path)
     workbook.close()
@@ -36,6 +36,7 @@ def test_loads_editable_turkish_pitch_reference(tmp_path) -> None:
         ("Neva", "Re", 440.0),
     ]
     assert records[0].piano_note == "La"
+    assert records[0].display_notation == "Re ♭1"
 
     extended = extend_reference_octaves(records)
     assert extended[0].frequency_hz == 110.0

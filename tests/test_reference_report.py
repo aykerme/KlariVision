@@ -25,5 +25,5 @@ def test_reference_report_shows_source_numbers_without_mutating_them(tmp_path: P
     report = output_path.read_text(encoding="utf-8")
     assert "110.00" in report
     assert "880.00" in report
-    assert "𝄳" in report
+    assert "Re ♭1" in report
     assert "×½ ve ×2" in report

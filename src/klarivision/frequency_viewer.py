@@ -50,7 +50,7 @@ SCALE_LABELS = {
     },
 }
 
-VIEWER_VERSION = "0.3.21-preview"
+VIEWER_VERSION = "0.3.22-preview"
 """Higher-resolution pYIN preview with conservative display cleanup."""
 
 MINIMUM_CONFIDENCE = 0.20
@@ -124,7 +124,7 @@ def build_frequency_viewer(
 :root{{color-scheme:light}}*{{box-sizing:border-box}}body{{margin:0;background:#f5f6f8;color:#17212b;font:14px system-ui,-apple-system,sans-serif}}main{{max-width:1180px;margin:auto;padding:22px}}h1{{font-size:21px;margin:0 0 4px}}p{{margin:0 0 16px;color:#56616e}}.media{{position:sticky;top:0;background:#f5f6f8;padding:10px 0 14px;z-index:2}}video,audio{{display:block;max-width:100%;width:660px;max-height:330px}}.panel{{background:#fff;border:1px solid #dbe0e6;border-radius:12px;padding:14px}}.tools{{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:10px}}button{{border:1px solid #b9c3cf;background:#fff;border-radius:7px;padding:6px 10px;font:inherit;cursor:pointer}}button:hover{{background:#eef5fb}}button[aria-pressed="true"]{{background:#dceefe;border-color:#4785be;color:#173d62;box-shadow:inset 0 0 0 1px #8bb7de}}input{{width:100px}}select{{font:inherit;padding:5px 7px;border:1px solid #b9c3cf;border-radius:7px;background:#fff}}.chart-scroll{{display:grid;grid-template-columns:minmax(0,1fr) 18px;grid-template-rows:580px 18px;gap:5px}}canvas{{display:block;width:100%;height:100%;border:1px solid #dbe0e6;border-radius:8px;touch-action:none}}#time-scroll{{grid-column:1;grid-row:2;width:100%;margin:0;accent-color:#7755b8}}#vertical-scroll{{grid-column:2;grid-row:1;width:18px;height:100%;margin:0;writing-mode:vertical-lr;direction:rtl;accent-color:#7755b8}}.note{{font-size:12px;color:#66717f}}.legend{{margin-left:auto;color:#56616e;font-size:12px}}@media(max-width:650px){{main{{padding:12px}}.chart-scroll{{grid-template-rows:470px 18px}}}}
 </style><main>
 <h1>KlariVision {VIEWER_VERSION} · Pitch konturu</h1>
-<p>Pitch eğrisi pYIN'in ölçtüğü fiziksel frekanstır (Hz). Türk Müziği (Sol Klarnet) ekseni, referans tablosundaki AEU koma işaretlerini ve alt/üst oktavlarını gösterir; ölçülen eğri değiştirilmez.</p>
+<p>Pitch eğrisi pYIN'in ölçtüğü fiziksel frekanstır (Hz). Türk Müziği (Sol Klarnet) ekseni, koma miktarını taşınabilir biçimde gösterir: ör. Re ♭5, Fa ♯1. Ölçülen eğri değiştirilmez.</p>
 <div class="media">{media}</div>
 <section class="panel"><div class="tools">
 <button id="minus">− Zaman</button><button id="plus">+ Zaman</button>
@@ -138,7 +138,7 @@ def build_frequency_viewer(
 </main><script>
 const frames={json.dumps(frames, ensure_ascii=False, separators=(',', ':'))};
 const scaleLabels={json.dumps(SCALE_LABELS, ensure_ascii=False, separators=(',', ':'))};
-const turkishReference={json.dumps([record.__dict__ | {"accidental_notation": record.accidental_notation, "octave_label": record.octave_label} for record in turkish_reference], ensure_ascii=False, separators=(',', ':'))};
+const turkishReference={json.dumps([record.__dict__ | {"display_notation": record.display_notation, "octave_label": record.octave_label} for record in turkish_reference], ensure_ascii=False, separators=(',', ':'))};
 const media=document.getElementById('media'),canvas=document.getElementById('chart'),ctx=canvas.getContext('2d'),timeScroll=document.getElementById('time-scroll'),verticalScroll=document.getElementById('vertical-scroll');
 const setAButton=document.getElementById('set-a'),setBButton=document.getElementById('set-b'),loopButton=document.getElementById('loop');
 const scaleMode=document.getElementById('scale-mode'),tonicInput=document.getElementById('tonic');
@@ -148,7 +148,7 @@ let duration=Math.max(...frames.map(p=>p.t),0),loopA=0,loopB=duration,loopEnable
 function cents(hz){{return 1200*Math.log2(hz/440)}}
 function notesForMode(mode,intervals){{const tonic=Number(tonicInput.value),names=scaleLabels[mode][String(tonic)],namesByPitchClass=new Map(intervals.map((interval,index)=>[(tonic+interval)%12,names[index]])),result=[];for(let midi=24;midi<=108;midi++){{const name=namesByPitchClass.get(midi%12);if(!name)continue;const octave=Math.floor(midi/12)-1,hz=440*Math.pow(2,(midi-69)/12);result.push([`${{name}}${{octave}}`,hz])}}return result}}
 function nihaventNotes(){{return notesForMode('minor',[0,2,3,5,7,8,10])}}
-function turkishNotes(){{return turkishReference.map(note=>[`${{note.accidental_notation}} · ${{note.turkish_name}} (${{note.octave_label}})`,note.frequency_hz])}}
+function turkishNotes(){{return turkishReference.map(note=>[note.display_notation,note.frequency_hz])}}
 function scaleNotes(){{if(scaleMode.value==='turkish')return turkishNotes();if(scaleMode.value==='nihavent')return nihaventNotes();return notesForMode(scaleMode.value,scaleMode.value==='major'?[0,2,4,5,7,9,11]:[0,2,3,5,7,8,10])}}
 function formatTime(time){{return `${{time.toFixed(2)}} sn`}}
 function updateLoopButtons(){{setAButton.textContent=`A: ${{formatTime(loopA)}}`;setBButton.textContent=`B: ${{loopBManual?formatTime(loopB):'Son'}}`;loopButton.setAttribute('aria-pressed',String(loopEnabled));}}
