@@ -103,17 +103,14 @@ def _form_page(message: str = "") -> str:
     return f"""<!doctype html><meta charset="utf-8"><title>KlariVision</title>
 <style>
 body{{font-family:system-ui;max-width:720px;margin:56px auto;padding:0 20px;color:#1e1e1e}}
-h1{{margin-bottom:6px}}p{{line-height:1.5}}form{{margin-top:24px;padding:24px;border:1px solid #ddd;border-radius:12px;background:#fafafa}}
-label{{display:block;font-weight:650;margin:16px 0 6px}}input,select,button{{font:inherit}}input,select{{width:100%;box-sizing:border-box;padding:9px}}button{{margin-top:22px;padding:10px 14px;background:#1d5fa7;color:white;border:0;border-radius:7px;cursor:pointer}}.notice{{padding:10px;background:#fff1f1;border-radius:7px;color:#8b2222}}
+h1{{margin-bottom:6px}}p{{line-height:1.5}}form{{margin-top:24px;padding:24px;border:1px solid #ddd;border-radius:12px;background:#fafafa}}input,select,button{{font:inherit}}.file-input{{position:absolute;width:1px;height:1px;opacity:0}}.file-button{{display:inline-block;margin-top:8px;padding:12px 16px;background:#1d5fa7;color:#fff;border-radius:8px;font-weight:650;cursor:pointer}}.file-name{{display:block;margin-top:12px;color:#596775}}button{{margin-top:22px;padding:10px 14px;background:#1d5fa7;color:white;border:0;border-radius:7px;cursor:pointer}}.notice{{padding:10px;background:#fff1f1;border-radius:7px;color:#8b2222}}
 </style>
-<h1>KlariVision</h1><p>Bir klarnet icrası seç; dosya yalnızca bu bilgisayarda analiz edilir.</p>{notice}
+<h1>KlariVision</h1><p>Yeni bir çalışma için video veya ses dosyası seç. Analiz tamamlanana kadar burada grafik ya da video gösterilmez.</p>{notice}
 <form method="post" action="/analyse" enctype="multipart/form-data">
-<label for="recording">Video veya ses dosyası</label><input id="recording" name="recording" type="file" accept="video/*,audio/*,.wav,.mp3,.m4a" required>
-<label for="makam">Makam</label><select id="makam" name="makam">{makam_options}</select>
-<label for="karar">Karar sesi</label><select id="karar" name="karar">{karar_options}</select>
-<label for="engine">Pitch motoru</label><select id="engine" name="engine"><option value="vamp">Hızlı pYIN (Vamp)</option><option value="python">Ayrıntılı pYIN (Python)</option></select>
+<input id="recording" class="file-input" name="recording" type="file" accept="video/*,audio/*,.wav,.mp3,.m4a" required><label class="file-button" for="recording">Video veya ses seç</label><span id="file-name" class="file-name">Henüz dosya seçilmedi</span>
+<input type="hidden" name="makam" value="huzzam"><input type="hidden" name="karar" value="dugah"><input type="hidden" name="engine" value="vamp">
 <button type="submit">Pitch analizini oluştur</button>
-</form>"""
+</form><script>document.getElementById('recording').addEventListener('change',event=>{{document.getElementById('file-name').textContent=event.target.files[0]?.name||'Henüz dosya seçilmedi'}})</script>"""
 
 
 class KlariVisionHandler(SimpleHTTPRequestHandler):
