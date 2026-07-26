@@ -50,8 +50,8 @@ SCALE_LABELS = {
     },
 }
 
-VIEWER_VERSION = "0.3.31-preview"
-"""Higher-resolution pYIN preview with conservative display cleanup."""
+VIEWER_VERSION = "0.4.0-foundation"
+"""Stable local pitch viewer foundation with media-synchronised playback."""
 
 MINIMUM_CONFIDENCE = 0.20
 """Suppress pYIN candidates with weak periodicity evidence."""

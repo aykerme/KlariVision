@@ -1,5 +1,22 @@
 # Toplantı Notları
 
+## 002 — 26 Temmuz 2026 — v0.4.0 Pitch Viewer Foundation
+
+### Sabitlenen temel
+
+- Vamp pYIN pitch eğrisi, ürünün doğrulanmış görsel veri kaynağıdır.
+- Dosya seçimi, analiz ilerlemesi ve grafik sayfasına otomatik geçiş çalışır.
+- Video/ses sunumu byte-aralığı isteklerini destekler; tarayıcı gerçek medya süresini kullanır.
+- A/B işaretleme ve loop, medya süresiyle senkron biçimde çalışır.
+- Zaman/dikey yakınlaştırma, kaydırma, eğri takibi ve mevcut eksen modları korunur.
+- Nihavend, Sol klarnet karar dönüşümüyle ayrı kurallı bir eksen olarak çalışır.
+
+### Kural
+
+Bu noktadan sonraki özellikler, önce bu temel davranışlara karşı test edilmelidir.
+Pitch eğrisi veya medya senkronizasyonunda değişiklik yapılacaksa, Şükrü Tunar
+referans kaydıyla ve A/B loop ile yeniden doğrulama zorunludur.
+
 ## 001 — 20 Temmuz 2026
 
 ### Kararlar
