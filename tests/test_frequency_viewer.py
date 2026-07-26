@@ -46,6 +46,7 @@ def test_frequency_viewer_uses_physical_hertz_grid(tmp_path) -> None:
     assert "loopEnabled" in html
     assert "function updateLoopButtons()" in html
     assert "function restartLoopAtA()" in html
+    assert "function playLoopFromA()" in html
     assert "media.addEventListener('ended'" in html
     assert "media.paused" in html
     assert "drag.moved" in html
