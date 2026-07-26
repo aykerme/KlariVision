@@ -1,26 +1,26 @@
 from openpyxl import Workbook
 
-from klarivision.pitch_reference import load_turkish_pitch_reference
+from klarivision.pitch_reference import extend_reference_octaves, load_turkish_pitch_reference
 
 
 def write_reference_workbook(path) -> None:
     workbook = Workbook()
     sheet = workbook.active
-    sheet.title = "Perde Eşleme"
-    sheet.append(["KlariVision referansı"])
+    sheet.title = "Türk Müziği Perdeleri"
+    sheet.append(["Başlık"])
+    sheet.append([])
+    sheet.append([])
     sheet.append(
         [
-            "Koma",
-            "Türk müziği perdesi",
-            "Parantez içi nota",
-            "Etiket / oktav notu",
-            "Sent (Dügâh=0)",
-            "Duyulan Hz",
-            "Sol klarnet yazılı Hz",
+            "Frekans (Hz)",
+            "Türk Nota İsmi",
+            "TM Notası (Sol Klarnet)",
+            "Batı Notası(Piyano)",
+            "Koma Açıklaması",
         ]
     )
-    sheet.append([9, "Yegâh", "Re", "", 0, 293.344891, 220.0])
-    sheet.append([40, "Dügâh", "La", "", 0, 440.0, 329.986999])
+    sheet.append([220.0, "Yegâh", "Re", "La", "Re"])
+    sheet.append([440.0, "Neva", "Re", "La", "Re (üst oktav)"])
     workbook.save(path)
     workbook.close()
 
@@ -31,8 +31,12 @@ def test_loads_editable_turkish_pitch_reference(tmp_path) -> None:
 
     records = load_turkish_pitch_reference(workbook_path)
 
-    assert [(record.name, record.solfege, record.heard_hz) for record in records] == [
-        ("Yegâh", "Re", 293.344891),
-        ("Dügâh", "La", 440.0),
+    assert [(record.turkish_name, record.sol_clarinet_note, record.frequency_hz) for record in records] == [
+        ("Yegâh", "Re", 220.0),
+        ("Neva", "Re", 440.0),
     ]
-    assert records[0].clarinet_written_hz == 220.0
+    assert records[0].piano_note == "La"
+
+    extended = extend_reference_octaves(records)
+    assert extended[0].frequency_hz == 110.0
+    assert extended[-1].frequency_hz == 880.0
