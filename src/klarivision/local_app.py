@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import cgi
+import hashlib
 import html
 import json
 import mimetypes
@@ -15,7 +16,7 @@ import unicodedata
 import uuid
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from urllib.parse import quote, unquote, urlparse
+from urllib.parse import parse_qs, quote, unquote, urlparse
 
 import imageio_ffmpeg
 
@@ -66,6 +67,15 @@ def _parse_byte_range(value: str | None, size: int) -> tuple[int, int] | None:
     return start, min(end, size - 1)
 
 
+def _file_signature(path: Path) -> str:
+    """Return a stable content signature for deciding whether pitch can be reused."""
+    digest = hashlib.sha256()
+    with path.open("rb") as source:
+        for chunk in iter(lambda: source.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()[:16]
+
+
 def _to_wav(source: Path, destination: Path) -> None:
     """Extract mono, 22.05 kHz WAV audio required by the pYIN extractor."""
     destination.parent.mkdir(parents=True, exist_ok=True)
@@ -88,21 +98,61 @@ def _to_wav(source: Path, destination: Path) -> None:
     )
 
 
+def _import_from_url(url: str) -> Path:
+    """Download one user-supplied web video into the local imports folder."""
+    parsed = urlparse(url.strip())
+    if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+        raise ValueError("Geçerli bir internet bağlantısı gir.")
+    try:
+        from yt_dlp import YoutubeDL
+    except ImportError as error:  # pragma: no cover - depends on the packaged app environment.
+        raise RuntimeError(
+            "Linkten açma için yt-dlp bileşeni gerekli. Uygulamayı bu bileşenle paketlemeliyiz."
+        ) from error
+
+    IMPORTS_DIR.mkdir(parents=True, exist_ok=True)
+    import_id = uuid.uuid4().hex[:10]
+    output_template = str(IMPORTS_DIR / f"link-{import_id}.%(ext)s")
+    options = {
+        "format": "bv*[ext=mp4]+ba[ext=m4a]/b[ext=mp4]/best",
+        "merge_output_format": "mp4",
+        "noplaylist": True,
+        "outtmpl": output_template,
+        "quiet": True,
+        "no_warnings": True,
+    }
+    with YoutubeDL(options) as downloader:
+        info = downloader.extract_info(url, download=True)
+        downloaded = Path(downloader.prepare_filename(info))
+    merged = downloaded.with_suffix(".mp4")
+    if merged.is_file():
+        return merged
+    if downloaded.is_file():
+        return downloaded
+    matches = sorted(IMPORTS_DIR.glob(f"link-{import_id}.*"))
+    if matches:
+        return matches[0]
+    raise RuntimeError("Bağlantıdan medya alınamadı.")
+
+
 def analyse_upload(source: Path, makam: str, karar: str, engine: str = "vamp") -> str:
     """Analyse one local media file and return its project-relative viewer URL."""
     if makam not in MAKAM_PROFILES or karar not in KARAR_TONES:
         raise ValueError("Geçersiz makam veya karar sesi seçimi.")
 
-    analysis_id = f"{_safe_stem(source.name)}-{uuid.uuid4().hex[:8]}"
+    signature = _file_signature(source)
+    analysis_id = f"{_safe_stem(source.name)}-{signature}"
     wav = AUDIO_DIR / f"{analysis_id}.wav"
     if engine not in {"vamp", "python"}:
         raise ValueError("Geçersiz pitch motoru seçimi.")
     pitch_json = OUTPUTS_DIR / f"{analysis_id}.{engine}.json"
     viewer = OUTPUTS_DIR / f"{analysis_id}.html"
-    _to_wav(source, wav)
-    extractor = VampPyinPitchExtractor() if engine == "vamp" else PyinPitchExtractor()
-    track = extractor.extract(AudioSource(wav))
-    write_json(track, pitch_json)
+    if not wav.is_file():
+        _to_wav(source, wav)
+    if not pitch_json.is_file():
+        extractor = VampPyinPitchExtractor() if engine == "vamp" else PyinPitchExtractor()
+        track = extractor.extract(AudioSource(wav))
+        write_json(track, pitch_json)
     build_frequency_viewer(
         pitch_json,
         os.path.relpath(wav, start=viewer.parent).replace(os.sep, "/"),
@@ -128,19 +178,25 @@ def _form_page(message: str = "") -> str:
     return f"""<!doctype html><meta charset="utf-8"><title>KlariVision</title>
 <style>
 body{{font-family:system-ui;max-width:720px;margin:56px auto;padding:0 20px;color:#1e1e1e}}
-h1{{margin-bottom:6px}}p{{line-height:1.5}}form{{margin-top:24px;padding:24px;border:1px solid #ddd;border-radius:12px;background:#fafafa}}input,select,button{{font:inherit}}.file-input{{position:absolute;width:1px;height:1px;opacity:0}}.file-button{{display:inline-block;margin-top:8px;padding:12px 16px;background:#1d5fa7;color:#fff;border-radius:8px;font-weight:650;cursor:pointer}}.file-button[aria-disabled="true"]{{opacity:.55;pointer-events:none}}.file-name{{display:block;margin-top:12px;color:#596775}}.progress{{display:none;margin-top:22px}}.progress.visible{{display:block}}.progress-track{{height:12px;background:#e2e8ef;border-radius:99px;overflow:hidden}}.progress-value{{height:100%;width:0;background:linear-gradient(90deg,#1d5fa7,#58a6e8);transition:width .25s ease}}.progress-label{{display:block;margin-top:9px;color:#405465;font-size:.94rem}}.notice{{padding:10px;background:#fff1f1;border-radius:7px;color:#8b2222}}
+h1{{margin-bottom:6px}}p{{line-height:1.5}}form{{margin-top:24px;padding:24px;border:1px solid #ddd;border-radius:12px;background:#fafafa}}input,select,button{{font:inherit}}.file-input{{position:absolute;width:1px;height:1px;opacity:0}}.file-button{{display:inline-block;margin-top:8px;padding:12px 16px;background:#1d5fa7;color:#fff;border-radius:8px;font-weight:650;cursor:pointer}}.file-button[aria-disabled="true"],button[disabled]{{opacity:.55;pointer-events:none}}.file-name{{display:block;margin-top:12px;color:#596775}}.link-row{{display:flex;gap:8px;margin-top:18px}}.link-row input{{flex:1;min-width:0;padding:10px;border:1px solid #c9d4df;border-radius:8px}}.link-row button{{padding:10px 13px;border:0;border-radius:8px;background:#263746;color:white;font-weight:650;cursor:pointer}}.progress{{display:none;margin-top:22px}}.progress.visible{{display:block}}.progress-track{{height:12px;background:#e2e8ef;border-radius:99px;overflow:hidden}}.progress-value{{height:100%;width:0;background:linear-gradient(90deg,#1d5fa7,#58a6e8);transition:width .25s ease}}.progress-label{{display:block;margin-top:9px;color:#405465;font-size:.94rem}}.notice{{padding:10px;background:#fff1f1;border-radius:7px;color:#8b2222}}
 </style>
 <h1>KlariVision</h1><p>Yeni bir çalışma için video veya ses dosyası seç. Analiz tamamlanana kadar burada grafik ya da video gösterilmez.</p>{notice}
 <form id="analysis-form" method="post" action="/analyse" enctype="multipart/form-data">
 <input id="recording" class="file-input" name="recording" type="file" accept="video/*,audio/*,.wav,.mp3,.m4a" required><label class="file-button" for="recording">Video veya ses seç</label><span id="file-name" class="file-name">Henüz dosya seçilmedi</span>
 <input type="hidden" name="makam" value="huzzam"><input type="hidden" name="karar" value="dugah"><input type="hidden" name="engine" value="vamp">
 <div id="progress" class="progress" aria-live="polite"><div class="progress-track"><div id="progress-value" class="progress-value"></div></div><span id="progress-label" class="progress-label">Dosya hazırlanıyor…</span></div>
-</form><script>
-const form=document.getElementById('analysis-form'),recording=document.getElementById('recording'),fileName=document.getElementById('file-name'),fileButton=document.querySelector('.file-button'),progress=document.getElementById('progress'),progressValue=document.getElementById('progress-value'),progressLabel=document.getElementById('progress-label');
+</form><form id="link-form" method="post" action="/analyse-link"><div class="link-row"><input id="media-url" name="url" type="url" placeholder="YouTube veya video bağlantısı"><button id="link-button" type="submit">Linkten aç</button></div><input type="hidden" name="makam" value="huzzam"><input type="hidden" name="karar" value="dugah"><input type="hidden" name="engine" value="vamp"></form><script>
+const form=document.getElementById('analysis-form'),linkForm=document.getElementById('link-form'),recording=document.getElementById('recording'),fileName=document.getElementById('file-name'),fileButton=document.querySelector('.file-button'),linkButton=document.getElementById('link-button'),mediaUrl=document.getElementById('media-url'),progress=document.getElementById('progress'),progressValue=document.getElementById('progress-value'),progressLabel=document.getElementById('progress-label');
 let analysisStarted=false,shownProgress=0,analysisTimer=null;
 function showProgress(value,label){{shownProgress=Math.max(shownProgress,Math.min(100,value));progressValue.style.width=`${{shownProgress}}%`;progressLabel.textContent=label}}
-function startAnalysis(){{if(analysisStarted||!recording.files.length)return;analysisStarted=true;fileButton.setAttribute('aria-disabled','true');progress.classList.add('visible');showProgress(1,'Dosya yükleniyor…');const request=new XMLHttpRequest();request.open('POST','/analyse');request.upload.onprogress=event=>{{if(event.lengthComputable)showProgress(4+(event.loaded/event.total)*26,'Dosya yükleniyor…')}};request.upload.onload=()=>{{showProgress(32,'Pitch analizi yapılıyor…');analysisTimer=setInterval(()=>showProgress(Math.min(94,shownProgress+Math.max(.4,(94-shownProgress)*.06)),'Pitch analizi yapılıyor…'),350)}};request.onload=()=>{{if(analysisTimer)clearInterval(analysisTimer);if(request.status>=200&&request.status<400){{showProgress(100,'Analiz tamamlandı. Grafik hazırlanıyor…');setTimeout(()=>{{window.location.assign(request.responseURL)}},220)}}else{{analysisStarted=false;fileButton.setAttribute('aria-disabled','false');progressLabel.textContent='Analiz oluşturulamadı. Lütfen tekrar dene.'}}}};request.onerror=()=>{{if(analysisTimer)clearInterval(analysisTimer);analysisStarted=false;fileButton.setAttribute('aria-disabled','false');progressLabel.textContent='Analiz oluşturulamadı. Lütfen tekrar dene.'}};request.send(new FormData(form))}}
-recording.addEventListener('change',event=>{{const file=event.target.files[0];fileName.textContent=file?.name||'Henüz dosya seçilmedi';if(file)startAnalysis()}});form.addEventListener('submit',event=>{{event.preventDefault();startAnalysis()}});
+function lockInputs(locked){{fileButton.setAttribute('aria-disabled',locked?'true':'false');linkButton.disabled=locked;mediaUrl.disabled=locked}}
+function finishRequest(request){{if(analysisTimer)clearInterval(analysisTimer);if(request.status>=200&&request.status<400){{showProgress(100,'Analiz tamamlandı. Grafik hazırlanıyor…');setTimeout(()=>{{window.location.assign(request.responseURL)}},220)}}else{{analysisStarted=false;lockInputs(false);progressLabel.textContent='Analiz oluşturulamadı. Lütfen tekrar dene.'}}}}
+function failRequest(){{if(analysisTimer)clearInterval(analysisTimer);analysisStarted=false;lockInputs(false);progressLabel.textContent='Analiz oluşturulamadı. Lütfen tekrar dene.'}}
+function startProgress(label){{analysisStarted=true;lockInputs(true);progress.classList.add('visible');showProgress(1,label)}}
+function startPitchTimer(){{analysisTimer=setInterval(()=>showProgress(Math.min(94,shownProgress+Math.max(.4,(94-shownProgress)*.06)),'Pitch analizi yapılıyor veya cache kontrol ediliyor…'),350)}}
+function startAnalysis(){{if(analysisStarted||!recording.files.length)return;startProgress('Dosya yükleniyor…');const request=new XMLHttpRequest();request.open('POST','/analyse');request.upload.onprogress=event=>{{if(event.lengthComputable)showProgress(4+(event.loaded/event.total)*26,'Dosya yükleniyor…')}};request.upload.onload=()=>{{showProgress(32,'Pitch analizi yapılıyor veya cache kontrol ediliyor…');startPitchTimer()}};request.onload=()=>finishRequest(request);request.onerror=failRequest;request.send(new FormData(form))}}
+function startLinkAnalysis(){{if(analysisStarted||!mediaUrl.value.trim())return;startProgress('Bağlantıdan medya alınıyor…');const request=new XMLHttpRequest();request.open('POST','/analyse-link');request.onload=()=>finishRequest(request);request.onerror=failRequest;showProgress(18,'Bağlantıdan medya alınıyor…');startPitchTimer();request.send(new FormData(linkForm))}}
+recording.addEventListener('change',event=>{{const file=event.target.files[0];fileName.textContent=file?.name||'Henüz dosya seçilmedi';if(file)startAnalysis()}});form.addEventListener('submit',event=>{{event.preventDefault();startAnalysis()}});linkForm.addEventListener('submit',event=>{{event.preventDefault();startLinkAnalysis()}});
 </script>"""
 
 
@@ -215,6 +271,9 @@ class KlariVisionHandler(SimpleHTTPRequestHandler):
                 remaining -= len(chunk)
 
     def do_POST(self) -> None:  # noqa: N802
+        if self.path == "/analyse-link":
+            self._handle_link_import()
+            return
         if self.path != "/analyse":
             self.send_error(404)
             return
@@ -242,6 +301,24 @@ class KlariVisionHandler(SimpleHTTPRequestHandler):
             )
         except Exception as error:  # User-facing local app; preserve the server process after an error.
             self._send_html(_form_page(f"Analiz oluşturulamadı: {error}"), status=400)
+            return
+        self.send_response(303)
+        self.send_header("Location", result_url)
+        self.end_headers()
+
+    def _handle_link_import(self) -> None:
+        try:
+            length = int(self.headers.get("Content-Length", "0"))
+            fields = parse_qs(self.rfile.read(length).decode("utf-8"), keep_blank_values=True)
+            source = _import_from_url(fields.get("url", [""])[0])
+            result_url = analyse_upload(
+                source,
+                fields.get("makam", ["huzzam"])[0],
+                fields.get("karar", ["dugah"])[0],
+                fields.get("engine", ["vamp"])[0],
+            )
+        except Exception as error:  # User-facing local app; preserve the server process after an error.
+            self._send_html(_form_page(f"Linkten analiz oluşturulamadı: {error}"), status=400)
             return
         self.send_response(303)
         self.send_header("Location", result_url)

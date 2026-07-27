@@ -30,6 +30,8 @@ def main() -> None:
         str(PROJECT_ROOT / "src"),
         "--collect-all",
         "webview",
+        "--collect-all",
+        "yt_dlp",
     ]
     for source, target in resources:
         command.extend(("--add-data", f"{source}:{target}"))
