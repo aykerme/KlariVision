@@ -15,6 +15,9 @@ data/video/*
 data/annotations/*
 !data/**/.gitkeep
 outputs/
+build/
+dist/
+KlariVision.spec
 
 # Operating-system files
 .DS_Store
