@@ -76,6 +76,15 @@ def _file_signature(path: Path) -> str:
     return digest.hexdigest()[:16]
 
 
+def _analysis_stem(source: Path) -> str:
+    """Return a readable stem without the temporary import id."""
+    stem = _safe_stem(source.name)
+    stem = re.sub(r"-[0-9a-f]{8,16}$", "", stem)
+    if re.fullmatch(r"link(?:-[0-9a-f]{8,16})?", stem):
+        return "link"
+    return stem or "icra"
+
+
 def _to_wav(source: Path, destination: Path) -> None:
     """Extract mono, 22.05 kHz WAV audio required by the pYIN extractor."""
     destination.parent.mkdir(parents=True, exist_ok=True)
@@ -111,14 +120,15 @@ def _import_from_url(url: str) -> Path:
         ) from error
 
     IMPORTS_DIR.mkdir(parents=True, exist_ok=True)
-    import_id = uuid.uuid4().hex[:10]
-    output_template = str(IMPORTS_DIR / f"link-{import_id}.%(ext)s")
+    output_template = str(IMPORTS_DIR / "link-%(id)s.%(ext)s")
     options = {
         "format": "bv*[ext=mp4]+ba[ext=m4a]/b[ext=mp4]/best",
         "merge_output_format": "mp4",
         "noplaylist": True,
         "outtmpl": output_template,
+        "ffmpeg_location": imageio_ffmpeg.get_ffmpeg_exe(),
         "quiet": True,
+        "noprogress": True,
         "no_warnings": True,
     }
     with YoutubeDL(options) as downloader:
@@ -129,9 +139,6 @@ def _import_from_url(url: str) -> Path:
         return merged
     if downloaded.is_file():
         return downloaded
-    matches = sorted(IMPORTS_DIR.glob(f"link-{import_id}.*"))
-    if matches:
-        return matches[0]
     raise RuntimeError("Bağlantıdan medya alınamadı.")
 
 
@@ -141,7 +148,7 @@ def analyse_upload(source: Path, makam: str, karar: str, engine: str = "vamp") -
         raise ValueError("Geçersiz makam veya karar sesi seçimi.")
 
     signature = _file_signature(source)
-    analysis_id = f"{_safe_stem(source.name)}-{signature}"
+    analysis_id = f"{_analysis_stem(source)}-{signature}"
     wav = AUDIO_DIR / f"{analysis_id}.wav"
     if engine not in {"vamp", "python"}:
         raise ValueError("Geçersiz pitch motoru seçimi.")
@@ -190,8 +197,8 @@ const form=document.getElementById('analysis-form'),linkForm=document.getElement
 let analysisStarted=false,shownProgress=0,analysisTimer=null;
 function showProgress(value,label){{shownProgress=Math.max(shownProgress,Math.min(100,value));progressValue.style.width=`${{shownProgress}}%`;progressLabel.textContent=label}}
 function lockInputs(locked){{fileButton.setAttribute('aria-disabled',locked?'true':'false');linkButton.disabled=locked;mediaUrl.disabled=locked}}
-function finishRequest(request){{if(analysisTimer)clearInterval(analysisTimer);if(request.status>=200&&request.status<400){{showProgress(100,'Analiz tamamlandı. Grafik hazırlanıyor…');setTimeout(()=>{{window.location.assign(request.responseURL)}},220)}}else{{analysisStarted=false;lockInputs(false);progressLabel.textContent='Analiz oluşturulamadı. Lütfen tekrar dene.'}}}}
-function failRequest(){{if(analysisTimer)clearInterval(analysisTimer);analysisStarted=false;lockInputs(false);progressLabel.textContent='Analiz oluşturulamadı. Lütfen tekrar dene.'}}
+function finishRequest(request){{if(analysisTimer)clearInterval(analysisTimer);if(request.status>=200&&request.status<400){{showProgress(100,'Analiz tamamlandı. Grafik hazırlanıyor…');setTimeout(()=>{{window.location.assign(request.responseURL)}},220)}}else{{analysisStarted=false;lockInputs(false);progressLabel.textContent=(request.responseText||'Analiz oluşturulamadı. Lütfen tekrar dene.').trim()}}}}
+function failRequest(){{if(analysisTimer)clearInterval(analysisTimer);analysisStarted=false;lockInputs(false);progressLabel.textContent='Bağlantı kurulamadı. Lütfen tekrar dene.'}}
 function startProgress(label){{analysisStarted=true;lockInputs(true);progress.classList.add('visible');showProgress(1,label)}}
 function startPitchTimer(){{analysisTimer=setInterval(()=>showProgress(Math.min(94,shownProgress+Math.max(.4,(94-shownProgress)*.06)),'Pitch analizi yapılıyor veya cache kontrol ediliyor…'),350)}}
 function startAnalysis(){{if(analysisStarted||!recording.files.length)return;startProgress('Dosya yükleniyor…');const request=new XMLHttpRequest();request.open('POST','/analyse');request.upload.onprogress=event=>{{if(event.lengthComputable)showProgress(4+(event.loaded/event.total)*26,'Dosya yükleniyor…')}};request.upload.onload=()=>{{showProgress(32,'Pitch analizi yapılıyor veya cache kontrol ediliyor…');startPitchTimer()}};request.onload=()=>finishRequest(request);request.onerror=failRequest;request.send(new FormData(form))}}
@@ -300,7 +307,7 @@ class KlariVisionHandler(SimpleHTTPRequestHandler):
                 form.getfirst("engine", "vamp"),
             )
         except Exception as error:  # User-facing local app; preserve the server process after an error.
-            self._send_html(_form_page(f"Analiz oluşturulamadı: {error}"), status=400)
+            self._send_text(f"Analiz oluşturulamadı: {error}", status=400)
             return
         self.send_response(303)
         self.send_header("Location", result_url)
@@ -318,7 +325,7 @@ class KlariVisionHandler(SimpleHTTPRequestHandler):
                 fields.get("engine", ["vamp"])[0],
             )
         except Exception as error:  # User-facing local app; preserve the server process after an error.
-            self._send_html(_form_page(f"Linkten analiz oluşturulamadı: {error}"), status=400)
+            self._send_text(f"Linkten analiz oluşturulamadı: {error}", status=400)
             return
         self.send_response(303)
         self.send_header("Location", result_url)
@@ -328,6 +335,14 @@ class KlariVisionHandler(SimpleHTTPRequestHandler):
         encoded = page.encode("utf-8")
         self.send_response(status)
         self.send_header("Content-Type", "text/html; charset=utf-8")
+        self.send_header("Content-Length", str(len(encoded)))
+        self.end_headers()
+        self.wfile.write(encoded)
+
+    def _send_text(self, message: str, status: int = 200) -> None:
+        encoded = message.encode("utf-8")
+        self.send_response(status)
+        self.send_header("Content-Type", "text/plain; charset=utf-8")
         self.send_header("Content-Length", str(len(encoded)))
         self.end_headers()
         self.wfile.write(encoded)

@@ -1,6 +1,15 @@
+from pathlib import Path
+
 import pytest
 
-from klarivision.local_app import analyse_upload, _file_signature, _form_page, _parse_byte_range, _safe_stem
+from klarivision.local_app import (
+    analyse_upload,
+    _analysis_stem,
+    _file_signature,
+    _form_page,
+    _parse_byte_range,
+    _safe_stem,
+)
 
 
 def test_safe_stem_keeps_a_short_local_identifier() -> None:
@@ -34,9 +43,16 @@ def test_file_signature_changes_when_source_changes(tmp_path) -> None:
     assert _file_signature(source) != first_signature
 
 
-def test_analyse_upload_reuses_cached_pitch_when_source_is_unchanged(tmp_path, monkeypatch) -> None:
-    source = tmp_path / "icra.mp4"
-    source.write_bytes(b"same-media")
+def test_analysis_stem_ignores_temporary_import_ids() -> None:
+    assert _analysis_stem(Path("icra-1234abcd.mp4")) == "icra"
+    assert _analysis_stem(Path("link-1234abcd56.mp4")) == "link"
+
+
+def test_analyse_upload_reuses_cached_pitch_when_import_name_changes(tmp_path, monkeypatch) -> None:
+    first_source = tmp_path / "icra-1234abcd.mp4"
+    second_source = tmp_path / "icra-5678abcd.mp4"
+    first_source.write_bytes(b"same-media")
+    second_source.write_bytes(b"same-media")
     monkeypatch.setattr("klarivision.local_app.PROJECT_ROOT", tmp_path)
     monkeypatch.setattr("klarivision.local_app.AUDIO_DIR", tmp_path / "data" / "audio")
     monkeypatch.setattr("klarivision.local_app.OUTPUTS_DIR", tmp_path / "outputs")
@@ -66,8 +82,8 @@ def test_analyse_upload_reuses_cached_pitch_when_source_is_unchanged(tmp_path, m
     monkeypatch.setattr("klarivision.local_app.write_json", fake_write_json)
     monkeypatch.setattr("klarivision.local_app.build_frequency_viewer", fake_build_frequency_viewer)
 
-    first = analyse_upload(source, "huzzam", "dugah")
-    second = analyse_upload(source, "huzzam", "dugah")
+    first = analyse_upload(first_source, "huzzam", "dugah")
+    second = analyse_upload(second_source, "huzzam", "dugah")
 
     assert first == second
     assert calls == {"to_wav": 1, "extract": 1}
