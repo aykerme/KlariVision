@@ -9,6 +9,17 @@
 
 ## Faz 1 — Pitch prototipi
 
+### Kilometre taşı — v0.5.0 Stable
+
+- [x] Yerel video/ses ve YouTube bağlantısından medya alma
+- [x] Geçici bağlantı hataları için otomatik yeniden deneme
+- [x] İçerik imzasına dayalı pitch cache
+- [x] Açılış ekranında son kullanılan analizlere doğrudan erişim
+- [x] Ayrı paketlenmiş yerel macOS uygulaması (`dist/KlariVision.app`)
+
+Bu sürüm, günlük çalışma için ürün tabanıdır. Sonraki ana faz, mevcut pitch
+motorunu koruyarak SwiftUI tabanlı macOS arayüzünü oluşturmaktır.
+
 ### Kilometre taşı — v0.4.0 Pitch Viewer Foundation
 
 - [x] Yerel video/ses seçimi ve analiz ilerleme ekranı

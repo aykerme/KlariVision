@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "klarivision"
-version = "0.1.0"
+version = "0.5.0"
 description = "Turkish music performance analysis and education platform"
 requires-python = ">=3.11"
 dependencies = [

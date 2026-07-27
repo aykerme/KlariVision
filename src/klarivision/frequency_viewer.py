@@ -82,7 +82,7 @@ MAKAM_DEFAULT_INTERVALS = {
 }
 """AEU theoretical interval sequences; users may tune these in the viewer."""
 
-VIEWER_VERSION = "0.5.4-nota-alani"
+VIEWER_VERSION = "v0.5 Stable"
 """Stable local pitch viewer foundation with media-synchronised playback."""
 
 MINIMUM_CONFIDENCE = 0.20

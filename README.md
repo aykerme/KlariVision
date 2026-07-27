@@ -2,9 +2,25 @@
 
 ## Sürüm
 
-Mevcut stabil temel: **v0.2.0**. Bu sürüm pYIN ile ölçülen duyulan frekansı ve
-ana nota frekanslarını gösterir; makam, karar, transpozisyon ve süsleme
-katmanları bu temel görünümden ayrıdır.
+Mevcut kararlı sürüm: **v0.5.0 — Stable**. Bu sürüm yerel video/ses ve
+YouTube bağlantılarından pYIN pitch grafiği oluşturur; önceki analizleri
+önbellekten yeniden açar ve son kullanılan çalışmaları saklar.
+
+## Uygulamayı kullanma
+
+`dist/KlariVision.app` dosyasını aç.
+
+1. **Video veya ses seç** ile yerel bir kayıt aç veya YouTube/video bağlantısını
+   yapıştırıp **Linkten aç** düğmesine bas.
+2. Analiz tamamlandığında video/ses ile senkron pitch grafiği açılır.
+3. Aynı kaynak yeniden açıldığında grafik üstünde **Önceki pitch analizi
+   kullanıldı** bilgisi görünür; ağır pitch işlemi tekrarlanmaz.
+4. Açılış ekranındaki **Son kullanılanlar** listesinden daha önceki grafiklere
+   doğrudan dön.
+
+Bu sürümde pitch grafiği ürünün doğrulanmış çekirdeğidir. Otomatik süsleme
+tanıma deneysel kapsamda tutulur; SwiftUI tabanlı yerel arayüz dönüşümü sonraki
+ana geliştirme fazıdır.
 
 ## Kod inceleme
 

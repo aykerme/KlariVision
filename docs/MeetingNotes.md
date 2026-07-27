@@ -1,5 +1,21 @@
 # Toplantı Notları
 
+## 003 — 27 Temmuz 2026 — v0.5.0 Stable
+
+### Sabitlenen ürün davranışı
+
+- Yerel video/ses dosyaları ile YouTube/video bağlantıları analiz edilebilir.
+- Aynı kaynak içerik imzasıyla tanınır; WAV ve pYIN JSON cache'den kullanılır.
+- Açılış ekranı, önceki analizleri **Son kullanılanlar** listesinde açar.
+- Link alma bir kez otomatik yeniden denenir; geçici YouTube hataları kullanıcıyı
+  tekrar başlatmak zorunda bırakmaz.
+- Paketlenmiş uygulama: `dist/KlariVision.app`.
+
+### Sonraki faz
+
+- Çalışan Python analiz motoru korunacak.
+- Arayüz, SwiftUI/Xcode ile macOS'a özgü çalışma alanı deneyimine taşınacak.
+
 ## 002 — 26 Temmuz 2026 — v0.4.0 Pitch Viewer Foundation
 
 ### Sabitlenen temel
