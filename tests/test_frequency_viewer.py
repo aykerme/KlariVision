@@ -16,7 +16,7 @@ def test_frequency_viewer_uses_physical_hertz_grid(tmp_path) -> None:
 
     html = output.read_text(encoding="utf-8")
     assert "Duyulan frekans" in html
-    assert "KlariVision 0.4.3-koma-rehberi" in html
+    assert "KlariVision 0.4.4-makam-ayarlari" in html
     assert '"minor"' in html
     assert "Ölçülen eğri değiştirilmez" in html
     assert "followPlayback" in html
@@ -65,21 +65,27 @@ def test_frequency_viewer_uses_physical_hertz_grid(tmp_path) -> None:
     assert 'value="nihavent"' in html
     assert ">Nihavend</option>" in html
     assert "function nihaventNotes()" in html
-    assert "notesForMode('minor',[0,2,3,5,7,8,10],solClarinetTonic,soundingTonic)" in html
+    assert "function makamNotes(mode,labelMode)" in html
+    assert '"nihavent":[9,4,9,9,4,9,9]' in html
     assert "const solClarinetTonic=Number(tonicInput.value),soundingTonic=(solClarinetTonic+7)%12" in html
     assert 'value="kurdi"' in html
     assert ">Kürdi</option>" in html
     assert "function kurdiNotes()" in html
-    assert "notesForMode('kurdi',[0,1,3,5,7,8,10],solClarinetTonic,soundingTonic)" in html
+    assert '"kurdi":[4,9,9,9,4,9,9]' in html
     assert 'value="ussak"' in html
     assert ">Uşşak</option>" in html
     assert "function ussakNotes()" in html
-    assert "notesForMode('ussak',[0,2,3,5,7,9,10],solClarinetTonic,soundingTonic)" in html
+    assert '"ussak":[8,5,9,9,4,9,9]' in html
     assert "Rast (karar)" not in html
     assert 'class="interval-guide"' in html
     assert "Koma rehberi" in html
     assert "Küçük mücennep" in html
     assert "♯5 / ♭5" in html
+    assert 'id="makam-settings-open"' in html
+    assert 'id="makam-settings"' in html
+    assert "Toplam: ${total} / 53 koma" in html
+    assert "makamSettingsApply.disabled=total!==53" in html
+    assert "localStorage.setItem(makamSettingsKey" in html
 
 
 def test_frequency_viewer_can_embed_video(tmp_path) -> None:
