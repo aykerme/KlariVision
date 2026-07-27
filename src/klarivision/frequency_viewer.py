@@ -82,7 +82,7 @@ MAKAM_DEFAULT_INTERVALS = {
 }
 """AEU theoretical interval sequences; users may tune these in the viewer."""
 
-VIEWER_VERSION = "0.5.3-zaman-surucusu"
+VIEWER_VERSION = "0.5.4-nota-alani"
 """Stable local pitch viewer foundation with media-synchronised playback."""
 
 MINIMUM_CONFIDENCE = 0.20
@@ -198,7 +198,7 @@ const timelineStyle=document.createElement('style');
 timelineStyle.textContent='.panel{{height:calc(var(--chart-height) + 130px)}}.chart-scroll{{grid-template-rows:minmax(0,1fr)}}#time-scroll{{display:block!important;width:100%!important;height:18px!important;margin:7px 0 0!important;accent-color:#7755b8;flex:0 0 auto;visibility:visible!important;opacity:1!important}}';
 document.head.append(timelineStyle);
 const verticalFollowInput=document.getElementById('vertical-follow');let verticalSpan=2400,verticalCenter=0,verticalReady=false,mediaReady=false;
-let duration=Math.max(...frames.map(p=>p.t),0),loopA=0,loopB=duration,loopEnabled=false,loopBManual=false; const left=165,right=20,marginTop=22,bottom=34;
+let duration=Math.max(...frames.map(p=>p.t),0),loopA=0,loopB=duration,loopEnabled=false,loopBManual=false; const left=140,right=20,marginTop=22,bottom=34;
 const makamSettingsKey='klarivision-makam-intervals-v1';
 const makamNames={{nihavent:'Nihavend',kurdi:'Kürdi',ussak:'Uşşak',hicaz:'Hicaz',kurdilihicazkar:'Kürdilihicazkâr',hicazkar:'Hicazkâr'}};
 let makamIntervals=JSON.parse(JSON.stringify(makamDefaults)),pendingMakamIntervals=null;

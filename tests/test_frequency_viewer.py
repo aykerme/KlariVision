@@ -16,7 +16,7 @@ def test_frequency_viewer_uses_physical_hertz_grid(tmp_path) -> None:
 
     html = output.read_text(encoding="utf-8")
     assert "Duyulan frekans" in html
-    assert "KlariVision 0.5.3-zaman-surucusu" in html
+    assert "KlariVision 0.5.4-nota-alani" in html
     assert '"minor"' in html
     assert "Ölçülen eğri değiştirilmez" in html
     assert "followPlayback" in html
@@ -111,7 +111,7 @@ def test_frequency_viewer_uses_physical_hertz_grid(tmp_path) -> None:
     assert "function organisePracticeControls()" in html
     assert "contextStatus.id='context-status'" in html
     assert "deferredControls.forEach(control=>control.hidden=true)" in html
-    assert "const left=165" in html
+    assert "const left=140" in html
     assert "chartGrid.after(timeScroll)" in html
     assert "height:calc(var(--chart-height) + 130px)" in html
     assert "function setPlaybackRate(value)" in html
