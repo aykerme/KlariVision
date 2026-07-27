@@ -28,6 +28,9 @@ def test_recording_picker_starts_analysis_after_file_selection() -> None:
     assert "function startLinkAnalysis()" in page
     assert "recording.addEventListener('change'" in page
     assert "linkForm.addEventListener('submit'" in page
+    assert 'enctype="application/x-www-form-urlencoded"' in page
+    assert "event.preventDefault();startLinkAnalysis()" not in page
+    assert "mediaUrl.disabled=locked" not in page
     assert "request.upload.onprogress" in page
     assert "window.location.assign(request.responseURL)" in page
     assert "Pitch analizini oluştur" not in page
