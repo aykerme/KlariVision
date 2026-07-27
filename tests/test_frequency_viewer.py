@@ -16,7 +16,7 @@ def test_frequency_viewer_uses_physical_hertz_grid(tmp_path) -> None:
 
     html = output.read_text(encoding="utf-8")
     assert "Duyulan frekans" in html
-    assert "KlariVision 0.5.0-calisma-odakli" in html
+    assert "KlariVision 0.5.1-mouse-odakli" in html
     assert '"minor"' in html
     assert "Ölçülen eğri değiştirilmez" in html
     assert "followPlayback" in html
@@ -110,7 +110,8 @@ def test_frequency_viewer_uses_physical_hertz_grid(tmp_path) -> None:
     assert "media.playbackRate" in html
     assert "function organisePracticeControls()" in html
     assert "contextStatus.id='context-status'" in html
-    assert "Grafik görünümü" in html
+    assert "deferredControls.forEach(control=>control.hidden=true)" in html
+    assert "const left=165" in html
 
 
 def test_frequency_viewer_can_embed_video(tmp_path) -> None:
