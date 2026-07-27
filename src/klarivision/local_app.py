@@ -12,6 +12,7 @@ import os
 import re
 import shutil
 import subprocess
+from datetime import datetime
 import unicodedata
 import uuid
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
@@ -33,6 +34,7 @@ PROJECT_ROOT = user_data_root()
 IMPORTS_DIR = PROJECT_ROOT / "data" / "imports"
 AUDIO_DIR = PROJECT_ROOT / "data" / "audio"
 OUTPUTS_DIR = PROJECT_ROOT / "outputs"
+RECENTS_PATH = PROJECT_ROOT / "data" / "recent_analyses.json"
 VIDEO_SUFFIXES = {".mp4", ".mov", ".m4v", ".webm"}
 MEDIA_SUFFIXES = VIDEO_SUFFIXES | {".wav", ".mp3", ".m4a"}
 
@@ -85,6 +87,61 @@ def _analysis_stem(source: Path) -> str:
     return stem or "icra"
 
 
+def _load_recent_analyses() -> list[dict[str, object]]:
+    """Return usable recent analyses, discarding stale or malformed entries."""
+    try:
+        entries = json.loads(RECENTS_PATH.read_text(encoding="utf-8"))
+    except (FileNotFoundError, json.JSONDecodeError):
+        entries = []
+    if not isinstance(entries, list):
+        entries = []
+    usable: list[dict[str, object]] = []
+    for entry in entries:
+        if not isinstance(entry, dict):
+            continue
+        viewer_url = entry.get("viewer_url")
+        if not isinstance(viewer_url, str) or not viewer_url.startswith("/outputs/"):
+            continue
+        if (PROJECT_ROOT / viewer_url.lstrip("/")).is_file():
+            usable.append(entry)
+    known_urls = {str(entry["viewer_url"]) for entry in usable}
+    if OUTPUTS_DIR.is_dir():
+        for viewer in sorted(OUTPUTS_DIR.glob("*.html"), key=lambda path: path.stat().st_mtime, reverse=True):
+            viewer_url = "/outputs/" + quote(viewer.name)
+            if viewer_url in known_urls:
+                continue
+            try:
+                if "<title>KlariVision" not in viewer.read_text(encoding="utf-8")[:500]:
+                    continue
+            except OSError:
+                continue
+            usable.append(
+                {
+                    "viewer_url": viewer_url,
+                    "label": viewer.stem.replace("-", " "),
+                    "analysed_at": datetime.fromtimestamp(viewer.stat().st_mtime).astimezone().strftime("%d.%m.%Y %H:%M"),
+                    "cache_hit": True,
+                }
+            )
+            known_urls.add(viewer_url)
+    return usable[:12]
+
+
+def _store_recent_analysis(source: Path, viewer_url: str, *, cache_hit: bool) -> None:
+    """Persist a compact list of analyses that can be reopened from the start page."""
+    RECENTS_PATH.parent.mkdir(parents=True, exist_ok=True)
+    entry = {
+        "viewer_url": viewer_url,
+        "label": source.name,
+        "analysed_at": datetime.now().astimezone().strftime("%d.%m.%Y %H:%M"),
+        "cache_hit": cache_hit,
+    }
+    entries = [item for item in _load_recent_analyses() if item.get("viewer_url") != viewer_url]
+    temporary = RECENTS_PATH.with_suffix(".tmp")
+    temporary.write_text(json.dumps([entry, *entries][:12], ensure_ascii=False, indent=2), encoding="utf-8")
+    temporary.replace(RECENTS_PATH)
+
+
 def _to_wav(source: Path, destination: Path) -> None:
     """Extract mono, 22.05 kHz WAV audio required by the pYIN extractor."""
     destination.parent.mkdir(parents=True, exist_ok=True)
@@ -131,9 +188,20 @@ def _import_from_url(url: str) -> Path:
         "noprogress": True,
         "no_warnings": True,
     }
-    with YoutubeDL(options) as downloader:
-        info = downloader.extract_info(url, download=True)
-        downloaded = Path(downloader.prepare_filename(info))
+    downloaded: Path | None = None
+    last_error: Exception | None = None
+    for attempt in range(2):
+        try:
+            with YoutubeDL(options) as downloader:
+                info = downloader.extract_info(url, download=True)
+                downloaded = Path(downloader.prepare_filename(info))
+            break
+        except Exception as error:  # YouTube occasionally rejects a first extraction attempt.
+            last_error = error
+            if attempt:
+                raise RuntimeError(f"Bağlantıdan medya alınamadı: {error}") from error
+    if downloaded is None:
+        raise RuntimeError(f"Bağlantıdan medya alınamadı: {last_error}")
     merged = downloaded.with_suffix(".mp4")
     if merged.is_file():
         return merged
@@ -156,7 +224,8 @@ def analyse_upload(source: Path, makam: str, karar: str, engine: str = "vamp") -
     viewer = OUTPUTS_DIR / f"{analysis_id}.html"
     if not wav.is_file():
         _to_wav(source, wav)
-    if not pitch_json.is_file():
+    cache_hit = pitch_json.is_file()
+    if not cache_hit:
         extractor = VampPyinPitchExtractor() if engine == "vamp" else PyinPitchExtractor()
         track = extractor.extract(AudioSource(wav))
         write_json(track, pitch_json)
@@ -169,8 +238,13 @@ def analyse_upload(source: Path, makam: str, karar: str, engine: str = "vamp") -
             if source.suffix.lower() in VIDEO_SUFFIXES
             else None
         ),
+        analysis_status=(
+            "Önceki pitch analizi kullanıldı." if cache_hit else "Yeni pitch analizi oluşturuldu."
+        ),
     )
-    return "/" + quote(viewer.relative_to(PROJECT_ROOT).as_posix())
+    viewer_url = "/" + quote(viewer.relative_to(PROJECT_ROOT).as_posix())
+    _store_recent_analysis(source, viewer_url, cache_hit=cache_hit)
+    return viewer_url
 
 
 def _form_page(message: str = "") -> str:
@@ -182,10 +256,26 @@ def _form_page(message: str = "") -> str:
         for key, value in KARAR_TONES.items()
     )
     notice = f'<p class="notice">{html.escape(message)}</p>' if message else ""
+    recent_items = "".join(
+        "<a class=\"recent-item\" href=\"{url}\"><strong>{label}</strong>"
+        "<span>{when} · {cache}</span></a>".format(
+            url=html.escape(str(entry["viewer_url"]), quote=True),
+            label=html.escape(str(entry.get("label", "İsimsiz kayıt"))),
+            when=html.escape(str(entry.get("analysed_at", ""))),
+            cache="Pitch hazır" if entry.get("cache_hit") else "Yeni analiz",
+        )
+        for entry in _load_recent_analyses()
+    )
+    recent_section = (
+        '<section class="recent"><h2>Son kullanılanlar</h2>' + recent_items + "</section>"
+        if recent_items
+        else ""
+    )
     return f"""<!doctype html><meta charset="utf-8"><title>KlariVision</title>
 <style>
 body{{font-family:system-ui;max-width:720px;margin:56px auto;padding:0 20px;color:#1e1e1e}}
 h1{{margin-bottom:6px}}p{{line-height:1.5}}form{{margin-top:24px;padding:24px;border:1px solid #ddd;border-radius:12px;background:#fafafa}}input,select,button{{font:inherit}}.file-input{{position:absolute;width:1px;height:1px;opacity:0}}.file-button{{display:inline-block;margin-top:8px;padding:12px 16px;background:#1d5fa7;color:#fff;border-radius:8px;font-weight:650;cursor:pointer}}.file-button[aria-disabled="true"],button[disabled]{{opacity:.55;pointer-events:none}}.file-name{{display:block;margin-top:12px;color:#596775}}.link-row{{display:flex;gap:8px;margin-top:18px}}.link-row input{{flex:1;min-width:0;padding:10px;border:1px solid #c9d4df;border-radius:8px}}.link-row button{{padding:10px 13px;border:0;border-radius:8px;background:#263746;color:white;font-weight:650;cursor:pointer}}.progress{{display:none;margin-top:22px}}.progress.visible{{display:block}}.progress-track{{height:12px;background:#e2e8ef;border-radius:99px;overflow:hidden}}.progress-value{{height:100%;width:0;background:linear-gradient(90deg,#1d5fa7,#58a6e8);transition:width .25s ease}}.progress-label{{display:block;margin-top:9px;color:#405465;font-size:.94rem}}.notice{{padding:10px;background:#fff1f1;border-radius:7px;color:#8b2222}}
+.recent{{margin-top:22px;border-top:1px solid #e0e5ea;padding-top:18px}}.recent h2{{font-size:16px;margin:0 0 8px}}.recent-item{{display:flex;justify-content:space-between;gap:12px;padding:10px 11px;border:1px solid #dde4eb;border-radius:8px;margin-top:7px;color:#173d62;text-decoration:none}}.recent-item:hover{{background:#eef5fb}}.recent-item span{{color:#637384;font-size:12px;white-space:nowrap}}
 </style>
 <h1>KlariVision</h1><p>Yeni bir çalışma için video veya ses dosyası seç. Analiz tamamlanana kadar burada grafik ya da video gösterilmez.</p>{notice}
 <form id="analysis-form" method="post" action="/analyse" enctype="multipart/form-data">
@@ -204,7 +294,7 @@ function startPitchTimer(){{analysisTimer=setInterval(()=>showProgress(Math.min(
 function startAnalysis(){{if(analysisStarted||!recording.files.length)return;startProgress('Dosya yükleniyor…');const request=new XMLHttpRequest();request.open('POST','/analyse');request.upload.onprogress=event=>{{if(event.lengthComputable)showProgress(4+(event.loaded/event.total)*26,'Dosya yükleniyor…')}};request.upload.onload=()=>{{showProgress(32,'Pitch analizi yapılıyor veya cache kontrol ediliyor…');startPitchTimer()}};request.onload=()=>finishRequest(request);request.onerror=failRequest;request.send(new FormData(form))}}
 function startLinkAnalysis(){{if(analysisStarted||!mediaUrl.value.trim())return;startProgress('Bağlantıdan medya alınıyor…');showProgress(18,'Bağlantıdan medya alınıyor…');startPitchTimer()}}
 recording.addEventListener('change',event=>{{const file=event.target.files[0];fileName.textContent=file?.name||'Henüz dosya seçilmedi';if(file)startAnalysis()}});form.addEventListener('submit',event=>{{event.preventDefault();startAnalysis()}});linkForm.addEventListener('submit',()=>startLinkAnalysis());
-</script>"""
+</script>{recent_section}"""
 
 
 class KlariVisionHandler(SimpleHTTPRequestHandler):

@@ -7,8 +7,10 @@ from klarivision.local_app import (
     _analysis_stem,
     _file_signature,
     _form_page,
+    _load_recent_analyses,
     _parse_byte_range,
     _safe_stem,
+    _store_recent_analysis,
 )
 
 
@@ -59,6 +61,7 @@ def test_analyse_upload_reuses_cached_pitch_when_import_name_changes(tmp_path, m
     monkeypatch.setattr("klarivision.local_app.PROJECT_ROOT", tmp_path)
     monkeypatch.setattr("klarivision.local_app.AUDIO_DIR", tmp_path / "data" / "audio")
     monkeypatch.setattr("klarivision.local_app.OUTPUTS_DIR", tmp_path / "outputs")
+    monkeypatch.setattr("klarivision.local_app.RECENTS_PATH", tmp_path / "data" / "recent_analyses.json")
 
     calls = {"to_wav": 0, "extract": 0}
 
@@ -90,6 +93,26 @@ def test_analyse_upload_reuses_cached_pitch_when_import_name_changes(tmp_path, m
 
     assert first == second
     assert calls == {"to_wav": 1, "extract": 1}
+
+
+def test_recent_analyses_only_lists_existing_viewers(tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr("klarivision.local_app.PROJECT_ROOT", tmp_path)
+    monkeypatch.setattr("klarivision.local_app.RECENTS_PATH", tmp_path / "data" / "recent_analyses.json")
+    monkeypatch.setattr("klarivision.local_app.OUTPUTS_DIR", tmp_path / "outputs")
+    viewer = tmp_path / "outputs" / "ornek.html"
+    viewer.parent.mkdir(parents=True)
+    viewer.write_text("<html></html>", encoding="utf-8")
+
+    _store_recent_analysis(Path("/tmp/Örnek Çalım.mp4"), "/outputs/ornek.html", cache_hit=True)
+
+    assert _load_recent_analyses() == [
+        {
+            "viewer_url": "/outputs/ornek.html",
+            "label": "Örnek Çalım.mp4",
+            "analysed_at": _load_recent_analyses()[0]["analysed_at"],
+            "cache_hit": True,
+        }
+    ]
 
 
 def test_parse_byte_range_supports_media_seeking() -> None:
