@@ -82,7 +82,7 @@ MAKAM_DEFAULT_INTERVALS = {
 }
 """AEU theoretical interval sequences; users may tune these in the viewer."""
 
-VIEWER_VERSION = "0.5.2-calisma-kontrolleri"
+VIEWER_VERSION = "0.5.3-zaman-surucusu"
 """Stable local pitch viewer foundation with media-synchronised playback."""
 
 MINIMUM_CONFIDENCE = 0.20
@@ -190,6 +190,13 @@ const makamSettingsDialog=document.getElementById('makam-settings'),makamSetting
 const makamStatus=document.getElementById('makam-status');let contextStatus,playbackRateStatus;
 const winInput=document.getElementById('window'),countdownInput=document.getElementById('countdown'),playToggle=document.getElementById('play-toggle'),countdownStatus=document.getElementById('countdown-status');let windowSeconds=12,viewStart=-6,drag=null,followPlayback=true,countdownTimer=null,countdownBypass=false;
 const workspace=document.getElementById('workspace'),layoutMode=document.getElementById('layout-mode'),mediaPanel=document.getElementById('media-panel'),chartPanel=canvas.closest('.panel');let resizeAction=null;
+// Keep the time scrubber on its own row.  It previously lived inside the
+// chart grid, where the fixed-size panel could clip it out of view.
+const chartGrid=document.getElementById('chart-panel');
+chartGrid.after(timeScroll);
+const timelineStyle=document.createElement('style');
+timelineStyle.textContent='.panel{{height:calc(var(--chart-height) + 130px)}}.chart-scroll{{grid-template-rows:minmax(0,1fr)}}#time-scroll{{display:block!important;width:100%!important;height:18px!important;margin:7px 0 0!important;accent-color:#7755b8;flex:0 0 auto;visibility:visible!important;opacity:1!important}}';
+document.head.append(timelineStyle);
 const verticalFollowInput=document.getElementById('vertical-follow');let verticalSpan=2400,verticalCenter=0,verticalReady=false,mediaReady=false;
 let duration=Math.max(...frames.map(p=>p.t),0),loopA=0,loopB=duration,loopEnabled=false,loopBManual=false; const left=165,right=20,marginTop=22,bottom=34;
 const makamSettingsKey='klarivision-makam-intervals-v1';
