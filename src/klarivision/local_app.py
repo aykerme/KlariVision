@@ -16,7 +16,7 @@ import unicodedata
 import uuid
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from urllib.parse import quote, unquote, urlparse
+from urllib.parse import parse_qs, quote, unquote, urlparse
 
 import imageio_ffmpeg
 
@@ -192,7 +192,7 @@ h1{{margin-bottom:6px}}p{{line-height:1.5}}form{{margin-top:24px;padding:24px;bo
 <input id="recording" class="file-input" name="recording" type="file" accept="video/*,audio/*,.wav,.mp3,.m4a" required><label class="file-button" for="recording">Video veya ses seç</label><span id="file-name" class="file-name">Henüz dosya seçilmedi</span>
 <input type="hidden" name="makam" value="huzzam"><input type="hidden" name="karar" value="dugah"><input type="hidden" name="engine" value="vamp">
 <div id="progress" class="progress" aria-live="polite"><div class="progress-track"><div id="progress-value" class="progress-value"></div></div><span id="progress-label" class="progress-label">Dosya hazırlanıyor…</span></div>
-</form><form id="link-form" method="post" action="/analyse-link"><div class="link-row"><input id="media-url" name="url" type="url" placeholder="YouTube veya video bağlantısı"><button id="link-button" type="submit">Linkten aç</button></div><input type="hidden" name="makam" value="huzzam"><input type="hidden" name="karar" value="dugah"><input type="hidden" name="engine" value="vamp"></form><script>
+</form><form id="link-form" method="post" action="/analyse-link"><div class="link-row"><input id="media-url" name="url" type="url" placeholder="YouTube veya video bağlantısı" required><button id="link-button" type="submit">Linkten aç</button></div><input type="hidden" name="makam" value="huzzam"><input type="hidden" name="karar" value="dugah"><input type="hidden" name="engine" value="vamp"></form><script>
 const form=document.getElementById('analysis-form'),linkForm=document.getElementById('link-form'),recording=document.getElementById('recording'),fileName=document.getElementById('file-name'),fileButton=document.querySelector('.file-button'),linkButton=document.getElementById('link-button'),mediaUrl=document.getElementById('media-url'),progress=document.getElementById('progress'),progressValue=document.getElementById('progress-value'),progressLabel=document.getElementById('progress-label');
 let analysisStarted=false,shownProgress=0,analysisTimer=null;
 function showProgress(value,label){{shownProgress=Math.max(shownProgress,Math.min(100,value));progressValue.style.width=`${{shownProgress}}%`;progressLabel.textContent=label}}
@@ -202,7 +202,7 @@ function failRequest(){{if(analysisTimer)clearInterval(analysisTimer);analysisSt
 function startProgress(label){{analysisStarted=true;lockInputs(true);progress.classList.add('visible');showProgress(1,label)}}
 function startPitchTimer(){{analysisTimer=setInterval(()=>showProgress(Math.min(94,shownProgress+Math.max(.4,(94-shownProgress)*.06)),'Pitch analizi yapılıyor veya cache kontrol ediliyor…'),350)}}
 function startAnalysis(){{if(analysisStarted||!recording.files.length)return;startProgress('Dosya yükleniyor…');const request=new XMLHttpRequest();request.open('POST','/analyse');request.upload.onprogress=event=>{{if(event.lengthComputable)showProgress(4+(event.loaded/event.total)*26,'Dosya yükleniyor…')}};request.upload.onload=()=>{{showProgress(32,'Pitch analizi yapılıyor veya cache kontrol ediliyor…');startPitchTimer()}};request.onload=()=>finishRequest(request);request.onerror=failRequest;request.send(new FormData(form))}}
-function startLinkAnalysis(){{if(analysisStarted||!mediaUrl.value.trim())return;startProgress('Bağlantıdan medya alınıyor…');const request=new XMLHttpRequest();request.open('POST','/analyse-link');request.onload=()=>finishRequest(request);request.onerror=failRequest;showProgress(18,'Bağlantıdan medya alınıyor…');startPitchTimer();request.send(new FormData(linkForm))}}
+function startLinkAnalysis(){{if(analysisStarted||!mediaUrl.value.trim())return;startProgress('Bağlantıdan medya alınıyor…');const request=new XMLHttpRequest();request.open('POST','/analyse-link');request.setRequestHeader('Content-Type','application/x-www-form-urlencoded;charset=UTF-8');request.onload=()=>finishRequest(request);request.onerror=failRequest;showProgress(18,'Bağlantıdan medya alınıyor…');startPitchTimer();request.send(new URLSearchParams(new FormData(linkForm)).toString())}}
 recording.addEventListener('change',event=>{{const file=event.target.files[0];fileName.textContent=file?.name||'Henüz dosya seçilmedi';if(file)startAnalysis()}});form.addEventListener('submit',event=>{{event.preventDefault();startAnalysis()}});linkForm.addEventListener('submit',event=>{{event.preventDefault();startLinkAnalysis()}});
 </script>"""
 
@@ -315,20 +315,16 @@ class KlariVisionHandler(SimpleHTTPRequestHandler):
 
     def _handle_link_import(self) -> None:
         try:
-            # The browser submits FormData as multipart/form-data.  Parsing it as
-            # a query string made every URL appear empty and triggered the
-            # misleading "Geçerli bir internet bağlantısı gir" message.
-            form = cgi.FieldStorage(
-                fp=self.rfile,
-                headers=self.headers,
-                environ={"REQUEST_METHOD": "POST", "CONTENT_TYPE": self.headers["Content-Type"]},
-            )
-            source = _import_from_url(form.getfirst("url", ""))
+            # Link metadata is deliberately sent as URL-encoded text. This is
+            # stable in both the embedded macOS WebKit view and regular browsers.
+            length = int(self.headers.get("Content-Length", "0"))
+            fields = parse_qs(self.rfile.read(length).decode("utf-8"), keep_blank_values=True)
+            source = _import_from_url(fields.get("url", [""])[0])
             result_url = analyse_upload(
                 source,
-                form.getfirst("makam", "huzzam"),
-                form.getfirst("karar", "dugah"),
-                form.getfirst("engine", "vamp"),
+                fields.get("makam", ["huzzam"])[0],
+                fields.get("karar", ["dugah"])[0],
+                fields.get("engine", ["vamp"])[0],
             )
         except Exception as error:  # User-facing local app; preserve the server process after an error.
             self._send_text(f"Linkten analiz oluşturulamadı: {error}", status=400)
