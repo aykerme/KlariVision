@@ -16,7 +16,7 @@ import unicodedata
 import uuid
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from urllib.parse import parse_qs, quote, unquote, urlparse
+from urllib.parse import quote, unquote, urlparse
 
 import imageio_ffmpeg
 
@@ -315,14 +315,20 @@ class KlariVisionHandler(SimpleHTTPRequestHandler):
 
     def _handle_link_import(self) -> None:
         try:
-            length = int(self.headers.get("Content-Length", "0"))
-            fields = parse_qs(self.rfile.read(length).decode("utf-8"), keep_blank_values=True)
-            source = _import_from_url(fields.get("url", [""])[0])
+            # The browser submits FormData as multipart/form-data.  Parsing it as
+            # a query string made every URL appear empty and triggered the
+            # misleading "Geçerli bir internet bağlantısı gir" message.
+            form = cgi.FieldStorage(
+                fp=self.rfile,
+                headers=self.headers,
+                environ={"REQUEST_METHOD": "POST", "CONTENT_TYPE": self.headers["Content-Type"]},
+            )
+            source = _import_from_url(form.getfirst("url", ""))
             result_url = analyse_upload(
                 source,
-                fields.get("makam", ["huzzam"])[0],
-                fields.get("karar", ["dugah"])[0],
-                fields.get("engine", ["vamp"])[0],
+                form.getfirst("makam", "huzzam"),
+                form.getfirst("karar", "dugah"),
+                form.getfirst("engine", "vamp"),
             )
         except Exception as error:  # User-facing local app; preserve the server process after an error.
             self._send_text(f"Linkten analiz oluşturulamadı: {error}", status=400)
