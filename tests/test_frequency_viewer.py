@@ -83,6 +83,19 @@ def test_frequency_viewer_can_embed_video(tmp_path) -> None:
     assert '<video id="media" controls src="video.mp4"></video>' in output.read_text(encoding="utf-8")
 
 
+def test_frequency_viewer_uses_compact_audio_player(tmp_path) -> None:
+    pitch_json = tmp_path / "pitch.json"
+    pitch_json.write_text(json.dumps({"frames": []}), encoding="utf-8")
+    output = tmp_path / "viewer.html"
+    build_frequency_viewer(pitch_json, "audio.wav", output)
+
+    html = output.read_text(encoding="utf-8")
+    assert 'class="audio-content"' in html
+    assert '<strong>Ses kaydı</strong>' in html
+    assert 'const audioOnly=true;' in html
+    assert 'workspace audio-only' in html
+
+
 def test_frequency_viewer_removes_weak_and_isolated_pitch_candidates() -> None:
     payload = {
         "frames": [
