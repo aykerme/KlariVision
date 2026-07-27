@@ -16,7 +16,7 @@ def test_frequency_viewer_uses_physical_hertz_grid(tmp_path) -> None:
 
     html = output.read_text(encoding="utf-8")
     assert "Duyulan frekans" in html
-    assert "KlariVision 0.4.6-dinamik-koma-etiketi" in html
+    assert "KlariVision 0.4.7-tum-makamlar-dinamik" in html
     assert '"minor"' in html
     assert "Ölçülen eğri değiştirilmez" in html
     assert "followPlayback" in html
@@ -66,8 +66,9 @@ def test_frequency_viewer_uses_physical_hertz_grid(tmp_path) -> None:
     assert ">Nihavend</option>" in html
     assert "function nihaventNotes()" in html
     assert "function makamNotes(mode,labelMode)" in html
-    assert "function makamLabel(name,octave,delta=0)" in html
-    assert "steps[degree]-defaultSteps[degree]" in html
+    assert "function makamLabel(name,octave,step,rootKoma)" in html
+    assert "naturalKomaByPitchClass" in html
+    assert "naturalKomaByName" in html
     assert '"nihavent":[9,4,9,9,4,9,9]' in html
     assert "const solClarinetTonic=Number(tonicInput.value),soundingTonic=(solClarinetTonic+7)%12" in html
     assert 'value="kurdi"' in html

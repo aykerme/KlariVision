@@ -79,7 +79,7 @@ MAKAM_DEFAULT_INTERVALS = {
 }
 """AEU theoretical interval sequences; users may tune these in the viewer."""
 
-VIEWER_VERSION = "0.4.6-dinamik-koma-etiketi"
+VIEWER_VERSION = "0.4.7-tum-makamlar-dinamik"
 """Stable local pitch viewer foundation with media-synchronised playback."""
 
 MINIMUM_CONFIDENCE = 0.20
@@ -194,8 +194,9 @@ let makamIntervals=JSON.parse(JSON.stringify(makamDefaults)),pendingMakamInterva
 try{{const stored=JSON.parse(localStorage.getItem(makamSettingsKey));if(stored&&Object.keys(makamDefaults).every(mode=>Array.isArray(stored[mode])&&stored[mode].length===7&&stored[mode].every(value=>Number.isInteger(value)&&value>=1&&value<=13)&&stored[mode].reduce((sum,value)=>sum+value,0)===53))makamIntervals=stored}}catch(_error){{}}
 function cents(hz){{return 1200*Math.log2(hz/440)}}
 function notesForMode(mode,intervals,labelTonic=Number(tonicInput.value),soundingTonic=Number(tonicInput.value)){{const names=scaleLabels[mode][String(labelTonic)],namesByPitchClass=new Map(intervals.map((interval,index)=>[(soundingTonic+interval)%12,names[index]])),result=[];for(let midi=24;midi<=108;midi++){{const name=namesByPitchClass.get(midi%12);if(!name)continue;const octave=Math.floor(midi/12)-1,hz=440*Math.pow(2,(midi-69)/12);result.push([`${{name}}${{octave}}`,hz])}}return result}}
-function makamLabel(name,octave,delta=0){{const match=name.match(/^(.*?)(?:\\s([♭♯])(\\d+))?$/),base=match[1],baseline=match[2]?(match[2]==='♭'?-1:1)*Number(match[3]):0,actual=baseline+delta;if(!actual)return `${{base}}${{octave}}`;return `${{base}}${{octave}} ${{actual<0?'♭':'♯'}}${{Math.abs(actual)}}`}}
-function makamNotes(mode,labelMode){{const solClarinetTonic=Number(tonicInput.value),soundingTonic=(solClarinetTonic+7)%12,tonicMidi=60+soundingTonic,names=scaleLabels[labelMode][String(solClarinetTonic)],steps=[0],defaultSteps=[0];for(const interval of makamIntervals[mode])steps.push(steps.at(-1)+interval);for(const interval of makamDefaults[mode])defaultSteps.push(defaultSteps.at(-1)+interval);const result=[];for(let octave=-3;octave<=3;octave++){{for(let degree=0;degree<7;degree++){{const hz=440*Math.pow(2,(tonicMidi-69)/12)*Math.pow(2,octave)*Math.pow(2,steps[degree]/53),label=mode==='ussak'?makamLabel(names[degree],Math.floor(tonicMidi/12)-1+octave,steps[degree]-defaultSteps[degree]):`${{names[degree]}}${{Math.floor(tonicMidi/12)-1+octave}}`;result.push([label,hz])}}}}return result}}
+const naturalKomaByPitchClass={{0:0,2:9,4:18,5:22,7:31,9:40,11:49}},naturalKomaByName={{Do:0,Re:9,Mi:18,Fa:22,Sol:31,La:40,Si:49}};
+function makamLabel(name,octave,step,rootKoma){{const base=name.match(/^(Do|Re|Mi|Fa|Sol|La|Si)/)[1],naturalStep=(naturalKomaByName[base]-rootKoma+53)%53,adjustment=step-naturalStep;if(!adjustment)return `${{base}}${{octave}}`;return `${{base}}${{octave}} ${{adjustment<0?'♭':'♯'}}${{Math.abs(adjustment)}}`}}
+function makamNotes(mode,labelMode){{const solClarinetTonic=Number(tonicInput.value),soundingTonic=(solClarinetTonic+7)%12,tonicMidi=60+soundingTonic,rootKoma=naturalKomaByPitchClass[solClarinetTonic],names=scaleLabels[labelMode][String(solClarinetTonic)],steps=[0];for(const interval of makamIntervals[mode])steps.push(steps.at(-1)+interval);const result=[];for(let octave=-3;octave<=3;octave++){{for(let degree=0;degree<7;degree++){{const hz=440*Math.pow(2,(tonicMidi-69)/12)*Math.pow(2,octave)*Math.pow(2,steps[degree]/53),label=makamLabel(names[degree],Math.floor(tonicMidi/12)-1+octave,steps[degree],rootKoma);result.push([label,hz])}}}}return result}}
 function nihaventNotes(){{return makamNotes('nihavent','minor')}}
 function kurdiNotes(){{return makamNotes('kurdi','kurdi')}}
 function ussakNotes(){{return makamNotes('ussak','ussak')}}
