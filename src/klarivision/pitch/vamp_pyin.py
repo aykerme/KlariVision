@@ -10,10 +10,11 @@ from pathlib import Path
 
 import numpy as np
 
+from ..runtime_paths import resource_root
 from .models import AudioSource, PitchTrack
 
 
-PROJECT_ROOT = Path(__file__).resolve().parents[3]
+PROJECT_ROOT = resource_root()
 DEFAULT_BINARY = PROJECT_ROOT / "tools" / "sonic-annotator" / "sonic-annotator"
 DEFAULT_TRANSFORM = PROJECT_ROOT / "data" / "reference" / "vamp-pyin-smoothedpitch.ttl"
 

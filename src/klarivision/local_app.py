@@ -25,9 +25,10 @@ from .pitch.models import AudioSource
 from .pitch.pyin import PyinPitchExtractor
 from .pitch.serialize import write_json
 from .pitch.vamp_pyin import VampPyinPitchExtractor
+from .runtime_paths import user_data_root
 
 
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
+PROJECT_ROOT = user_data_root()
 IMPORTS_DIR = PROJECT_ROOT / "data" / "imports"
 AUDIO_DIR = PROJECT_ROOT / "data" / "audio"
 OUTPUTS_DIR = PROJECT_ROOT / "outputs"
@@ -255,11 +256,16 @@ class KlariVisionHandler(SimpleHTTPRequestHandler):
         self.wfile.write(encoded)
 
 
+def create_server(port: int = 8765) -> ThreadingHTTPServer:
+    """Create the local service used by both the browser and desktop app."""
+    return ThreadingHTTPServer(("127.0.0.1", port), KlariVisionHandler)
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Run the local KlariVision recording picker.")
     parser.add_argument("--port", type=int, default=8765)
     arguments = parser.parse_args()
-    server = ThreadingHTTPServer(("127.0.0.1", arguments.port), KlariVisionHandler)
+    server = create_server(arguments.port)
     print(f"KlariVision hazır: http://127.0.0.1:{arguments.port}")
     server.serve_forever()
 

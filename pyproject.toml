@@ -18,6 +18,7 @@ dependencies = [
 [project.scripts]
 klarivision-analyze = "klarivision.cli:main"
 klarivision-app = "klarivision.local_app:main"
+klarivision-desktop = "klarivision.desktop_app:main"
 
 [project.optional-dependencies]
 pitch-pyin = [
@@ -25,6 +26,10 @@ pitch-pyin = [
     "numba>=0.60",
 ]
 dev = ["pytest>=8"]
+desktop = [
+    "pywebview>=5.4,<6",
+    "pyinstaller>=6.10,<7",
+]
 
 [tool.pytest.ini_options]
 pythonpath = ["src"]

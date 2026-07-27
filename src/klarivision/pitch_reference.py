@@ -8,8 +8,10 @@ import re
 
 from openpyxl import load_workbook
 
+from .runtime_paths import resource_root
 
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
+
+PROJECT_ROOT = resource_root()
 DEFAULT_REFERENCE_PATH = (
     PROJECT_ROOT / "data" / "reference" / "Turk_Muzigi_Perdeleri_ve_Mikrotonal_Notasyon.xlsx"
 )
