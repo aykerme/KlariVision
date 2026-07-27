@@ -48,9 +48,20 @@ SCALE_LABELS = {
         "11": ("Si", "Do♯", "Re", "Mi", "Fa♯", "Sol", "La♯"),
         "6": ("Fa♯", "Sol♯", "La", "Si", "Do♯", "Re", "Mi♯"),
     },
+    "kurdi": {
+        "0": ("Do", "Re♭", "Mi♭", "Fa", "Sol", "La♭", "Si♭"),
+        "2": ("Re", "Mi♭", "Fa", "Sol", "La", "Si♭", "Do"),
+        "4": ("Mi", "Fa", "Sol", "La", "Si", "Do", "Re"),
+        "5": ("Fa", "Sol♭", "La♭", "Si♭", "Do", "Re♭", "Mi♭"),
+        "7": ("Sol", "La♭", "Si♭", "Do", "Re", "Mi♭", "Fa"),
+        "9": ("La", "Si♭", "Do", "Re", "Mi", "Fa", "Sol"),
+        "10": ("Si♭", "Do♭", "Re♭", "Mi♭", "Fa", "Sol♭", "La♭"),
+        "11": ("Si", "Do", "Re", "Mi", "Fa♯", "Sol", "La"),
+        "6": ("Fa♯", "Sol", "La", "Si", "Do♯", "Re", "Mi"),
+    },
 }
 
-VIEWER_VERSION = "0.4.0-foundation"
+VIEWER_VERSION = "0.4.1-kurdi"
 """Stable local pitch viewer foundation with media-synchronised playback."""
 
 MINIMUM_CONFIDENCE = 0.20
@@ -132,7 +143,7 @@ def build_frequency_viewer(
 <label>Görünür süre <input id="window" type="number" min="2" max="60" step="1" value="12"> sn</label>
 <button id="vertical-out">− Dikey</button><button id="vertical-in">+ Dikey</button>
 <label><input id="vertical-follow" type="checkbox"> Eğriyi dikey takip et</label>
-<label>Eksen <select id="scale-mode"><option value="major">Majör</option><option value="minor">Minör</option><option value="nihavent">Nihavend</option><option value="turkish">Türk Müziği · Sol Klarnet</option></select></label>
+<label>Eksen <select id="scale-mode"><option value="major">Majör</option><option value="minor">Minör</option><option value="nihavent">Nihavend</option><option value="kurdi">Kürdi</option><option value="turkish">Türk Müziği · Sol Klarnet</option></select></label>
 <label>Karar <select id="tonic"><option value="0">Do</option><option value="2">Re</option><option value="4">Mi</option><option value="5">Fa</option><option value="7">Sol</option><option value="9">La</option><option value="11">Si</option></select></label>
 <label>Geri sayım <input id="countdown" type="number" min="0" max="60" step="1" value="0"> sn</label><button id="play-toggle">Oynat</button><span id="countdown-status" class="countdown-status" aria-live="polite"></span>
 <button id="set-a" disabled>A: 0.00 sn</button><button id="set-b" disabled>B: Son</button><button id="loop" aria-pressed="false" disabled>Loop</button><button id="reset">Başa dön</button><span class="legend">Tekerlek: imleç çevresinde zaman yakınlaştır · Shift+tekerlek: dikey yakınlaştır · sürükle: kayıtta gezin</span>
@@ -150,8 +161,9 @@ let duration=Math.max(...frames.map(p=>p.t),0),loopA=0,loopB=duration,loopEnable
 function cents(hz){{return 1200*Math.log2(hz/440)}}
 function notesForMode(mode,intervals,labelTonic=Number(tonicInput.value),soundingTonic=Number(tonicInput.value)){{const names=scaleLabels[mode][String(labelTonic)],namesByPitchClass=new Map(intervals.map((interval,index)=>[(soundingTonic+interval)%12,names[index]])),result=[];for(let midi=24;midi<=108;midi++){{const name=namesByPitchClass.get(midi%12);if(!name)continue;const octave=Math.floor(midi/12)-1,hz=440*Math.pow(2,(midi-69)/12);result.push([`${{name}}${{octave}}`,hz])}}return result}}
 function nihaventNotes(){{const solClarinetTonic=Number(tonicInput.value),soundingTonic=(solClarinetTonic+7)%12;return notesForMode('minor',[0,2,3,5,7,8,10],solClarinetTonic,soundingTonic)}}
+function kurdiNotes(){{const solClarinetTonic=Number(tonicInput.value),soundingTonic=(solClarinetTonic+7)%12;return notesForMode('kurdi',[0,1,3,5,7,8,10],solClarinetTonic,soundingTonic)}}
 function turkishNotes(){{return turkishReference.map(note=>[note.display_notation,note.frequency_hz])}}
-function scaleNotes(){{if(scaleMode.value==='turkish')return turkishNotes();if(scaleMode.value==='nihavent')return nihaventNotes();return notesForMode(scaleMode.value,scaleMode.value==='major'?[0,2,4,5,7,9,11]:[0,2,3,5,7,8,10])}}
+function scaleNotes(){{if(scaleMode.value==='turkish')return turkishNotes();if(scaleMode.value==='nihavent')return nihaventNotes();if(scaleMode.value==='kurdi')return kurdiNotes();return notesForMode(scaleMode.value,scaleMode.value==='major'?[0,2,4,5,7,9,11]:[0,2,3,5,7,8,10])}}
 function formatTime(time){{return `${{time.toFixed(2)}} sn`}}
 function updateLoopButtons(){{setAButton.textContent=`A: ${{formatTime(loopA)}}`;setBButton.textContent=`B: ${{loopBManual?formatTime(loopB):'Son'}}`;loopButton.setAttribute('aria-pressed',String(loopEnabled));}}
 function setMediaReady(ready){{mediaReady=ready;setAButton.disabled=!ready;setBButton.disabled=!ready;loopButton.disabled=!ready;if(ready)countdownStatus.textContent=''}}
