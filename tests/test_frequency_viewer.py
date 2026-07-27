@@ -16,7 +16,7 @@ def test_frequency_viewer_uses_physical_hertz_grid(tmp_path) -> None:
 
     html = output.read_text(encoding="utf-8")
     assert "Duyulan frekans" in html
-    assert "KlariVision 0.4.7-tum-makamlar-dinamik" in html
+    assert "KlariVision 0.4.8-hicaz-makamlari" in html
     assert '"minor"' in html
     assert "Ölçülen eğri değiştirilmez" in html
     assert "followPlayback" in html
@@ -79,6 +79,18 @@ def test_frequency_viewer_uses_physical_hertz_grid(tmp_path) -> None:
     assert ">Uşşak</option>" in html
     assert "function ussakNotes()" in html
     assert '"ussak":[8,5,9,9,4,9,9]' in html
+    assert 'value="hicaz"' in html
+    assert ">Hicaz</option>" in html
+    assert "function hicazNotes()" in html
+    assert '"hicaz":[5,12,5,9,8,5,9]' in html
+    assert 'value="kurdilihicazkar"' in html
+    assert ">Kürdilihicazkâr</option>" in html
+    assert "function kurdilihicazkarNotes()" in html
+    assert '"kurdilihicazkar":[4,9,9,9,4,9,9]' in html
+    assert 'value="hicazkar"' in html
+    assert ">Hicazkâr</option>" in html
+    assert "function hicazkarNotes()" in html
+    assert '"hicazkar":[5,12,5,9,5,12,5]' in html
     assert "Rast (karar)" not in html
     assert 'class="interval-guide"' in html
     assert "Koma rehberi" in html
