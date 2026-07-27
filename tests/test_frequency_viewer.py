@@ -16,7 +16,7 @@ def test_frequency_viewer_uses_physical_hertz_grid(tmp_path) -> None:
 
     html = output.read_text(encoding="utf-8")
     assert "Duyulan frekans" in html
-    assert "KlariVision 0.4.4-makam-ayarlari" in html
+    assert "KlariVision 0.4.5-makam-dogrulama" in html
     assert '"minor"' in html
     assert "Ölçülen eğri değiştirilmez" in html
     assert "followPlayback" in html
@@ -86,6 +86,8 @@ def test_frequency_viewer_uses_physical_hertz_grid(tmp_path) -> None:
     assert "Toplam: ${total} / 53 koma" in html
     assert "makamSettingsApply.disabled=total!==53" in html
     assert "localStorage.setItem(makamSettingsKey" in html
+    assert 'id="makam-status"' in html
+    assert "function updateMakamStatus()" in html
 
 
 def test_frequency_viewer_can_embed_video(tmp_path) -> None:
