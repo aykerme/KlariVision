@@ -1,0 +1,265 @@
+{
+  "builtTestProducts" : [
+
+  ],
+  "copyCommands" : {
+
+  },
+  "explicitTargetDependencyImportCheckingMode" : {
+    "none" : {
+
+    }
+  },
+  "generatedSourceTargetSet" : [
+
+  ],
+  "pluginDescriptions" : [
+
+  ],
+  "swiftCommands" : {
+    "C.KlariVisionApp-arm64-apple-macosx26.0-debug.module" : {
+      "executable" : "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc",
+      "fileList" : "/Users/aydinkoyuncu/Documents/KlariVision/macos/KlariVision/.build/arm64-apple-macosx/debug/KlariVisionApp.build/sources",
+      "importPath" : "/Users/aydinkoyuncu/Documents/KlariVision/macos/KlariVision/.build/arm64-apple-macosx/debug/Modules",
+      "inputs" : [
+        {
+          "kind" : "file",
+          "name" : "/Users/aydinkoyuncu/Documents/KlariVision/macos/KlariVision/Sources/KlariVisionApp/KlariVisionApp.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/aydinkoyuncu/Documents/KlariVision/macos/KlariVision/.build/arm64-apple-macosx/debug/swift-version--58304C5D6DBC2206.txt"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/aydinkoyuncu/Documents/KlariVision/macos/KlariVision/.build/arm64-apple-macosx/debug/KlariVisionApp.build/sources"
+        }
+      ],
+      "isLibrary" : false,
+      "moduleName" : "KlariVisionApp",
+      "moduleOutputPath" : "/Users/aydinkoyuncu/Documents/KlariVision/macos/KlariVision/.build/arm64-apple-macosx/debug/Modules/KlariVisionApp.swiftmodule",
+      "objects" : [
+        "/Users/aydinkoyuncu/Documents/KlariVision/macos/KlariVision/.build/arm64-apple-macosx/debug/KlariVisionApp.build/KlariVisionApp.swift.o"
+      ],
+      "otherArguments" : [
+        "-target",
+        "arm64-apple-macosx14.0",
+        "-incremental",
+        "-enable-batch-mode",
+        "-serialize-diagnostics",
+        "-index-store-path",
+        "/Users/aydinkoyuncu/Documents/KlariVision/macos/KlariVision/.build/arm64-apple-macosx/debug/index/store",
+        "-Onone",
+        "-enable-testing",
+        "-j8",
+        "-DSWIFT_PACKAGE",
+        "-DDEBUG",
+        "-DSWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE",
+        "-module-cache-path",
+        "/Users/aydinkoyuncu/Documents/KlariVision/macos/KlariVision/.build/arm64-apple-macosx/debug/ModuleCache",
+        "-parseable-output",
+        "-Xfrontend",
+        "-entry-point-function-name",
+        "-Xfrontend",
+        "KlariVisionApp_main",
+        "-parse-as-library",
+        "-swift-version",
+        "6",
+        "-plugin-path",
+        "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins/testing",
+        "-sdk",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.2.sdk",
+        "-F",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+        "-F",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/PrivateFrameworks",
+        "-I",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+        "-L",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+        "-g",
+        "-Xcc",
+        "-isysroot",
+        "-Xcc",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.2.sdk",
+        "-Xcc",
+        "-F",
+        "-Xcc",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+        "-Xcc",
+        "-F",
+        "-Xcc",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/PrivateFrameworks",
+        "-Xcc",
+        "-fPIC",
+        "-Xcc",
+        "-g",
+        "-package-name",
+        "klarivision"
+      ],
+      "outputFileMapPath" : "/Users/aydinkoyuncu/Documents/KlariVision/macos/KlariVision/.build/arm64-apple-macosx/debug/KlariVisionApp.build/output-file-map.json",
+      "outputs" : [
+        {
+          "kind" : "file",
+          "name" : "/Users/aydinkoyuncu/Documents/KlariVision/macos/KlariVision/.build/arm64-apple-macosx/debug/KlariVisionApp.build/KlariVisionApp.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/aydinkoyuncu/Documents/KlariVision/macos/KlariVision/.build/arm64-apple-macosx/debug/Modules/KlariVisionApp.swiftmodule"
+        }
+      ],
+      "prepareForIndexing" : false,
+      "sources" : [
+        "/Users/aydinkoyuncu/Documents/KlariVision/macos/KlariVision/Sources/KlariVisionApp/KlariVisionApp.swift"
+      ],
+      "tempsPath" : "/Users/aydinkoyuncu/Documents/KlariVision/macos/KlariVision/.build/arm64-apple-macosx/debug/KlariVisionApp.build",
+      "wholeModuleOptimization" : false
+    }
+  },
+  "swiftFrontendCommands" : {
+
+  },
+  "swiftTargetScanArgs" : {
+    "KlariVisionApp" : [
+      "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc",
+      "-module-name",
+      "KlariVisionApp",
+      "-package-name",
+      "klarivision",
+      "-c",
+      "/Users/aydinkoyuncu/Documents/KlariVision/macos/KlariVision/Sources/KlariVisionApp/KlariVisionApp.swift",
+      "-I",
+      "/Users/aydinkoyuncu/Documents/KlariVision/macos/KlariVision/.build/arm64-apple-macosx/debug/Modules",
+      "-target",
+      "arm64-apple-macosx14.0",
+      "-incremental",
+      "-enable-batch-mode",
+      "-serialize-diagnostics",
+      "-index-store-path",
+      "/Users/aydinkoyuncu/Documents/KlariVision/macos/KlariVision/.build/arm64-apple-macosx/debug/index/store",
+      "-Onone",
+      "-enable-testing",
+      "-j8",
+      "-DSWIFT_PACKAGE",
+      "-DDEBUG",
+      "-DSWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE",
+      "-module-cache-path",
+      "/Users/aydinkoyuncu/Documents/KlariVision/macos/KlariVision/.build/arm64-apple-macosx/debug/ModuleCache",
+      "-parseable-output",
+      "-Xfrontend",
+      "-entry-point-function-name",
+      "-Xfrontend",
+      "KlariVisionApp_main",
+      "-parse-as-library",
+      "-swift-version",
+      "6",
+      "-plugin-path",
+      "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins/testing",
+      "-sdk",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.2.sdk",
+      "-F",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+      "-F",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/PrivateFrameworks",
+      "-I",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+      "-L",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+      "-g",
+      "-Xcc",
+      "-isysroot",
+      "-Xcc",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.2.sdk",
+      "-Xcc",
+      "-F",
+      "-Xcc",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+      "-Xcc",
+      "-F",
+      "-Xcc",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/PrivateFrameworks",
+      "-Xcc",
+      "-fPIC",
+      "-Xcc",
+      "-g",
+      "-package-name",
+      "klarivision",
+      "-driver-use-frontend-path",
+      "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc"
+    ]
+  },
+  "targetDependencyMap" : {
+    "KlariVisionApp" : [
+
+    ]
+  },
+  "testDiscoveryCommands" : {
+
+  },
+  "testEntryPointCommands" : {
+
+  },
+  "traitConfiguration" : {
+    "default" : {
+
+    }
+  },
+  "writeCommands" : {
+    "/Users/aydinkoyuncu/Documents/KlariVision/macos/KlariVision/.build/arm64-apple-macosx/debug/KlariVision-entitlement.plist" : {
+      "alwaysOutOfDate" : false,
+      "inputs" : [
+        {
+          "kind" : "virtual",
+          "name" : "<entitlement-plist>"
+        },
+        {
+          "kind" : "virtual",
+          "name" : "<com.apple.security.get-task-allow>"
+        }
+      ],
+      "outputFilePath" : "/Users/aydinkoyuncu/Documents/KlariVision/macos/KlariVision/.build/arm64-apple-macosx/debug/KlariVision-entitlement.plist"
+    },
+    "/Users/aydinkoyuncu/Documents/KlariVision/macos/KlariVision/.build/arm64-apple-macosx/debug/KlariVision.product/Objects.LinkFileList" : {
+      "alwaysOutOfDate" : false,
+      "inputs" : [
+        {
+          "kind" : "virtual",
+          "name" : "<link-file-list>"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/aydinkoyuncu/Documents/KlariVision/macos/KlariVision/.build/arm64-apple-macosx/debug/KlariVisionApp.build/KlariVisionApp.swift.o"
+        }
+      ],
+      "outputFilePath" : "/Users/aydinkoyuncu/Documents/KlariVision/macos/KlariVision/.build/arm64-apple-macosx/debug/KlariVision.product/Objects.LinkFileList"
+    },
+    "/Users/aydinkoyuncu/Documents/KlariVision/macos/KlariVision/.build/arm64-apple-macosx/debug/KlariVisionApp.build/sources" : {
+      "alwaysOutOfDate" : false,
+      "inputs" : [
+        {
+          "kind" : "virtual",
+          "name" : "<sources-file-list>"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/aydinkoyuncu/Documents/KlariVision/macos/KlariVision/Sources/KlariVisionApp/KlariVisionApp.swift"
+        }
+      ],
+      "outputFilePath" : "/Users/aydinkoyuncu/Documents/KlariVision/macos/KlariVision/.build/arm64-apple-macosx/debug/KlariVisionApp.build/sources"
+    },
+    "/Users/aydinkoyuncu/Documents/KlariVision/macos/KlariVision/.build/arm64-apple-macosx/debug/swift-version--58304C5D6DBC2206.txt" : {
+      "alwaysOutOfDate" : true,
+      "inputs" : [
+        {
+          "kind" : "virtual",
+          "name" : "<swift-get-version>"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc"
+        }
+      ],
+      "outputFilePath" : "/Users/aydinkoyuncu/Documents/KlariVision/macos/KlariVision/.build/arm64-apple-macosx/debug/swift-version--58304C5D6DBC2206.txt"
+    }
+  }
+}

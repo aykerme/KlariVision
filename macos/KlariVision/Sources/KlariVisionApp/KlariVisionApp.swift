@@ -1,0 +1,266 @@
+import AppKit
+import SwiftUI
+
+@main
+struct KlariVisionApp: App {
+    @State private var library = RecentLibrary()
+
+    var body: some Scene {
+        WindowGroup {
+            WelcomeView(library: library)
+                .frame(minWidth: 860, minHeight: 620)
+        }
+        .defaultSize(width: 1060, height: 720)
+
+        Settings {
+            SettingsView()
+        }
+    }
+}
+
+@Observable
+@MainActor
+final class RecentLibrary {
+    struct Item: Codable, Identifiable, Hashable {
+        let viewerURL: String
+        let label: String
+        let analysedAt: String
+        let cacheHit: Bool
+
+        var id: String { viewerURL }
+
+        enum CodingKeys: String, CodingKey {
+            case viewerURL = "viewer_url"
+            case label
+            case analysedAt = "analysed_at"
+            case cacheHit = "cache_hit"
+        }
+    }
+
+    private(set) var items: [Item] = []
+    private(set) var selectedFile: URL?
+    var mediaLink = ""
+
+    init() {
+        reload()
+    }
+
+    func reload() {
+        for root in dataRoots() {
+            let file = root.appending(path: "data/recent_analyses.json")
+            guard let data = try? Data(contentsOf: file),
+                  let decoded = try? JSONDecoder().decode([Item].self, from: data) else { continue }
+            items = decoded
+            return
+        }
+        items = []
+    }
+
+    func chooseFile() {
+        let panel = NSOpenPanel()
+        panel.allowedContentTypes = [.movie, .audio, .mpeg4Movie, .quickTimeMovie, .mp3]
+        panel.allowsMultipleSelection = false
+        panel.canChooseDirectories = false
+        if panel.runModal() == .OK {
+            selectedFile = panel.url
+        }
+    }
+
+    func selectFile(_ url: URL) {
+        selectedFile = url
+    }
+
+    func open(_ item: Item) {
+        for root in dataRoots() {
+            let relativePath = item.viewerURL.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+            let viewer = root.appending(path: relativePath)
+            if FileManager.default.fileExists(atPath: viewer.path) {
+                NSWorkspace.shared.open(viewer)
+                return
+            }
+        }
+    }
+
+    private func dataRoots() -> [URL] {
+        let manager = FileManager.default
+        let appSupport = manager.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
+            .appending(path: "KlariVision")
+        var roots = [appSupport]
+        var cursor = URL(fileURLWithPath: manager.currentDirectoryPath)
+        for _ in 0..<5 {
+            roots.append(cursor)
+            cursor.deleteLastPathComponent()
+        }
+        return roots
+    }
+}
+
+struct WelcomeView: View {
+    @Bindable var library: RecentLibrary
+    @State private var isDropTarget = false
+
+    var body: some View {
+        NavigationSplitView {
+            List(selection: .constant("library")) {
+                Label("Çalışmalar", systemImage: "waveform.path.ecg")
+                    .tag("library")
+            }
+            .listStyle(.sidebar)
+            .navigationTitle("KlariVision")
+        } detail: {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 24) {
+                    VStack(alignment: .leading, spacing: 5) {
+                        Text("Yeni çalışma")
+                            .font(.title2.weight(.semibold))
+                        Text("Video veya ses kaydından pitch eğrisi oluştur.")
+                            .foregroundStyle(.secondary)
+                    }
+
+                    DropZone(isTargeted: $isDropTarget, selectedFile: library.selectedFile) {
+                        library.chooseFile()
+                    }
+                    .onDrop(of: [.fileURL], isTargeted: $isDropTarget) { providers in
+                        guard let provider = providers.first else { return false }
+                        provider.loadItem(forTypeIdentifier: "public.file-url", options: nil) { value, _ in
+                            guard let url = value as? URL else { return }
+                            Task { @MainActor in library.selectFile(url) }
+                        }
+                        return true
+                    }
+
+                    VStack(alignment: .leading, spacing: 9) {
+                        Text("Bağlantıdan içe aktar")
+                            .font(.headline)
+                        HStack {
+                            TextField("YouTube veya video bağlantısı", text: $library.mediaLink)
+                                .textFieldStyle(.roundedBorder)
+                            Button("İçe Aktar") { }
+                                .disabled(library.mediaLink.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                        }
+                        Text("Yerel analiz motoru ile bağlantı aktarımı bir sonraki native ekranda bağlanacak.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+
+                    Divider()
+
+                    HStack {
+                        Text("Son çalışmalar")
+                            .font(.headline)
+                        Spacer()
+                        Button("Yenile", systemImage: "arrow.clockwise") { library.reload() }
+                            .labelStyle(.iconOnly)
+                    }
+
+                    if library.items.isEmpty {
+                        ContentUnavailableView(
+                            "Henüz çalışma yok",
+                            systemImage: "clock",
+                            description: Text("İlk analizden sonra çalışmalar burada görünür.")
+                        )
+                    } else {
+                        LazyVStack(spacing: 8) {
+                            ForEach(library.items) { item in
+                                Button { library.open(item) } label: {
+                                    RecentRow(item: item)
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        }
+                    }
+                }
+                .padding(32)
+                .frame(maxWidth: 860, alignment: .leading)
+            }
+            .toolbar {
+                ToolbarItem(placement: .primaryAction) {
+                    Button("Ayarlar", systemImage: "gearshape") {
+                        NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
+                    }
+                }
+            }
+        }
+    }
+}
+
+private struct DropZone: View {
+    @Binding var isTargeted: Bool
+    let selectedFile: URL?
+    let chooseFile: () -> Void
+
+    var body: some View {
+        VStack(spacing: 12) {
+            Image(systemName: selectedFile == nil ? "film.stack" : "checkmark.circle.fill")
+                .font(.system(size: 34))
+                .foregroundStyle(selectedFile == nil ? Color.accentColor : Color.green)
+            Text(selectedFile?.lastPathComponent ?? "Dosyayı buraya sürükleyin")
+                .font(.headline)
+            Text(selectedFile == nil ? "veya bilgisayarınızdan bir video ya da ses kaydı seçin." : "Native analiz akışı için hazır.")
+                .foregroundStyle(.secondary)
+            Button("Dosya Seç", action: chooseFile)
+                .buttonStyle(.borderedProminent)
+        }
+        .frame(maxWidth: .infinity, minHeight: 210)
+        .background(isTargeted ? Color.accentColor.opacity(0.13) : Color(nsColor: .controlBackgroundColor))
+        .overlay {
+            RoundedRectangle(cornerRadius: 14)
+                .stroke(isTargeted ? Color.accentColor : Color.secondary.opacity(0.35), style: StrokeStyle(lineWidth: 1.5, dash: [7]))
+        }
+        .clipShape(.rect(cornerRadius: 14))
+    }
+}
+
+private struct RecentRow: View {
+    let item: RecentLibrary.Item
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: "waveform")
+                .foregroundStyle(.tint)
+                .frame(width: 24)
+            VStack(alignment: .leading, spacing: 3) {
+                Text(item.label)
+                    .lineLimit(1)
+                Text(item.analysedAt)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            Spacer()
+            if item.cacheHit {
+                Text("Pitch hazır")
+                    .font(.caption.weight(.medium))
+                    .foregroundStyle(.green)
+            }
+            Image(systemName: "chevron.right")
+                .font(.caption)
+                .foregroundStyle(.tertiary)
+        }
+        .padding(12)
+        .background(.background, in: RoundedRectangle(cornerRadius: 10))
+        .overlay {
+            RoundedRectangle(cornerRadius: 10).stroke(.quaternary)
+        }
+    }
+}
+
+private struct SettingsView: View {
+    var body: some View {
+        Form {
+            Section("Görünüm") {
+                Toggle("Koyu görünümü sistemden al", isOn: .constant(true))
+                Toggle("Eğriyi dikey takip et", isOn: .constant(true))
+            }
+            Section("Çalışma") {
+                Picker("Çalma hızı", selection: .constant(1.0)) {
+                    Text("0,50×").tag(0.5)
+                    Text("0,75×").tag(0.75)
+                    Text("1,00×").tag(1.0)
+                }
+            }
+        }
+        .formStyle(.grouped)
+        .frame(width: 430, height: 230)
+        .padding()
+    }
+}
