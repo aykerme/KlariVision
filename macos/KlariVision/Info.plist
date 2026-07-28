@@ -10,6 +10,8 @@
     <string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
     <key>CFBundleInfoDictionaryVersion</key>
     <string>6.0</string>
+    <key>CFBundleIconFile</key>
+    <string>KlariVision</string>
     <key>CFBundleName</key>
     <string>$(PRODUCT_NAME)</string>
     <key>CFBundlePackageType</key>
@@ -17,7 +19,7 @@
     <key>CFBundleShortVersionString</key>
     <string>0.5.0</string>
     <key>CFBundleVersion</key>
-    <string>1</string>
+    <string>2</string>
     <key>LSMinimumSystemVersion</key>
     <string>14.0</string>
     <key>NSPrincipalClass</key>
