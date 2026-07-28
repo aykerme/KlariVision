@@ -9,6 +9,7 @@ from klarivision.local_app import (
     _form_page,
     _load_recent_analyses,
     _parse_byte_range,
+    refresh_existing_viewer,
     _safe_stem,
     _store_recent_analysis,
 )
@@ -59,6 +60,7 @@ def test_analyse_upload_reuses_cached_pitch_when_import_name_changes(tmp_path, m
     first_source.write_bytes(b"same-media")
     second_source.write_bytes(b"same-media")
     monkeypatch.setattr("klarivision.local_app.PROJECT_ROOT", tmp_path)
+    monkeypatch.setattr("klarivision.local_app.IMPORTS_DIR", tmp_path / "data" / "imports")
     monkeypatch.setattr("klarivision.local_app.AUDIO_DIR", tmp_path / "data" / "audio")
     monkeypatch.setattr("klarivision.local_app.OUTPUTS_DIR", tmp_path / "outputs")
     monkeypatch.setattr("klarivision.local_app.RECENTS_PATH", tmp_path / "data" / "recent_analyses.json")
@@ -93,6 +95,70 @@ def test_analyse_upload_reuses_cached_pitch_when_import_name_changes(tmp_path, m
 
     assert first == second
     assert calls == {"to_wav": 1, "extract": 1}
+
+
+def test_analyse_upload_keeps_selected_video_in_app_imports(tmp_path, monkeypatch) -> None:
+    source = tmp_path / "Masaüstü Videosu.mp4"
+    source.write_bytes(b"video-media")
+    monkeypatch.setattr("klarivision.local_app.PROJECT_ROOT", tmp_path)
+    monkeypatch.setattr("klarivision.local_app.IMPORTS_DIR", tmp_path / "data" / "imports")
+    monkeypatch.setattr("klarivision.local_app.AUDIO_DIR", tmp_path / "data" / "audio")
+    monkeypatch.setattr("klarivision.local_app.OUTPUTS_DIR", tmp_path / "outputs")
+    monkeypatch.setattr("klarivision.local_app.RECENTS_PATH", tmp_path / "data" / "recent_analyses.json")
+
+    captured: dict[str, str | None] = {}
+
+    def fake_to_wav(_source, destination):
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        destination.write_bytes(b"wav")
+
+    class FakeExtractor:
+        def extract(self, _audio_source):
+            return object()
+
+    def fake_write_json(_track, destination):
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        destination.write_text('{"frames":[]}', encoding="utf-8")
+
+    def fake_build_frequency_viewer(_pitch_json, _audio_path, viewer, **kwargs):
+        captured["video_relative_path"] = kwargs["video_relative_path"]
+        viewer.parent.mkdir(parents=True, exist_ok=True)
+        viewer.write_text("<html></html>", encoding="utf-8")
+
+    monkeypatch.setattr("klarivision.local_app._to_wav", fake_to_wav)
+    monkeypatch.setattr("klarivision.local_app.VampPyinPitchExtractor", FakeExtractor)
+    monkeypatch.setattr("klarivision.local_app.write_json", fake_write_json)
+    monkeypatch.setattr("klarivision.local_app.build_frequency_viewer", fake_build_frequency_viewer)
+
+    analyse_upload(source, "huzzam", "dugah")
+
+    imported = tmp_path / "data" / "imports" / f"masaustu-videosu-{_file_signature(source)}.mp4"
+    assert imported.is_file()
+    assert captured["video_relative_path"] == f"../data/imports/{imported.name}"
+
+
+def test_refresh_existing_viewer_preserves_video_tag(tmp_path, monkeypatch) -> None:
+    outputs = tmp_path / "outputs"
+    viewer = outputs / "ornek.html"
+    audio = tmp_path / "data" / "audio" / "ornek.wav"
+    pitch = outputs / "ornek.vamp.json"
+    outputs.mkdir(parents=True)
+    audio.parent.mkdir(parents=True)
+    audio.write_bytes(b"wav")
+    pitch.write_text('{"frames":[]}', encoding="utf-8")
+    viewer.write_text('<video id="media" controls src="../data/imports/ornek.mp4"></video>', encoding="utf-8")
+    monkeypatch.setattr("klarivision.local_app.OUTPUTS_DIR", outputs)
+    monkeypatch.setattr("klarivision.local_app.AUDIO_DIR", audio.parent)
+    captured: dict[str, str | None] = {}
+
+    def fake_build_frequency_viewer(_pitch_json, _audio_path, _viewer, **kwargs):
+        captured["video_relative_path"] = kwargs["video_relative_path"]
+
+    monkeypatch.setattr("klarivision.local_app.build_frequency_viewer", fake_build_frequency_viewer)
+
+    refresh_existing_viewer(viewer)
+
+    assert captured["video_relative_path"] == "../data/imports/ornek.mp4"
 
 
 def test_recent_analyses_only_lists_existing_viewers(tmp_path, monkeypatch) -> None:

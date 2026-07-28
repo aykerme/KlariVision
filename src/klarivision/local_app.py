@@ -209,6 +209,24 @@ def _import_from_url(url: str) -> Path:
     raise RuntimeError("Bağlantıdan medya alınamadı.")
 
 
+def _persist_video_source(source: Path, analysis_id: str) -> Path:
+    """Keep locally selected videos inside the app data folder.
+
+    The native viewer can reliably read files below Application Support.  A
+    video selected from Downloads/Desktop therefore needs a local copy, while
+    audio is already represented by the extracted WAV cache.
+    """
+    if source.suffix.lower() not in VIDEO_SUFFIXES:
+        return source
+    IMPORTS_DIR.mkdir(parents=True, exist_ok=True)
+    if source.parent.resolve() == IMPORTS_DIR.resolve():
+        return source
+    destination = IMPORTS_DIR / f"{analysis_id}{source.suffix.lower()}"
+    if not destination.is_file():
+        shutil.copy2(source, destination)
+    return destination
+
+
 def analyse_upload(source: Path, makam: str, karar: str, engine: str = "vamp") -> str:
     """Analyse one local media file and return its project-relative viewer URL."""
     if makam not in MAKAM_PROFILES or karar not in KARAR_TONES:
@@ -216,13 +234,14 @@ def analyse_upload(source: Path, makam: str, karar: str, engine: str = "vamp") -
 
     signature = _file_signature(source)
     analysis_id = f"{_analysis_stem(source)}-{signature}"
+    media_source = _persist_video_source(source, analysis_id)
     wav = AUDIO_DIR / f"{analysis_id}.wav"
     if engine not in {"vamp", "python"}:
         raise ValueError("Geçersiz pitch motoru seçimi.")
     pitch_json = OUTPUTS_DIR / f"{analysis_id}.{engine}.json"
     viewer = OUTPUTS_DIR / f"{analysis_id}.html"
     if not wav.is_file():
-        _to_wav(source, wav)
+        _to_wav(media_source, wav)
     cache_hit = pitch_json.is_file()
     if not cache_hit:
         if engine == "vamp":
@@ -240,8 +259,8 @@ def analyse_upload(source: Path, makam: str, karar: str, engine: str = "vamp") -
         os.path.relpath(wav, start=viewer.parent).replace(os.sep, "/"),
         viewer,
         video_relative_path=(
-            os.path.relpath(source, start=viewer.parent).replace(os.sep, "/")
-            if source.suffix.lower() in VIDEO_SUFFIXES
+            os.path.relpath(media_source, start=viewer.parent).replace(os.sep, "/")
+            if media_source.suffix.lower() in VIDEO_SUFFIXES
             else None
         ),
         analysis_status=(
@@ -273,7 +292,7 @@ def refresh_existing_viewer(viewer: Path) -> Path:
         raise FileNotFoundError("Bu çalışma için ses önbelleği bulunamadı.")
 
     previous_html = viewer.read_text(encoding="utf-8")
-    video_match = re.search(r'<video[^>]*\\bsrc="([^"]+)"', previous_html, re.IGNORECASE)
+    video_match = re.search(r'<video[^>]*\bsrc="([^"]+)"', previous_html, re.IGNORECASE)
     video_relative_path = html.unescape(video_match.group(1)) if video_match else None
     build_frequency_viewer(
         pitch_candidates[0],
