@@ -206,12 +206,7 @@ struct WelcomeView: View {
     var body: some View {
         NavigationSplitView {
             List {
-                Section("Çalışma") {
-                    Button { library.closeWorkspace() } label: {
-                        Label("Yeni çalışma", systemImage: "plus.circle")
-                    }
-                }
-                Section("Son çalışmalar") {
+                Section("Çalışmalar") {
                     if library.items.isEmpty {
                         Text("Henüz kayıt yok")
                             .foregroundStyle(.secondary)
