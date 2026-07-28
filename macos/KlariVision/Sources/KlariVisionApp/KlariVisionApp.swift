@@ -205,9 +205,29 @@ struct WelcomeView: View {
 
     var body: some View {
         NavigationSplitView {
-            List(selection: .constant("library")) {
-                Label("Çalışmalar", systemImage: "waveform.path.ecg")
-                    .tag("library")
+            List {
+                Section("Çalışma") {
+                    Button { library.closeWorkspace() } label: {
+                        Label("Yeni çalışma", systemImage: "plus.circle")
+                    }
+                }
+                Section("Son çalışmalar") {
+                    if library.items.isEmpty {
+                        Text("Henüz kayıt yok")
+                            .foregroundStyle(.secondary)
+                    } else {
+                        ForEach(library.items) { item in
+                            Button { library.open(item) } label: {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(item.label).lineLimit(1)
+                                    Text(item.analysedAt)
+                                        .font(.caption2)
+                                        .foregroundStyle(.secondary)
+                                }
+                            }
+                        }
+                    }
+                }
             }
             .listStyle(.sidebar)
             .navigationTitle("KlariVision")
@@ -259,32 +279,6 @@ struct WelcomeView: View {
                             .foregroundStyle(.secondary)
                     }
 
-                    Divider()
-
-                    HStack {
-                        Text("Son çalışmalar")
-                            .font(.headline)
-                        Spacer()
-                        Button("Yenile", systemImage: "arrow.clockwise") { library.reload() }
-                            .labelStyle(.iconOnly)
-                    }
-
-                    if library.items.isEmpty {
-                        ContentUnavailableView(
-                            "Henüz çalışma yok",
-                            systemImage: "clock",
-                            description: Text("İlk analizden sonra çalışmalar burada görünür.")
-                        )
-                    } else {
-                        LazyVStack(spacing: 8) {
-                            ForEach(library.items) { item in
-                                Button { library.open(item) } label: {
-                                    RecentRow(item: item)
-                                }
-                                .buttonStyle(.plain)
-                            }
-                        }
-                    }
                 }
                 .padding(32)
                 .frame(maxWidth: 860, alignment: .leading)
@@ -333,7 +327,17 @@ private struct LocalViewer: NSViewRepresentable {
     let readAccessRoot: URL
 
     func makeNSView(context: Context) -> WKWebView {
-        let webView = WKWebView(frame: .zero, configuration: WKWebViewConfiguration())
+        let configuration = WKWebViewConfiguration()
+        let hideStandaloneControls = """
+        document.addEventListener('DOMContentLoaded', () => {
+            const newRecording = document.getElementById('new-recording');
+            if (newRecording) newRecording.style.display = 'none';
+        });
+        """
+        configuration.userContentController.addUserScript(
+            WKUserScript(source: hideStandaloneControls, injectionTime: .atDocumentEnd, forMainFrameOnly: true)
+        )
+        let webView = WKWebView(frame: .zero, configuration: configuration)
         webView.setValue(false, forKey: "drawsBackground")
         webView.loadFileURL(viewer, allowingReadAccessTo: readAccessRoot)
         return webView
