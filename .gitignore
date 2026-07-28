@@ -21,6 +21,7 @@ KlariVision.spec
 
 # Swift Package build output
 macos/KlariVision/.build/
+macos/KlariVision/.swiftpm/
 
 # Operating-system files
 .DS_Store
