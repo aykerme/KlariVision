@@ -1,5 +1,6 @@
 import AppKit
 import SwiftUI
+import WebKit
 
 @main
 struct KlariVisionApp: App {
@@ -50,6 +51,7 @@ final class RecentLibrary {
     private(set) var selectedFile: URL?
     private(set) var isAnalysing = false
     private(set) var analysisMessage = ""
+    private(set) var activeViewer: URL?
     var mediaLink = ""
 
     init() {
@@ -131,7 +133,7 @@ final class RecentLibrary {
                     }
                     let viewer = root.appending(path: String(relativeViewer).trimmingCharacters(in: CharacterSet(charactersIn: "/")))
                     self.analysisMessage = "Pitch eğrisi hazır."
-                    NSWorkspace.shared.open(viewer)
+                    self.activeViewer = viewer
                     self.reload()
                 }
             } catch {
@@ -152,10 +154,20 @@ final class RecentLibrary {
             let relativePath = item.viewerURL.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
             let viewer = root.appending(path: relativePath)
             if FileManager.default.fileExists(atPath: viewer.path) {
-                NSWorkspace.shared.open(viewer)
+                activeViewer = viewer
                 return
             }
         }
+    }
+
+    func closeWorkspace() {
+        activeViewer = nil
+        selectedFile = nil
+        analysisMessage = ""
+    }
+
+    func viewerReadAccessRoot(for viewer: URL) -> URL {
+        dataRoots().first(where: { viewer.path.hasPrefix($0.path) }) ?? viewer.deletingLastPathComponent()
     }
 
     private func dataRoots() -> [URL] {
@@ -200,7 +212,10 @@ struct WelcomeView: View {
             .listStyle(.sidebar)
             .navigationTitle("KlariVision")
         } detail: {
-            ScrollView {
+            if let viewer = library.activeViewer {
+                WorkspaceView(viewer: viewer, library: library)
+            } else {
+                ScrollView {
                 VStack(alignment: .leading, spacing: 24) {
                     VStack(alignment: .leading, spacing: 5) {
                         Text("Yeni çalışma")
@@ -273,15 +288,60 @@ struct WelcomeView: View {
                 }
                 .padding(32)
                 .frame(maxWidth: 860, alignment: .leading)
-            }
-            .toolbar {
-                ToolbarItem(placement: .primaryAction) {
-                    Button("Ayarlar", systemImage: "gearshape") {
-                        NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
+                }
+                .toolbar {
+                    ToolbarItem(placement: .primaryAction) {
+                        Button("Ayarlar", systemImage: "gearshape") {
+                            NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
+                        }
                     }
                 }
             }
         }
+    }
+}
+
+private struct WorkspaceView: View {
+    let viewer: URL
+    @Bindable var library: RecentLibrary
+
+    var body: some View {
+        VStack(spacing: 0) {
+            HStack(spacing: 10) {
+                Button("Yeni çalışma", systemImage: "plus") { library.closeWorkspace() }
+                Divider().frame(height: 18)
+                Text(viewer.deletingPathExtension().lastPathComponent)
+                    .lineLimit(1)
+                    .foregroundStyle(.secondary)
+                Spacer()
+                Button("Ayarlar", systemImage: "gearshape") {
+                    NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
+                }
+            }
+            .padding(.horizontal, 16)
+            .frame(height: 44)
+            .background(.bar)
+
+            LocalViewer(viewer: viewer, readAccessRoot: library.viewerReadAccessRoot(for: viewer))
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
+    }
+}
+
+private struct LocalViewer: NSViewRepresentable {
+    let viewer: URL
+    let readAccessRoot: URL
+
+    func makeNSView(context: Context) -> WKWebView {
+        let webView = WKWebView(frame: .zero, configuration: WKWebViewConfiguration())
+        webView.setValue(false, forKey: "drawsBackground")
+        webView.loadFileURL(viewer, allowingReadAccessTo: readAccessRoot)
+        return webView
+    }
+
+    func updateNSView(_ webView: WKWebView, context: Context) {
+        guard webView.url != viewer else { return }
+        webView.loadFileURL(viewer, allowingReadAccessTo: readAccessRoot)
     }
 }
 
