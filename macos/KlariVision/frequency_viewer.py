@@ -96,7 +96,7 @@ def _cents(frequency_hz: float) -> float:
 def prepare_display_frames(payload: dict[str, object]) -> list[dict[str, float]]:
     """Clean only clearly unreliable single-frame pitch candidates for display.
 
-    The original pYIN JSON remains untouched.  A candidate must be voiced and
+    The original pYIN JSON remains untouched. A candidate must be voiced and
     reasonably confident; isolated jumps that immediately return to the same
     pitch are omitted rather than being mistaken for a musical ornament.
     """
@@ -163,23 +163,162 @@ def build_frequency_viewer(
         f"""<!doctype html><html lang="tr"><meta charset="utf-8">
 <title>KlariVision {VIEWER_VERSION} — Duyulan frekans</title>
 <style>
-:root{{color-scheme:light}}*{{box-sizing:border-box}}body{{margin:0;background:#f5f6f8;color:#17212b;font:14px system-ui,-apple-system,sans-serif}}main{{max-width:1320px;margin:auto;padding:22px}}h1{{font-size:21px;margin:0 0 4px}}p{{margin:0 0 16px;color:#56616e}}.new-recording{{display:inline-block;border:1px solid #4785be;background:#e7f2fc;border-radius:7px;padding:7px 11px;color:#173d62;text-decoration:none;font-weight:650}}.layout-tools{{display:flex;align-items:center;gap:12px;margin:0 0 14px}}.workspace{{--media-width:660px;--media-height:360px;--chart-height:580px;display:grid;gap:16px;overflow-x:auto}}.workspace.side{{grid-template-columns:minmax(320px,var(--media-width)) minmax(320px,1fr);align-items:start}}.workspace.side-right{{grid-template-columns:minmax(320px,1fr) minmax(320px,var(--media-width))}}.workspace.side-right .media{{order:2}}.media{{position:relative;width:var(--media-width);height:var(--media-height);background:#f5f6f8;padding:10px 0 14px}}video,audio{{display:block;max-width:100%;width:100%;height:100%;max-height:100%;object-fit:contain}}audio{{height:auto;margin-top:calc((var(--media-height) - 54px)/2)}}body.audio-only .layout-tools{{display:none}}.workspace.audio-only .media{{width:100%;height:auto;min-height:74px;background:#fff;border:1px solid #dbe0e6;border-radius:12px;padding:12px 14px}}.audio-content{{display:flex;align-items:center;gap:16px}}.audio-content strong{{white-space:nowrap;color:#405465}}.audio-content audio{{margin:0;height:32px;flex:1}}.workspace.audio-only .panel{{width:100%}}.panel{{position:relative;justify-self:start;display:flex;flex-direction:column;min-width:320px;height:calc(var(--chart-height) + 92px);background:#fff;border:1px solid #dbe0e6;border-radius:12px;padding:14px;overflow:hidden}}.workspace.stacked .panel{{width:100%}}.workspace.side .panel{{width:100%}}.tools{{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:10px;flex:0 0 auto}}button{{border:1px solid #b9c3cf;background:#fff;border-radius:7px;padding:6px 10px;font:inherit;cursor:pointer}}button:hover{{background:#eef5fb}}button[aria-pressed="true"]{{background:#dceefe;border-color:#4785be;color:#173d62;box-shadow:inset 0 0 0 1px #8bb7de}}input{{width:100px}}select{{font:inherit;padding:5px 7px;border:1px solid #b9c3cf;border-radius:7px;background:#fff}}.countdown-status{{min-width:76px;color:#7755b8;font-weight:700}}.chart-scroll{{display:grid;grid-template-columns:minmax(0,1fr) 18px;grid-template-rows:minmax(0,1fr) 18px;gap:5px;min-height:220px;flex:1}}canvas{{display:block;width:100%;height:100%;border:1px solid #dbe0e6;border-radius:8px;touch-action:none}}#time-scroll{{grid-column:1;grid-row:2;width:100%;margin:0;accent-color:#7755b8}}#vertical-scroll{{grid-column:2;grid-row:1;width:18px;height:100%;margin:0;writing-mode:vertical-lr;direction:rtl;accent-color:#7755b8}}.note{{font-size:12px;color:#66717f;margin:8px 0 0;flex:0 0 auto}}.legend{{margin-left:auto;color:#56616e;font-size:12px}}.interval-guide{{position:absolute;z-index:4;right:18px;bottom:38px;font-size:11px;color:#34414e}}.interval-guide summary{{cursor:pointer;list-style:none;border:1px solid #c4d2df;background:rgba(255,255,255,.94);border-radius:999px;padding:5px 9px;box-shadow:0 1px 4px rgba(25,45,65,.12)}}.interval-guide summary::-webkit-details-marker{{display:none}}.interval-guide[open]{{width:286px;background:rgba(255,255,255,.97);border:1px solid #c4d2df;border-radius:9px;padding:9px;box-shadow:0 3px 13px rgba(25,45,65,.16)}}.interval-guide[open] summary{{border:0;padding:0 0 7px;font-weight:700}}.interval-guide table{{width:100%;border-collapse:collapse}}.interval-guide th,.interval-guide td{{padding:3px 2px;border-top:1px solid #e6ebef;text-align:left;white-space:nowrap}}.interval-guide th{{font-weight:650;color:#607080}}dialog{{width:min(630px,calc(100vw - 28px));border:0;border-radius:13px;box-shadow:0 18px 55px rgba(12,25,38,.35);padding:0;color:#17212b}}dialog::backdrop{{background:rgba(22,35,48,.36)}}.settings-form{{padding:20px}}.settings-form h2{{margin:0 0 6px;font-size:18px}}.settings-form p{{font-size:13px;margin-bottom:14px}}.settings-grid{{display:grid;grid-template-columns:repeat(7,minmax(68px,1fr));gap:8px;margin:14px 0}}.settings-grid label{{display:grid;gap:4px;font-size:11px;color:#506070}}.settings-grid select{{width:100%;padding:5px 3px;font-size:12px}}.settings-total{{font-weight:700;color:#1f5d36}}.settings-total.invalid{{color:#a33232}}.settings-actions{{display:flex;justify-content:flex-end;gap:8px;margin-top:16px}}.resize-handle{{position:absolute;z-index:5;touch-action:none}}.resize-right{{right:0;top:0;width:16px;height:100%;cursor:ew-resize}}.resize-bottom{{left:0;bottom:0;width:100%;height:16px;cursor:ns-resize}}.resize-corner{{right:0;bottom:0;width:24px;height:24px;cursor:nwse-resize;background:linear-gradient(135deg,transparent 45%,#91a4b8 46%,#91a4b8 54%,transparent 55%)}}@media(max-width:650px){{main{{padding:12px}}.audio-content{{align-items:stretch;flex-direction:column;gap:7px}}.interval-guide{{right:14px;bottom:36px}}.settings-grid{{grid-template-columns:repeat(4,minmax(68px,1fr))}}}}
+:root{{
+    color-scheme: light dark;
+    --bg-main: #f5f6f8;
+    --bg-card: #ffffff;
+    --border-card: #dbe0e6;
+    --text-main: #17212b;
+    --text-muted: #56616e;
+    --accent: #0066cc;
+    --accent-bg: #e5f0ff;
+}}
+@media (prefers-color-scheme: dark) {{
+    :root {{
+        --bg-main: #12161b;
+        --bg-card: #1c222b;
+        --border-card: #2e3846;
+        --text-main: #f0f4f8;
+        --text-muted: #94a3b8;
+        --accent: #388bfd;
+        --accent-bg: #1e293b;
+    }}
+}}
+*{{box-sizing:border-box}}
+body{{
+    margin:0;
+    background:var(--bg-main);
+    color:var(--text-main);
+    font:-apple-system,BlinkMacSystemFont,"SF Pro Text","SF Pro Display",system-ui,sans-serif;
+    -webkit-font-smoothing:antialiased;
+}}
+main{{max-width:1320px;margin:auto;padding:22px}}
+h1{{font-size:21px;font-weight:600;margin:0 0 4px}}
+p{{margin:0 0 16px;color:var(--text-muted)}}
+.new-recording{{
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    border:1px solid var(--accent);
+    background:var(--accent-bg);
+    border-radius:8px;
+    padding:6px 12px;
+    color:var(--accent);
+    text-decoration:none;
+    font-size:13px;
+    font-weight:600;
+    transition:opacity 0.15s;
+}}
+.new-recording:hover{{opacity:0.85}}
+.layout-tools{{display:flex;align-items:center;gap:12px;margin:0 0 14px}}
+.workspace{{--media-width:660px;--media-height:360px;--chart-height:580px;display:grid;gap:16px;overflow-x:auto}}
+.workspace.side{{grid-template-columns:minmax(320px,var(--media-width)) minmax(320px,1fr);align-items:start}}
+.workspace.side-right{{grid-template-columns:minmax(320px,1fr) minmax(320px,var(--media-width))}}
+.workspace.side-right .media{{order:2}}
+.media{{position:relative;width:var(--media-width);height:var(--media-height);background:var(--bg-main);padding:10px 0 14px}}
+video,audio{{display:block;max-width:100%;width:100%;height:100%;max-height:100%;object-fit:contain}}
+audio{{height:auto;margin-top:calc((var(--media-height) - 54px)/2)}}
+body.audio-only .layout-tools{{display:none}}
+.workspace.audio-only .media{{width:100%;height:auto;min-height:74px;background:var(--bg-card);border:1px solid var(--border-card);border-radius:12px;padding:12px 14px}}
+.audio-content{{display:flex;align-items:center;gap:16px}}
+.audio-content strong{{white-space:nowrap;color:var(--text-muted)}}
+.audio-content audio{{margin:0;height:32px;flex:1}}
+.workspace.audio-only .panel{{width:100%}}
+.panel{{
+    position:relative;
+    justify-self:start;
+    display:flex;
+    flex-direction:column;
+    min-width:320px;
+    height:calc(var(--chart-height) + 92px);
+    background:var(--bg-card);
+    border:1px solid var(--border-card);
+    border-radius:12px;
+    padding:14px;
+    overflow:hidden;
+    box-shadow:0 2px 8px rgba(0,0,0,0.04);
+}}
+.workspace.stacked .panel{{width:100%}}
+.workspace.side .panel{{width:100%}}
+.tools{{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px;flex:0 0 auto}}
+button{{
+    border:1px solid var(--border-card);
+    background:var(--bg-card);
+    color:var(--text-main);
+    border-radius:7px;
+    padding:5px 11px;
+    font:inherit;
+    font-size:13px;
+    font-weight:500;
+    cursor:pointer;
+    transition:all 0.15s ease;
+}}
+button:hover{{background:var(--accent-bg);border-color:var(--accent);color:var(--accent)}}
+button[aria-pressed="true"]{{background:var(--accent);border-color:var(--accent);color:#fff}}
+input,select{{
+    font:inherit;
+    font-size:13px;
+    padding:5px 8px;
+    border:1px solid var(--border-card);
+    border-radius:7px;
+    background:var(--bg-card);
+    color:var(--text-main);
+}}
+input[type=number]{{width:70px}}
+.countdown-status{{min-width:76px;color:#8b5cf6;font-weight:600}}
+.chart-scroll{{display:grid;grid-template-columns:minmax(0,1fr) 18px;grid-template-rows:minmax(0,1fr) 18px;gap:6px;min-height:220px;flex:1}}
+canvas{{display:block;width:100%;height:100%;border:1px solid var(--border-card);border-radius:8px;touch-action:none}}
+#time-scroll{{grid-column:1;grid-row:2;width:100%;margin:0;accent-color:var(--accent)}}
+#vertical-scroll{{grid-column:2;grid-row:1;width:18px;height:100%;margin:0;writing-mode:vertical-lr;direction:rtl;accent-color:var(--accent)}}
+.note{{font-size:12px;color:var(--text-muted);margin:8px 0 0;flex:0 0 auto}}
+.legend{{margin-left:auto;color:var(--text-muted);font-size:12px}}
+.interval-guide{{position:absolute;z-index:4;right:18px;bottom:38px;font-size:11px;color:var(--text-muted)}}
+.interval-guide summary{{cursor:pointer;list-style:none;border:1px solid var(--border-card);background:var(--bg-card);border-radius:999px;padding:4px 10px;box-shadow:0 2px 6px rgba(0,0,0,0.08)}}
+.interval-guide summary::-webkit-details-marker{{display:none}}
+.interval-guide[open]{{width:286px;background:var(--bg-card);border:1px solid var(--border-card);border-radius:10px;padding:10px;box-shadow:0 4px 16px rgba(0,0,0,0.14)}}
+.interval-guide[open] summary{{border:0;padding:0 0 8px;font-weight:600}}
+.interval-guide table{{width:100%;border-collapse:collapse}}
+.interval-guide th,.interval-guide td{{padding:4px 3px;border-top:1px solid var(--border-card);text-align:left;white-space:nowrap}}
+.interval-guide th{{font-weight:600;color:var(--text-muted)}}
+dialog{{width:min(620px,calc(100vw - 28px));border:1px solid var(--border-card);border-radius:14px;box-shadow:0 20px 60px rgba(0,0,0,0.3);padding:0;color:var(--text-main);background:var(--bg-card)}}
+dialog::backdrop{{background:rgba(0,0,0,0.4);backdrop-filter:blur(4px)}}
+.settings-form{{padding:22px}}
+.settings-form h2{{margin:0 0 6px;font-size:18px;font-weight:600}}
+.settings-form p{{font-size:13px;margin-bottom:14px}}
+.settings-grid{{display:grid;grid-template-columns:repeat(7,minmax(68px,1fr));gap:8px;margin:14px 0}}
+.settings-grid label{{display:grid;gap:4px;font-size:11px;color:var(--text-muted)}}
+.settings-grid select{{width:100%;padding:5px 3px;font-size:12px}}
+.settings-total{{font-weight:700;color:#16a34a}}
+.settings-total.invalid{{color:#dc2626}}
+.settings-actions{{display:flex;justify-content:flex-end;gap:8px;margin-top:16px}}
+.resize-handle{{position:absolute;z-index:5;touch-action:none}}
+.resize-right{{right:0;top:0;width:16px;height:100%;cursor:ew-resize}}
+.resize-bottom{{left:0;bottom:0;width:100%;height:16px;cursor:ns-resize}}
+.resize-corner{{right:0;bottom:0;width:24px;height:24px;cursor:nwse-resize;background:linear-gradient(135deg,transparent 45%,#94a3b8 46%,#94a3b8 54%,transparent 55%)}}
 </style><style>
-.app-context{{display:inline-block;margin:0 0 14px;color:#405465;font-size:13px;font-weight:650}}.analysis-status{{display:inline-block;margin:0 0 12px;padding:5px 9px;border-radius:999px;background:#e8f4ea;color:#23633a;font-size:12px;font-weight:700}}.settings-section{{display:grid;gap:10px;padding:13px 0;border-top:1px solid #e2e7ec}}.settings-section h3{{margin:0;font-size:14px}}.settings-row{{display:flex;align-items:center;gap:10px;flex-wrap:wrap}}.settings-actions input[type=checkbox]{{width:auto;margin:0 5px 0 0;vertical-align:middle}}.speed-stepper{{display:flex;align-items:center;gap:8px;margin:auto}}.speed-stepper span{{min-width:52px;text-align:center;font-weight:700}}#time-scroll{{display:block!important;visibility:visible!important;opacity:1!important}}.tools #makam-settings-open{{margin-left:auto}}@media(max-width:650px){{.tools #makam-settings-open{{margin-left:0}}}}
+.app-context{{display:inline-block;margin:0 0 14px;color:var(--text-muted);font-size:13px;font-weight:600}}
+.analysis-status{{display:inline-block;margin:0 0 12px;padding:4px 10px;border-radius:999px;background:#dcfce7;color:#15803d;font-size:12px;font-weight:600}}
+.settings-section{{display:grid;gap:10px;padding:14px 0;border-top:1px solid var(--border-card)}}
+.settings-section h3{{margin:0;font-size:14px;font-weight:600}}
+.settings-row{{display:flex;align-items:center;gap:10px;flex-wrap:wrap}}
+.speed-stepper{{display:flex;align-items:center;gap:8px;margin:auto}}
+.speed-stepper span{{min-width:52px;text-align:center;font-weight:700}}
+#time-scroll{{display:block!important;visibility:visible!important;opacity:1!important}}
+.tools #makam-settings-open{{margin-left:auto}}
 </style><body class="{'audio-only' if is_audio_only else ''}"><main>
-<h1>KlariVision {VIEWER_VERSION} · Pitch konturu</h1><a id="new-recording" class="new-recording" href="/">Yeni video / ses seç</a>
-<p>Pitch eğrisi pYIN'in ölçtüğü fiziksel frekanstır (Hz). Türk Müziği (Sol Klarnet) ekseni, koma miktarını taşınabilir biçimde gösterir: ör. Re ♭5, Fa ♯1. Ölçülen eğri değiştirilmez.</p>{status}
+<h1>KlariVision {VIEWER_VERSION} · Pitch Konturu</h1><a id="new-recording" class="new-recording" href="/">Yeni Video / Ses Seç</a>
+<p>Pitch eğrisi pYIN'in ölçtüğü fiziksel frekanstır (Hz). Türk Müziği (Sol Klarnet) ekseni koma miktarını gösterir.</p>{status}
 <div class="layout-tools"><label>Yerleşim <select id="layout-mode"><option value="stacked">Üst üste</option><option value="side">Video solda · yan yana</option><option value="side-right">Video sağda · yan yana</option></select></label></div>
 <div id="workspace" class="workspace {'audio-only' if is_audio_only else ''}"><div id="media-panel" class="media">{media}{media_handles}</div>
 <section class="panel"><div class="tools">
 <button id="minus">− Zaman</button><button id="plus">+ Zaman</button>
-<label>Görünür süre <input id="window" type="number" min="2" max="60" step="1" value="12"> sn</label>
+<label>Süre <input id="window" type="number" min="2" max="60" step="1" value="12"> sn</label>
 <button id="vertical-out">− Dikey</button><button id="vertical-in">+ Dikey</button>
 <label>Eksen <select id="scale-mode"><option value="major">Majör</option><option value="minor">Minör</option><option value="nihavent">Nihavend</option><option value="kurdi">Kürdi</option><option value="ussak">Uşşak</option><option value="hicaz">Hicaz</option><option value="kurdilihicazkar">Kürdilihicazkâr</option><option value="hicazkar">Hicazkâr</option><option value="turkish">Türk Müziği · Sol Klarnet</option></select></label><button id="makam-settings-open" type="button">Ayarlar</button><span id="makam-status" class="countdown-status"></span>
 <label>Karar <select id="tonic"><option value="0">Do</option><option value="2">Re</option><option value="4">Mi</option><option value="5">Fa</option><option value="7">Sol</option><option value="9">La</option><option value="11">Si</option></select></label>
-<label>Geri sayım <input id="countdown" type="number" min="0" max="60" step="1" value="0"> sn</label><button id="play-toggle">Oynat</button><span id="countdown-status" class="countdown-status" aria-live="polite"></span>
-<button id="set-a" disabled>A: 0.00 sn</button><button id="set-b" disabled>B: Son</button><button id="loop" aria-pressed="false" disabled>Loop</button><button id="reset">Başa dön</button><span class="legend">Tekerlek: imleç çevresinde zaman yakınlaştır · Shift+tekerlek: dikey yakınlaştır · sürükle: kayıtta gezin</span>
-</div><div id="chart-panel" class="chart-scroll"><canvas id="chart"></canvas><input id="vertical-scroll" type="range" aria-label="Dikey grafiği kaydır"><input id="time-scroll" type="range" aria-label="Kayıtta gezin"><span></span></div><p class="note">Yatay çubuk kayıtta gezinir; sağdaki çubuk dikey merkezi değiştirir.</p><details class="interval-guide"><summary>Koma rehberi</summary><table><thead><tr><th>Rumuz</th><th>Aralık</th><th>Koma</th><th>Gösterim</th></tr></thead><tbody><tr><td>F</td><td>Koma</td><td>1</td><td>♯1 / ♭1</td></tr><tr><td>E</td><td>Eksik bakiye</td><td>3</td><td>—</td></tr><tr><td>B</td><td>Bakiye</td><td>4</td><td>♯4 / ♭4</td></tr><tr><td>S</td><td>Küçük mücennep</td><td>5</td><td>♯5 / ♭5</td></tr><tr><td>K</td><td>Büyük mücennep</td><td>8</td><td>♯8 / ♭8</td></tr><tr><td>T</td><td>Tanini</td><td>9</td><td>♯9 / ♭9</td></tr><tr><td>A</td><td>Artık ikili</td><td>12–13</td><td>—</td></tr></tbody></table></details><span class="resize-handle resize-right" data-resize="right"></span><span class="resize-handle resize-bottom" data-resize="bottom"></span><span class="resize-handle resize-corner" data-resize="corner"></span></section></div><dialog id="makam-settings"><form method="dialog" class="settings-form"><h2>Ayarlar</h2><p>Makam aralıklarını, dikey eğri takibini ve çalma hızını buradan düzenleyebilirsin.</p><div class="settings-actions" style="justify-content:flex-start;margin-top:0"><label><input id="vertical-follow" type="checkbox"> Eğriyi dikey takip et</label><label>Çalma hızı <select id="playback-rate"><option value="0.10">0,10×</option><option value="0.15">0,15×</option><option value="0.20">0,20×</option><option value="0.25">0,25×</option><option value="0.30">0,30×</option><option value="0.35">0,35×</option><option value="0.40">0,40×</option><option value="0.45">0,45×</option><option value="0.50">0,50×</option><option value="0.55">0,55×</option><option value="0.60">0,60×</option><option value="0.65">0,65×</option><option value="0.70">0,70×</option><option value="0.75">0,75×</option><option value="0.80">0,80×</option><option value="0.85">0,85×</option><option value="0.90">0,90×</option><option value="0.95">0,95×</option><option value="1.00" selected>1,00×</option></select></label></div><label>Makam <select id="makam-settings-mode"><option value="nihavent">Nihavend</option><option value="kurdi">Kürdi</option><option value="ussak">Uşşak</option><option value="hicaz">Hicaz</option><option value="kurdilihicazkar">Kürdilihicazkâr</option><option value="hicazkar">Hicazkâr</option></select></label><div id="makam-settings-grid" class="settings-grid"></div><div id="makam-settings-total" class="settings-total"></div><div class="settings-actions"><button id="makam-settings-reset" type="button">Teoriye dön</button><button value="cancel">Vazgeç</button><button id="makam-settings-apply" type="button">Uygula</button></div></form></dialog></main><script>
+<label>Geri Sayım <input id="countdown" type="number" min="0" max="60" step="1" value="0"> sn</label><button id="play-toggle">Oynat</button><span id="countdown-status" class="countdown-status" aria-live="polite"></span>
+<button id="set-a" disabled>A: 0.00 sn</button><button id="set-b" disabled>B: Son</button><button id="loop" aria-pressed="false" disabled>Loop</button><button id="reset">Başa Dön</button><span class="legend">Tekerlek: Zaman Yakınlaştır · Shift+Tekerlek: Dikey Yakınlaştır</span>
+</div><div id="chart-panel" class="chart-scroll"><canvas id="chart"></canvas><input id="vertical-scroll" type="range" aria-label="Dikey grafiği kaydır"><input id="time-scroll" type="range" aria-label="Kayıtta gezin"><span></span></div><p class="note">Yatay çubuk kayıtta gezinir; sağdaki çubuk dikey merkezi değiştirir.</p><details class="interval-guide"><summary>Koma Rehberi</summary><table><thead><tr><th>Rumuz</th><th>Aralık</th><th>Koma</th><th>Gösterim</th></tr></thead><tbody><tr><td>F</td><td>Koma</td><td>1</td><td>♯1 / ♭1</td></tr><tr><td>E</td><td>Eksik bakiye</td><td>3</td><td>—</td></tr><tr><td>B</td><td>Bakiye</td><td>4</td><td>♯4 / ♭4</td></tr><tr><td>S</td><td>Küçük mücennep</td><td>5</td><td>♯5 / ♭5</td></tr><tr><td>K</td><td>Büyük mücennep</td><td>8</td><td>♯8 / ♭8</td></tr><tr><td>T</td><td>Tanini</td><td>9</td><td>♯9 / ♭9</td></tr><tr><td>A</td><td>Artık ikili</td><td>12–13</td><td>—</td></tr></tbody></table></details><span class="resize-handle resize-right" data-resize="right"></span><span class="resize-handle resize-bottom" data-resize="bottom"></span><span class="resize-handle resize-corner" data-resize="corner"></span></section></div><dialog id="makam-settings"><form method="dialog" class="settings-form"><h2>Ayarlar</h2><p>Makam aralıklarını, dikey eğri takibini ve çalma hızını buradan düzenleyebilirsiniz.</p><div class="settings-actions" style="justify-content:flex-start;margin-top:0"><label><input id="vertical-follow" type="checkbox"> Eğriyi dikey takip et</label><label>Çalma Hızı <select id="playback-rate"><option value="0.10">0,10×</option><option value="0.25">0,25×</option><option value="0.50">0,50×</option><option value="0.75">0,75×</option><option value="1.00" selected>1,00×</option></select></label></div><label>Makam <select id="makam-settings-mode"><option value="nihavent">Nihavend</option><option value="kurdi">Kürdi</option><option value="ussak">Uşşak</option><option value="hicaz">Hicaz</option><option value="kurdilihicazkar">Kürdilihicazkâr</option><option value="hicazkar">Hicazkâr</option></select></label><div id="makam-settings-grid" class="settings-grid"></div><div id="makam-settings-total" class="settings-total"></div><div class="settings-actions"><button id="makam-settings-reset" type="button">Teoriye Dön</button><button value="cancel">Vazgeç</button><button id="makam-settings-apply" type="button">Uygula</button></div></form></dialog></main><script>
 const audioOnly={json.dumps(is_audio_only)};
 const frames={json.dumps(frames, ensure_ascii=False, separators=(',', ':'))};
 const scaleLabels={json.dumps(SCALE_LABELS, ensure_ascii=False, separators=(',', ':'))};
@@ -189,20 +328,15 @@ const media=document.getElementById('media'),canvas=document.getElementById('cha
 const setAButton=document.getElementById('set-a'),setBButton=document.getElementById('set-b'),loopButton=document.getElementById('loop');
 const scaleMode=document.getElementById('scale-mode'),tonicInput=document.getElementById('tonic');
 const makamSettingsDialog=document.getElementById('makam-settings'),makamSettingsOpen=document.getElementById('makam-settings-open'),makamSettingsMode=document.getElementById('makam-settings-mode'),makamSettingsGrid=document.getElementById('makam-settings-grid'),makamSettingsTotal=document.getElementById('makam-settings-total'),makamSettingsApply=document.getElementById('makam-settings-apply'),makamSettingsReset=document.getElementById('makam-settings-reset'),playbackRateInput=document.getElementById('playback-rate');
-let appearanceThemeInput=null,timeReadout=null,transportHint=null;const appearanceThemeKey='klarivision-appearance-v1';
+let appearanceThemeInput=null;const appearanceThemeKey='klarivision-appearance-v1';
 const makamStatus=document.getElementById('makam-status');let contextStatus,playbackRateStatus;
 const winInput=document.getElementById('window'),countdownInput=document.getElementById('countdown'),playToggle=document.getElementById('play-toggle'),countdownStatus=document.getElementById('countdown-status');let windowSeconds=12,viewStart=-6,drag=null,followPlayback=true,countdownTimer=null,countdownBypass=false;
 const workspace=document.getElementById('workspace'),layoutMode=document.getElementById('layout-mode'),mediaPanel=document.getElementById('media-panel'),chartPanel=canvas.closest('.panel');let resizeAction=null;
-// Keep the time scrubber on its own row.  It previously lived inside the
-// chart grid, where the fixed-size panel could clip it out of view.
 const chartGrid=document.getElementById('chart-panel');
 chartGrid.after(timeScroll);
 const timelineStyle=document.createElement('style');
-timelineStyle.textContent='.panel{{height:calc(var(--chart-height) + 130px)}}.chart-scroll{{grid-template-rows:minmax(0,1fr)}}#time-scroll{{display:block!important;width:100%!important;height:18px!important;margin:7px 0 0!important;accent-color:#7755b8;flex:0 0 auto;visibility:visible!important;opacity:1!important}}.loop-controls{{display:flex;align-items:center;gap:7px;padding:4px 6px;border:1px solid #cbd7e2;border-radius:9px;background:#f4f8fc}}body.theme-studio{{background:#171b20;color:#edf4f8}}body.theme-studio .panel,body.theme-studio .workspace.audio-only .media{{background:#20262d;border-color:#3a4653}}body.theme-studio .tools button,body.theme-studio select{{background:#28323c;color:#edf4f8;border-color:#536271}}body.theme-studio .note,body.theme-studio p,body.theme-studio .legend{{color:#b9c6d2}}body.theme-studio .loop-controls{{background:#192d34;border-color:#38717a}}body.theme-classic{{background:#f7f0e5;color:#263647}}body.theme-classic .panel,body.theme-classic .workspace.audio-only .media{{background:#fffaf1;border-color:#d9bb82}}body.theme-classic .tools button,body.theme-classic select{{background:#fffaf1;color:#263647;border-color:#c7a66d}}body.theme-classic .loop-controls{{background:#fbefd8;border-color:#c7a66d}}body.native-shell main{{max-width:none;padding:16px}}body.native-shell h1,body.native-shell main>p,body.native-shell .new-recording,body.native-shell .analysis-status,body.native-shell .app-context{{display:none!important}}body.native-shell .workspace{{gap:14px}}body.native-shell .workspace.stacked .media{{width:min(100%,880px);height:var(--media-height);padding:0;overflow:hidden;background:#151a20;border:1px solid #dbe0e6;border-radius:12px;box-shadow:0 1px 3px rgba(15,35,55,.12)}}body.native-shell .workspace.stacked .media video{{height:100%;border-radius:11px}}body.native-shell .workspace.stacked .panel{{width:min(100%,980px);height:calc(var(--chart-height) + 130px);border-radius:12px;box-shadow:0 1px 3px rgba(15,35,55,.10)}}body.native-shell .tools{{margin-bottom:12px}}body.native-shell .workspace.audio-only .media{{width:min(100%,980px)}}body.native-shell.theme-studio .workspace.stacked .media{{border-color:#3a4653}}body.native-shell.theme-classic .workspace.stacked .media{{border-color:#d9bb82}}';
+timelineStyle.textContent='.panel{{height:calc(var(--chart-height) + 130px)}}.chart-scroll{{grid-template-rows:minmax(0,1fr)}}#time-scroll{{display:block!important;width:100%!important;height:18px!important;margin:7px 0 0!important;accent-color:#0066cc;flex:0 0 auto;visibility:visible!important;opacity:1!important}}.loop-controls{{display:flex;align-items:center;gap:7px;padding:4px 8px;border:1px solid var(--border-card);border-radius:9px;background:var(--bg-main)}}body.theme-studio{{background:#12161b;color:#f0f4f8}}body.theme-studio .panel,body.theme-studio .workspace.audio-only .media{{background:#1c222b;border-color:#2e3846}}body.theme-studio .tools button,body.theme-studio select{{background:#222a35;color:#f0f4f8;border-color:#3a4758}}body.theme-studio .note,body.theme-studio p,body.theme-studio .legend{{color:#94a3b8}}body.theme-classic{{background:#fbf8f3;color:#2c221e}}body.theme-classic .panel,body.theme-classic .workspace.audio-only .media{{background:#fffdf9;border-color:#e2d9cc}}body.native-shell main{{max-width:none;padding:16px}}body.native-shell h1,body.native-shell main>p,body.native-shell .new-recording,body.native-shell .analysis-status,body.native-shell .app-context{{display:none!important}}body.native-shell .workspace{{gap:14px}}body.native-shell .workspace.stacked .media{{width:min(100%,880px);height:var(--media-height);padding:0;overflow:hidden;background:#151a20;border:1px solid var(--border-card);border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,0.1)}}body.native-shell .workspace.stacked .media video{{height:100%;border-radius:11px}}body.native-shell .workspace.stacked .panel{{width:min(100%,980px);height:calc(var(--chart-height) + 130px);border-radius:12px}}body.native-shell .tools{{margin-bottom:12px}}body.native-shell .workspace.audio-only .media{{width:min(100%,980px)}}';
 document.head.append(timelineStyle);
-const transportStyle=document.createElement('style');
-transportStyle.textContent='.player-controls{{display:flex;align-items:center;gap:8px;min-height:54px;padding:6px 8px;border:1px solid #dbe3eb;border-radius:12px;background:rgba(255,255,255,.92);box-shadow:0 1px 4px rgba(20,43,66,.09)}}.player-controls button{{min-width:38px;height:38px;padding:0 10px;border:0;background:transparent;border-radius:9px;font-weight:650}}.player-controls button:hover{{background:#eef4fa}}.player-controls #play-toggle{{display:flex;align-items:center;gap:8px;padding:0 13px;border:1px solid #dbe3eb;background:#fff}}.player-controls #play-toggle::before{{content:"▶";font-size:16px}}.player-controls #play-toggle.is-playing::before{{content:"❚❚";font-size:12px;letter-spacing:-2px}}.player-controls .transport-jump{{font-size:15px}}.player-controls .transport-time{{min-width:88px;text-align:center;color:#5d6a78;font-variant-numeric:tabular-nums;font-weight:650}}.player-controls .loop-label{{margin-left:auto;color:#4b5968;font-weight:650}}.player-controls #loop{{position:relative;min-width:48px;width:48px;height:28px;padding:0;border-radius:999px;background:#c9d3dc;transition:background .16s}}.player-controls #loop::after{{content:"";position:absolute;top:4px;left:4px;width:20px;height:20px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.22);transition:transform .16s}}.player-controls #loop[aria-pressed="true"]{{background:#4d9bed}}.player-controls #loop[aria-pressed="true"]::after{{transform:translateX(20px)}}.player-controls #transport-more{{font-size:22px;line-height:1;color:#526170}}.transport-hint{{display:none!important}}.transport-hint.visible{{display:inline!important;position:absolute;right:14px;top:68px;z-index:8;max-width:360px;padding:8px 10px;border:1px solid #dbe3eb;border-radius:8px;background:#fff;box-shadow:0 4px 14px rgba(20,43,66,.16)}}body.theme-studio .player-controls{{background:#202a33;border-color:#3b4c5b}}body.theme-studio .player-controls #play-toggle{{background:#28343f;border-color:#435464}}body.theme-studio .player-controls .transport-time,body.theme-studio .player-controls .loop-label{{color:#d4e1eb}}body.theme-classic .player-controls{{background:#fffaf1;border-color:#d9bb82}}';
-document.head.append(transportStyle);
 const verticalFollowInput=document.getElementById('vertical-follow');let verticalSpan=2400,verticalCenter=0,verticalReady=false,mediaReady=false;
 let duration=Math.max(...frames.map(p=>p.t),0),loopA=0,loopB=duration,loopEnabled=false,loopBManual=false; const left=140,right=20,marginTop=22,bottom=34;
 const makamSettingsKey='klarivision-makam-intervals-v1';
@@ -227,14 +361,24 @@ function updateMakamStatus(){{const axis=scaleMode.selectedOptions[0].textConten
 function renderMakamSettings(){{const mode=makamSettingsMode.value,values=pendingMakamIntervals[mode],total=values.reduce((sum,value)=>sum+Number(value),0);makamSettingsGrid.replaceChildren(...values.map((value,index)=>{{const label=document.createElement('label'),select=document.createElement('select');label.textContent=`Aralık ${{index+1}}`;select.dataset.intervalIndex=index;for(let koma=1;koma<=13;koma++){{const option=document.createElement('option');option.value=koma;option.textContent=komaOption(koma);option.selected=koma===Number(value);select.append(option)}}label.append(select);return label}}));makamSettingsTotal.textContent=`Toplam: ${{total}} / 53 koma`;makamSettingsTotal.classList.toggle('invalid',total!==53);makamSettingsApply.disabled=total!==53}}
 function activeAppearance(){{const stored=localStorage.getItem(appearanceThemeKey);return ['focus','studio','classic'].includes(stored)?stored:'focus'}}
 function setAppearance(theme){{const selected=['focus','studio','classic'].includes(theme)?theme:'focus';document.body.classList.remove('theme-studio','theme-classic');if(selected!=='focus')document.body.classList.add(`theme-${{selected}}`);localStorage.setItem(appearanceThemeKey,selected);if(appearanceThemeInput)appearanceThemeInput.value=selected;draw()}}
-function chartPalette(){{if(document.body.classList.contains('theme-studio'))return {{background:'#20262d',grid:'#3b4651',axis:'#bdcad5',label:'#e7f3f7',curve:'#57d9e8',frame:'#657888',loop:'rgba(51,184,199,.23)',playhead:'#d99aff'}};if(document.body.classList.contains('theme-classic'))return {{background:'#fffaf1',grid:'#eadfce',axis:'#a38b69',label:'#263647',curve:'#23415c',frame:'#c7a66d',loop:'rgba(204,162,81,.20)',playhead:'#9a6ab0'}};return {{background:'#fff',grid:'#e2e6eb',axis:'#edf0f3',label:'#3d4854',curve:'#111820',frame:'#aeb8c3',loop:'rgba(112,181,235,.20)',playhead:'#7755b8'}}}}
+function chartPalette(){{
+    const isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    if(document.body.classList.contains('theme-studio') || isDark) return {{
+        background:'#1c222b', grid:'#2d3748', axis:'#475569', label:'#cbd5e1', curve:'#388bfd', frame:'#475569', loop:'rgba(56, 139, 253, 0.2)', playhead:'#a855f7'
+    }};
+    if(document.body.classList.contains('theme-classic')) return {{
+        background:'#fffdf9', grid:'#e2d9cc', axis:'#cbd5e1', label:'#2c221e', curve:'#2563eb', frame:'#cbd5e1', loop:'rgba(37, 99, 235, 0.15)', playhead:'#9333ea'
+    }};
+    return {{
+        background:'#ffffff', grid:'#f1f5f9', axis:'#cbd5e1', label:'#475569', curve:'#0066cc', frame:'#cbd5e1', loop:'rgba(0, 102, 204, 0.15)', playhead:'#8b5cf6'
+    }}
+}}
 function setPlaybackRate(value){{const rate=Math.max(.10,Math.min(1,Math.round(value*20)/20));playbackRateInput.value=rate.toFixed(2);media.playbackRate=rate;if(playbackRateStatus)playbackRateStatus.textContent=`${{rate.toFixed(2).replace('.',',')}}×`}}
-function addAppearanceSettings(){{const form=makamSettingsDialog.querySelector('.settings-form'),section=document.createElement('section'),label=document.createElement('label'),select=document.createElement('select'),heading=document.createElement('h3'),controls=document.createElement('div'),controlsRow=playToggle.parentElement,time=document.createElement('span'),loopLabel=document.createElement('span'),moreButton=document.createElement('button'),hint=document.querySelector('.legend');section.className='settings-section settings-appearance';heading.textContent='Görünüm';label.textContent='Tema ';select.id='appearance-theme';[['focus','Çalışma odaklı'],['studio','Stüdyo'],['classic','Sıcak klasik']].forEach(([value,text])=>{{const option=document.createElement('option');option.value=value;option.textContent=text;select.append(option)}});label.append(select);section.append(heading,label);form.insertBefore(section,form.firstChild);appearanceThemeInput=select;select.onchange=()=>setAppearance(select.value);controls.className='player-controls';controls.setAttribute('aria-label','Oynatma ve A B Loop kontrolleri');setAButton.className='transport-jump';setBButton.className='transport-jump';setAButton.textContent='|◀';setBButton.textContent='▶|';setAButton.title='İmleçte A işaretini oluştur';setBButton.title='İmleçte B işaretini oluştur';time.className='transport-time';timeReadout=time;loopLabel.className='loop-label';loopLabel.textContent='Loop';loopButton.textContent='';loopButton.title='A ile B arasında döngü';moreButton.id='transport-more';moreButton.type='button';moreButton.textContent='…';moreButton.title='Kullanım ipuçları';hint.classList.add('transport-hint');transportHint=hint;moreButton.onclick=()=>hint.classList.toggle('visible');controls.append(playToggle,setAButton,setBButton,time,loopLabel,loopButton,moreButton);controlsRow.append(controls);setAppearance(activeAppearance())}}
+function addAppearanceSettings(){{const form=makamSettingsDialog.querySelector('.settings-form'),section=document.createElement('section'),label=document.createElement('label'),select=document.createElement('select'),heading=document.createElement('h3'),loopControls=document.createElement('div'),controlsRow=playToggle.parentElement;section.className='settings-section settings-appearance';heading.textContent='Görünüm';label.textContent='Tema ';select.id='appearance-theme';[['focus','Çalışma Odaklı'],['studio','Karanlık Stüdyo'],['classic','Sıcak Klasik']].forEach(([value,text])=>{{const option=document.createElement('option');option.value=value;option.textContent=text;select.append(option)}});label.append(select);section.append(heading,label);form.insertBefore(section,form.firstChild);appearanceThemeInput=select;select.onchange=()=>setAppearance(select.value);loopControls.className='loop-controls';loopControls.setAttribute('aria-label','A B Loop kontrolleri');loopControls.append(playToggle,setAButton,setBButton,loopButton);controlsRow.append(loopControls);setAppearance(activeAppearance())}}
 function organisePracticeControls(){{const form=makamSettingsDialog.querySelector('.settings-form'),makamLabel=makamSettingsMode.closest('label'),speedRow=playbackRateInput.closest('.settings-actions'),speedLabel=playbackRateInput.closest('label'),practice=document.createElement('section'),practiceRow=document.createElement('div'),speedStepper=document.createElement('div'),speedDown=document.createElement('button'),speedUp=document.createElement('button'),title=document.querySelector('h1'),description=document.querySelector('main > p'),deferredControls=[document.getElementById('minus'),document.getElementById('plus'),winInput.closest('label'),document.getElementById('vertical-out'),document.getElementById('vertical-in')];practice.className='settings-section';practiceRow.className='settings-row';speedStepper.className='speed-stepper';speedDown.type='button';speedDown.textContent='−';speedUp.type='button';speedUp.textContent='+';playbackRateStatus=document.createElement('span');speedStepper.append(speedDown,playbackRateStatus,speedUp);speedLabel.hidden=true;speedRow.append(speedStepper);speedDown.onclick=()=>setPlaybackRate(Number(playbackRateInput.value)-.05);speedUp.onclick=()=>setPlaybackRate(Number(playbackRateInput.value)+.05);practice.innerHTML='<h3>Çalışma</h3>';practiceRow.append(layoutMode.closest('label'),scaleMode.closest('label'),tonicInput.closest('label'),countdownInput.closest('label'));practice.append(practiceRow);form.insertBefore(practice,speedRow);makamLabel.before(makamStatus);deferredControls.forEach(control=>control.hidden=true);document.querySelector('.layout-tools').remove();title.textContent='KlariVision';contextStatus=document.createElement('span');contextStatus.id='context-status';contextStatus.className='app-context';title.after(contextStatus);description.textContent='Pitch eğrisi duyulan fiziksel frekansı (Hz) gösterir.';setPlaybackRate(Number(playbackRateInput.value))}}
 makamSettingsOpen.onclick=()=>{{pendingMakamIntervals=JSON.parse(JSON.stringify(makamIntervals));if(makamIntervals[scaleMode.value])makamSettingsMode.value=scaleMode.value;renderMakamSettings();makamSettingsDialog.showModal()}};makamSettingsMode.onchange=renderMakamSettings;makamSettingsGrid.onchange=event=>{{if(!event.target.matches('select[data-interval-index]'))return;pendingMakamIntervals[makamSettingsMode.value][Number(event.target.dataset.intervalIndex)]=Number(event.target.value);renderMakamSettings()}};makamSettingsReset.onclick=()=>{{pendingMakamIntervals[makamSettingsMode.value]=[...makamDefaults[makamSettingsMode.value]];renderMakamSettings()}};makamSettingsApply.onclick=()=>{{const values=pendingMakamIntervals[makamSettingsMode.value];if(values.reduce((sum,value)=>sum+Number(value),0)!==53)return;makamIntervals=pendingMakamIntervals;localStorage.setItem(makamSettingsKey,JSON.stringify(makamIntervals));makamSettingsDialog.close();updateMakamStatus();draw()}};
 function formatTime(time){{return `${{time.toFixed(2)}} sn`}}
-function formatClock(time){{const seconds=Math.max(0,Math.floor(Number(time)||0)),minutes=Math.floor(seconds/60);return `${{minutes}}:${{String(seconds%60).padStart(2,'0')}}`}}
-function updateLoopButtons(){{setAButton.title=`A: ${{formatTime(loopA)}}`;setBButton.title=`B: ${{loopBManual?formatTime(loopB):'Video sonu'}}`;loopButton.setAttribute('aria-pressed',String(loopEnabled));if(timeReadout)timeReadout.textContent=`${{formatClock(media.currentTime)}} / ${{formatClock(duration)}}`;}}
+function updateLoopButtons(){{setAButton.textContent=`A: ${{formatTime(loopA)}}`;setBButton.textContent=`B: ${{loopBManual?formatTime(loopB):'Son'}}`;loopButton.setAttribute('aria-pressed',String(loopEnabled));}}
 function setMediaReady(ready){{mediaReady=ready;setAButton.disabled=!ready;setBButton.disabled=!ready;loopButton.disabled=!ready;if(ready)countdownStatus.textContent=''}}
 function resize(){{const dpr=devicePixelRatio||1,w=canvas.clientWidth,h=canvas.clientHeight;canvas.width=w*dpr;canvas.height=h*dpr;ctx.setTransform(dpr,0,0,dpr,0,0);draw()}}
 function visibleValues(){{return frames.filter(p=>p.t>=viewStart&&p.t<=viewStart+windowSeconds).map(p=>cents(p.hz))}}
@@ -244,20 +388,20 @@ function range(){{const values=visibleValues();if(!verticalReady){{verticalCente
 function updateScrollbars(){{timeScroll.min=0;timeScroll.max=Math.max(1,Math.round(duration*1000));timeScroll.value=Math.round((media.currentTime||0)*1000);const values=frames.map(p=>cents(p.hz));if(!values.length)return;verticalScroll.min=Math.floor(Math.min(...values)-verticalSpan/2);verticalScroll.max=Math.ceil(Math.max(...values)+verticalSpan/2);verticalScroll.value=Math.round(verticalCenter)}}
 function draw(){{const w=canvas.clientWidth,h=canvas.clientHeight,cw=w-left-right,ch=h-marginTop-bottom,[lo,hi]=range(),palette=chartPalette();ctx.clearRect(0,0,w,h);const x=t=>left+(t-viewStart)/windowSeconds*cw,y=hz=>marginTop+(hi-cents(hz))/(hi-lo)*ch;
 ctx.fillStyle=palette.background;ctx.fillRect(0,0,w,h);ctx.strokeStyle=palette.grid;ctx.lineWidth=1;
-for(const [name,hz] of scaleNotes()){{const yy=y(hz);if(yy<marginTop-5||yy>h-bottom+5)continue;ctx.beginPath();ctx.moveTo(left,yy);ctx.lineTo(w-right,yy);ctx.stroke();ctx.fillStyle=palette.label;ctx.textAlign='right';ctx.font='11px system-ui';ctx.fillText(`${{name}}  (${{hz.toFixed(2)}} Hz)`,left-9,yy+4)}}
+for(const [name,hz] of scaleNotes()){{const yy=y(hz);if(yy<marginTop-5||yy>h-bottom+5)continue;ctx.beginPath();ctx.moveTo(left,yy);ctx.lineTo(w-right,yy);ctx.stroke();ctx.fillStyle=palette.label;ctx.textAlign='right';ctx.font='11px -apple-system, system-ui';ctx.fillText(`${{name}}  (${{hz.toFixed(2)}} Hz)`,left-9,yy+4)}}
 for(let t=Math.max(0,Math.ceil(viewStart));t<=Math.min(duration,viewStart+windowSeconds);t++){{const xx=x(t);ctx.strokeStyle=palette.axis;ctx.beginPath();ctx.moveTo(xx,marginTop);ctx.lineTo(xx,h-bottom);ctx.stroke();ctx.fillStyle=palette.label;ctx.textAlign='center';ctx.fillText(`${{t}} sn`,xx,h-12)}}
 if(loopEnabled){{const start=Math.max(left,x(loopA)),end=Math.min(w-right,x(loopB));if(end>start){{ctx.fillStyle=palette.loop;ctx.fillRect(start,marginTop,end-start,ch)}}}}
-ctx.save();ctx.beginPath();ctx.rect(left,marginTop,cw,ch);ctx.clip();ctx.strokeStyle=palette.curve;ctx.lineWidth=1.7;ctx.lineJoin='round';ctx.lineCap='round';ctx.beginPath();let previous=null;for(const p of frames){{if(p.t<viewStart-.05||p.t>viewStart+windowSeconds+.05)continue;const xx=x(p.t),yy=y(p.hz);if(!previous||p.t-previous.t>.030)ctx.moveTo(xx,yy);else ctx.lineTo(xx,yy);previous=p}}ctx.stroke();
-function marker(time,label,color){{if(time<viewStart||time>viewStart+windowSeconds)return;const xx=x(time);ctx.strokeStyle=color;ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(xx,marginTop);ctx.lineTo(xx,h-bottom);ctx.stroke();ctx.fillStyle=color;ctx.font='bold 12px system-ui';ctx.textAlign='center';ctx.fillText(label,xx,marginTop+14)}}marker(loopA,'A','#157347');marker(loopB,'B','#bd5b00');const current=media.currentTime||0;if(current>=viewStart&&current<=viewStart+windowSeconds){{const xx=x(current);ctx.strokeStyle=palette.playhead;ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(xx,marginTop);ctx.lineTo(xx,h-bottom);ctx.stroke()}}ctx.restore();ctx.strokeStyle=palette.frame;ctx.strokeRect(left,marginTop,cw,ch);updateScrollbars()}}
+ctx.save();ctx.beginPath();ctx.rect(left,marginTop,cw,ch);ctx.clip();ctx.strokeStyle=palette.curve;ctx.lineWidth=2.0;ctx.lineJoin='round';ctx.lineCap='round';ctx.beginPath();let previous=null;for(const p of frames){{if(p.t<viewStart-.05||p.t>viewStart+windowSeconds+.05)continue;const xx=x(p.t),yy=y(p.hz);if(!previous||p.t-previous.t>.030)ctx.moveTo(xx,yy);else ctx.lineTo(xx,yy);previous=p}}ctx.stroke();
+function marker(time,label,color){{if(time<viewStart||time>viewStart+windowSeconds)return;const xx=x(time);ctx.strokeStyle=color;ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(xx,marginTop);ctx.lineTo(xx,h-bottom);ctx.stroke();ctx.fillStyle=color;ctx.font='bold 12px -apple-system, system-ui';ctx.textAlign='center';ctx.fillText(label,xx,marginTop+14)}}marker(loopA,'A','#16a34a');marker(loopB,'B','#ea580c');const current=media.currentTime||0;if(current>=viewStart&&current<=viewStart+windowSeconds){{const xx=x(current);ctx.strokeStyle=palette.playhead;ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(xx,marginTop);ctx.lineTo(xx,h-bottom);ctx.stroke()}}ctx.restore();ctx.strokeStyle=palette.frame;ctx.strokeRect(left,marginTop,cw,ch);updateScrollbars()}}
 function clampStart(){{viewStart=Math.max(-windowSeconds/2,Math.min(viewStart,duration-windowSeconds/2))}}
 function centerOnPlayhead(){{viewStart=(media.currentTime||0)-windowSeconds/2;clampStart()}}
 function loopStart(){{return Math.max(0,Math.min(loopA,Math.max(0,duration-.001)))}}
 function restartLoopAtA(){{media.currentTime=loopStart()}}
 function playLoopFromA(){{const start=loopStart();media.play().then(()=>{{if(loopEnabled)media.currentTime=start}}).catch(()=>{{}})}}
-function tick(){{if(loopEnabled&&!media.paused&&(media.currentTime||0)>=loopB)restartLoopAtA();if(followPlayback)centerOnPlayhead();if(timeReadout)timeReadout.textContent=`${{formatClock(media.currentTime)}} / ${{formatClock(duration)}}`;draw();requestAnimationFrame(tick)}}
+function tick(){{if(loopEnabled&&!media.paused&&(media.currentTime||0)>=loopB)restartLoopAtA();if(followPlayback)centerOnPlayhead();draw();requestAnimationFrame(tick)}}
 function setWindow(value){{windowSeconds=Math.max(2,Math.min(60,value));winInput.value=windowSeconds;centerOnPlayhead();draw()}}
 function setVerticalSpan(value,anchor){{const previous=verticalSpan;verticalSpan=Math.max(200,Math.min(4800,value));if(anchor!==undefined){{const ratio=(verticalCenter+previous/2-anchor)/previous;verticalCenter=anchor+(ratio-.5)*verticalSpan}}draw()}}
-function updatePlayButton(){{playToggle.textContent=countdownTimer?'İptal':(media.paused?'Oynat':'Duraklat');playToggle.classList.toggle('is-playing',!media.paused&&!countdownTimer)}}
+function updatePlayButton(){{playToggle.textContent=countdownTimer?'İptal':(media.paused?'Oynat':'Duraklat')}}
 function clearCountdown(){{if(countdownTimer){{clearInterval(countdownTimer);countdownTimer=null}}countdownStatus.textContent='';updatePlayButton()}}
 function beginPlayback(){{if(!media.paused){{media.pause();return}}const seconds=Math.max(0,Math.floor(Number(countdownInput.value)||0));if(seconds===0){{countdownBypass=true;media.play().catch(()=>{{}});return}}let remaining=seconds;countdownStatus.textContent=`Başlıyor: ${{remaining}}`;updatePlayButton();countdownTimer=setInterval(()=>{{remaining-=1;if(remaining<=0){{clearCountdown();countdownBypass=true;media.play().catch(()=>{{}})}}else countdownStatus.textContent=`Başlıyor: ${{remaining}}`}},1000)}}
 function applyLayout(){{workspace.className=`workspace ${{audioOnly?'audio-only ':''}}${{layoutMode.value}}`;requestAnimationFrame(resize)}}
@@ -270,7 +414,7 @@ document.getElementById('vertical-out').onclick=()=>setVerticalSpan(verticalSpan
 scaleMode.onchange=()=>{{tonicInput.disabled=scaleMode.value==='turkish';updateMakamStatus();draw()}};tonicInput.onchange=()=>{{updateMakamStatus();draw()}};playbackRateInput.onchange=()=>setPlaybackRate(Number(playbackRateInput.value));
 setAButton.onclick=()=>{{if(!mediaReady)return;loopA=Math.max(0,Math.min(media.currentTime||0,duration));if(loopA>=loopB-.02){{loopB=duration;loopBManual=false}}updateLoopButtons();draw()}};setBButton.onclick=()=>{{if(!mediaReady)return;loopB=Math.max(loopA+.02,Math.min(media.currentTime||0,duration));loopBManual=true;updateLoopButtons();draw()}};loopButton.onclick=()=>{{if(!mediaReady){{countdownStatus.textContent='Video hazırlanıyor…';return}}if(!loopEnabled&&loopB-loopA<.02){{countdownStatus.textContent='Loop için A ile B arasında en az 0,02 sn olmalı.';return}}loopEnabled=!loopEnabled;if(loopEnabled){{countdownBypass=true;playLoopFromA()}}else if(media.currentTime<duration){{countdownBypass=true;media.play()}}updateLoopButtons();draw()}};
 timeScroll.addEventListener('input',()=>{{media.currentTime=Number(timeScroll.value)/1000;followPlayback=true;centerOnPlayhead();draw()}});verticalScroll.addEventListener('input',()=>{{verticalCenter=Number(verticalScroll.value);verticalReady=true;verticalFollowInput.checked=false;draw()}});
-canvas.addEventListener('wheel',e=>{{e.preventDefault();const rect=canvas.getBoundingClientRect();if(e.shiftKey){{const ratio=(e.clientY-rect.top-marginTop)/(rect.height-marginTop-bottom),[lo,hi]=range(),anchor=hi-ratio*(hi-lo);setVerticalSpan(verticalSpan*(e.deltaY>0?1.2:1/1.2),anchor);return}}setWindow(windowSeconds*(e.deltaY>0?1.2:1/1.2));followPlayback=true;}},{{passive:false}});
+canvas.addEventListener('wheel',e=>{{e.preventDefault();if(e.shiftKey){{const rect=canvas.getBoundingClientRect(),ratio=(e.clientY-rect.top-marginTop)/(rect.height-marginTop-bottom),[lo,hi]=range(),anchor=hi-ratio*(hi-lo);setVerticalSpan(verticalSpan*(e.deltaY>0?1.2:1/1.2),anchor);return}}setWindow(windowSeconds*(e.deltaY>0?1.2:1/1.2));followPlayback=true;}},{{passive:false}});
 if(location.protocol==='file:')document.getElementById('new-recording').href='http://127.0.0.1:8765/';layoutMode.onchange=applyLayout;verticalFollowInput.onchange=()=>draw();playToggle.onclick=()=>{{if(countdownTimer)clearCountdown();else beginPlayback()}};canvas.addEventListener('pointerdown',e=>{{drag={{x:e.clientX,time:media.currentTime||0,moved:false}};canvas.setPointerCapture(e.pointerId);followPlayback=true}});canvas.addEventListener('pointermove',e=>{{if(!drag)return;const change=(e.clientX-drag.x)/(canvas.clientWidth-left-right)*windowSeconds;if(!drag.moved&&Math.abs(e.clientX-drag.x)<4)return;drag.moved=true;media.currentTime=Math.max(0,Math.min(duration,drag.time-change));centerOnPlayhead();draw()}});canvas.addEventListener('pointerup',()=>{{if(drag&&!drag.moved)beginPlayback();drag=null}});media.addEventListener('play',()=>{{if(countdownBypass){{countdownBypass=false;updatePlayButton();return}}if((Number(countdownInput.value)||0)>0){{media.pause();beginPlayback()}}else updatePlayButton()}});media.addEventListener('pause',()=>{{if(!countdownTimer)updatePlayButton()}});media.addEventListener('timeupdate',()=>{{if(loopEnabled&&(media.currentTime||0)>=loopB)restartLoopAtA()}});media.addEventListener('ended',()=>{{if(loopEnabled){{countdownBypass=true;playLoopFromA()}}}});media.addEventListener('seeking',()=>{{followPlayback=true;centerOnPlayhead()}});media.addEventListener('loadedmetadata',()=>{{setPlaybackRate(Number(playbackRateInput.value));if(Number.isFinite(media.duration)){{duration=Math.max(duration,media.duration);if(!loopBManual)loopB=duration}}updateLoopButtons();centerOnPlayhead();draw()}});media.addEventListener('canplay',()=>setMediaReady(true));if(media.readyState>=3)setMediaReady(true);enablePanelResize(mediaPanel);enablePanelResize(chartPanel);new ResizeObserver(()=>resize()).observe(chartPanel);updateLoopButtons();applyLayout();addEventListener('resize',resize);requestAnimationFrame(tick);
 </script></main></body></html>""",
         encoding="utf-8",
