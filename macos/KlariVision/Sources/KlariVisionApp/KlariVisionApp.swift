@@ -325,12 +325,12 @@ private struct LocalViewer: NSViewRepresentable {
     func makeNSView(context: Context) -> WKWebView {
         let configuration = WKWebViewConfiguration()
         let hideStandaloneControls = """
-        document.addEventListener('DOMContentLoaded', () => {
+        (() => {
             const newRecording = document.getElementById('new-recording');
             if (newRecording) newRecording.style.display = 'none';
             const makamSettings = document.getElementById('makam-settings-open');
             if (makamSettings) makamSettings.style.display = 'none';
-        });
+        })();
         """
         configuration.userContentController.addUserScript(
             WKUserScript(source: hideStandaloneControls, injectionTime: .atDocumentEnd, forMainFrameOnly: true)
