@@ -72,13 +72,14 @@ final class RecentLibrary {
         panel.allowedContentTypes = [.movie, .audio, .mpeg4Movie, .quickTimeMovie, .mp3]
         panel.allowsMultipleSelection = false
         panel.canChooseDirectories = false
-        if panel.runModal() == .OK {
-            selectedFile = panel.url
+        if panel.runModal() == .OK, let url = panel.url {
+            selectFile(url)
         }
     }
 
     func selectFile(_ url: URL) {
         selectedFile = url
+        analyseSelectedFile()
     }
 
     func analyseSelectedFile() {
@@ -220,19 +221,12 @@ struct WelcomeView: View {
                         return true
                     }
 
-                    if library.selectedFile != nil {
-                        HStack(spacing: 12) {
-                            Button(library.isAnalysing ? "Pitch analiz ediliyor…" : "Pitch Eğrisini Oluştur") {
-                                library.analyseSelectedFile()
-                            }
-                            .buttonStyle(.borderedProminent)
-                            .disabled(library.isAnalysing)
+                    if library.selectedFile != nil, !library.analysisMessage.isEmpty {
+                        HStack(spacing: 10) {
                             if library.isAnalysing { ProgressView().controlSize(.small) }
-                            if !library.analysisMessage.isEmpty {
-                                Text(library.analysisMessage)
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                            }
+                            Text(library.analysisMessage)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
                         }
                     }
 
