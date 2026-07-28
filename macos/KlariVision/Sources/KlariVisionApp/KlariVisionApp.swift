@@ -321,6 +321,7 @@ private struct LocalViewer: NSViewRepresentable {
         let configuration = WKWebViewConfiguration()
         let hideStandaloneControls = """
         (() => {
+            document.body.classList.add('native-shell');
             const newRecording = document.getElementById('new-recording');
             if (newRecording) newRecording.style.display = 'none';
             const makamSettings = document.getElementById('makam-settings-open');
