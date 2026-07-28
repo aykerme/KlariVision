@@ -283,13 +283,6 @@ struct WelcomeView: View {
                 .padding(32)
                 .frame(maxWidth: 860, alignment: .leading)
                 }
-                .toolbar {
-                    ToolbarItem(placement: .primaryAction) {
-                        Button("Ayarlar", systemImage: "gearshape") {
-                            NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
-                        }
-                    }
-                }
             }
         }
     }
@@ -308,9 +301,6 @@ private struct WorkspaceView: View {
                     .lineLimit(1)
                     .foregroundStyle(.secondary)
                 Spacer()
-                Button("Ayarlar", systemImage: "gearshape") {
-                    NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
-                }
             }
             .padding(.horizontal, 16)
             .frame(height: 44)
