@@ -24,7 +24,6 @@ import imageio_ffmpeg
 from .contour_viewer import KARAR_TONES, MAKAM_PROFILES
 from .frequency_viewer import build_frequency_viewer
 from .pitch.models import AudioSource
-from .pitch.pyin import PyinPitchExtractor
 from .pitch.serialize import write_json
 from .pitch.vamp_pyin import VampPyinPitchExtractor
 from .runtime_paths import user_data_root
@@ -226,7 +225,14 @@ def analyse_upload(source: Path, makam: str, karar: str, engine: str = "vamp") -
         _to_wav(source, wav)
     cache_hit = pitch_json.is_file()
     if not cache_hit:
-        extractor = VampPyinPitchExtractor() if engine == "vamp" else PyinPitchExtractor()
+        if engine == "vamp":
+            extractor = VampPyinPitchExtractor()
+        else:
+            # Keep the slower pure-Python version available to the development
+            # workflow without loading it in the packaged native application.
+            from .pitch.pyin import PyinPitchExtractor
+
+            extractor = PyinPitchExtractor()
         track = extractor.extract(AudioSource(wav))
         write_json(track, pitch_json)
     build_frequency_viewer(
@@ -245,6 +251,38 @@ def analyse_upload(source: Path, makam: str, karar: str, engine: str = "vamp") -
     viewer_url = "/" + quote(viewer.relative_to(PROJECT_ROOT).as_posix())
     _store_recent_analysis(source, viewer_url, cache_hit=cache_hit)
     return viewer_url
+
+
+def refresh_existing_viewer(viewer: Path) -> Path:
+    """Refresh a saved HTML viewer without running pitch analysis again."""
+    viewer = viewer.expanduser().resolve()
+    if viewer.parent != OUTPUTS_DIR.resolve() or viewer.suffix.lower() != ".html":
+        raise ValueError("Geçersiz kayıt görünümü.")
+    if not viewer.is_file():
+        raise FileNotFoundError("Kaydedilmiş çalışma bulunamadı.")
+
+    pitch_candidates = sorted(
+        viewer.parent.glob(f"{viewer.stem}.*.json"),
+        key=lambda path: path.stat().st_mtime,
+        reverse=True,
+    )
+    if not pitch_candidates:
+        raise FileNotFoundError("Bu çalışma için pitch verisi bulunamadı.")
+    wav = AUDIO_DIR / f"{viewer.stem}.wav"
+    if not wav.is_file():
+        raise FileNotFoundError("Bu çalışma için ses önbelleği bulunamadı.")
+
+    previous_html = viewer.read_text(encoding="utf-8")
+    video_match = re.search(r'<video[^>]*\\bsrc="([^"]+)"', previous_html, re.IGNORECASE)
+    video_relative_path = html.unescape(video_match.group(1)) if video_match else None
+    build_frequency_viewer(
+        pitch_candidates[0],
+        os.path.relpath(wav, start=viewer.parent).replace(os.sep, "/"),
+        viewer,
+        video_relative_path=video_relative_path,
+        analysis_status="Önceki pitch analizi kullanıldı. Arayüz güncellendi.",
+    )
+    return viewer
 
 
 def _form_page(message: str = "") -> str:
