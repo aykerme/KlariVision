@@ -5,6 +5,15 @@ import SwiftUI
 struct KlariVisionApp: App {
     @State private var library = RecentLibrary()
 
+    init() {
+        // Swift Package uygulamaları Xcode'dan çalıştırıldığında bazen arka
+        // planda kalabiliyor. Normal bir macOS uygulaması gibi etkinleştir.
+        NSApplication.shared.setActivationPolicy(.regular)
+        DispatchQueue.main.async {
+            NSApplication.shared.activate(ignoringOtherApps: true)
+        }
+    }
+
     var body: some Scene {
         WindowGroup {
             WelcomeView(library: library)

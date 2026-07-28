@@ -1,0 +1,51 @@
+// !$*UTF8*$!
+{
+    archiveVersion = 1;
+    classes = {};
+    objectVersion = 56;
+    objects = {
+
+/* Begin PBXBuildFile section */
+        A10000000000000000000011 /* KlariVisionApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000010 /* KlariVisionApp.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+        A10000000000000000000010 /* KlariVisionApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/KlariVisionApp/KlariVisionApp.swift; sourceTree = "<group>"; };
+        A10000000000000000000012 /* KlariVision.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = KlariVision.app; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+        A10000000000000000000013 /* Frameworks */ = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+        A10000000000000000000014 = {isa = PBXGroup; children = (A10000000000000000000010 /* KlariVisionApp.swift */, A10000000000000000000015 /* Products */); sourceTree = "<group>"; };
+        A10000000000000000000015 /* Products */ = {isa = PBXGroup; children = (A10000000000000000000012 /* KlariVision.app */); name = Products; sourceTree = "<group>"; };
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+        A10000000000000000000016 /* KlariVision */ = {isa = PBXNativeTarget; buildConfigurationList = A10000000000000000000017 /* Build configuration list for PBXNativeTarget \"KlariVision\" */; buildPhases = (A10000000000000000000018 /* Sources */, A10000000000000000000013 /* Frameworks */); buildRules = (); dependencies = (); name = KlariVision; productName = KlariVision; productReference = A10000000000000000000012 /* KlariVision.app */; productType = "com.apple.product-type.application"; };
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+        A10000000000000000000019 /* Project object */ = {isa = PBXProject; attributes = { BuildIndependentTargetsInParallel = 1; LastSwiftUpdateCheck = 1600; LastUpgradeCheck = 1600; TargetAttributes = { A10000000000000000000016 = { CreatedOnToolsVersion = 16.0; }; }; }; buildConfigurationList = A10000000000000000000020 /* Build configuration list for PBXProject \"KlariVision\" */; compatibilityVersion = "Xcode 14.0"; developmentRegion = en; hasScannedForEncodings = 0; knownRegions = (en, Base); mainGroup = A10000000000000000000014; productRefGroup = A10000000000000000000015 /* Products */; projectDirPath = ""; projectRoot = ""; targets = (A10000000000000000000016 /* KlariVision */); };
+/* End PBXProject section */
+
+/* Begin PBXSourcesBuildPhase section */
+        A10000000000000000000018 /* Sources */ = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (A10000000000000000000011 /* KlariVisionApp.swift in Sources */); runOnlyForDeploymentPostprocessing = 0; };
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+        A10000000000000000000021 /* Debug */ = {isa = XCBuildConfiguration; buildSettings = { ALWAYS_SEARCH_USER_PATHS = NO; CLANG_ENABLE_MODULES = YES; CLANG_ENABLE_OBJC_ARC = YES; MACOSX_DEPLOYMENT_TARGET = 14.0; SDKROOT = macosx; SWIFT_VERSION = 5.0; }; name = Debug; };
+        A10000000000000000000022 /* Release */ = {isa = XCBuildConfiguration; buildSettings = { ALWAYS_SEARCH_USER_PATHS = NO; CLANG_ENABLE_MODULES = YES; CLANG_ENABLE_OBJC_ARC = YES; MACOSX_DEPLOYMENT_TARGET = 14.0; SDKROOT = macosx; SWIFT_VERSION = 5.0; }; name = Release; };
+        A10000000000000000000023 /* Debug */ = {isa = XCBuildConfiguration; buildSettings = { CODE_SIGN_STYLE = Automatic; DEVELOPMENT_TEAM = ""; GENERATE_INFOPLIST_FILE = NO; INFOPLIST_FILE = Info.plist; MACOSX_DEPLOYMENT_TARGET = 14.0; PRODUCT_BUNDLE_IDENTIFIER = com.aykerme.KlariVisionNative; PRODUCT_NAME = KlariVision; SWIFT_VERSION = 5.0; }; name = Debug; };
+        A10000000000000000000024 /* Release */ = {isa = XCBuildConfiguration; buildSettings = { CODE_SIGN_STYLE = Automatic; DEVELOPMENT_TEAM = ""; GENERATE_INFOPLIST_FILE = NO; INFOPLIST_FILE = Info.plist; MACOSX_DEPLOYMENT_TARGET = 14.0; PRODUCT_BUNDLE_IDENTIFIER = com.aykerme.KlariVisionNative; PRODUCT_NAME = KlariVision; SWIFT_VERSION = 5.0; }; name = Release; };
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+        A10000000000000000000020 /* Build configuration list for PBXProject \"KlariVision\" */ = {isa = XCConfigurationList; buildConfigurations = (A10000000000000000000021 /* Debug */, A10000000000000000000022 /* Release */); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
+        A10000000000000000000017 /* Build configuration list for PBXNativeTarget \"KlariVision\" */ = {isa = XCConfigurationList; buildConfigurations = (A10000000000000000000023 /* Debug */, A10000000000000000000024 /* Release */); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
+/* End XCConfigurationList section */
+    };
+    rootObject = A10000000000000000000019 /* Project object */;
+}
