@@ -291,6 +291,7 @@ struct WelcomeView: View {
 private struct WorkspaceView: View {
     let viewer: URL
     @Bindable var library: RecentLibrary
+    @State private var webView: WKWebView?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -301,12 +302,16 @@ private struct WorkspaceView: View {
                     .lineLimit(1)
                     .foregroundStyle(.secondary)
                 Spacer()
+                Button("Ayarlar", systemImage: "gearshape") {
+                    webView?.evaluateJavaScript("document.getElementById('makam-settings-open')?.click()")
+                }
+                .disabled(webView == nil)
             }
             .padding(.horizontal, 16)
             .frame(height: 44)
             .background(.bar)
 
-            LocalViewer(viewer: viewer, readAccessRoot: library.viewerReadAccessRoot(for: viewer))
+            LocalViewer(viewer: viewer, readAccessRoot: library.viewerReadAccessRoot(for: viewer), webView: $webView)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
     }
@@ -315,6 +320,7 @@ private struct WorkspaceView: View {
 private struct LocalViewer: NSViewRepresentable {
     let viewer: URL
     let readAccessRoot: URL
+    @Binding var webView: WKWebView?
 
     func makeNSView(context: Context) -> WKWebView {
         let configuration = WKWebViewConfiguration()
@@ -322,6 +328,8 @@ private struct LocalViewer: NSViewRepresentable {
         document.addEventListener('DOMContentLoaded', () => {
             const newRecording = document.getElementById('new-recording');
             if (newRecording) newRecording.style.display = 'none';
+            const makamSettings = document.getElementById('makam-settings-open');
+            if (makamSettings) makamSettings.style.display = 'none';
         });
         """
         configuration.userContentController.addUserScript(
@@ -330,6 +338,7 @@ private struct LocalViewer: NSViewRepresentable {
         let webView = WKWebView(frame: .zero, configuration: configuration)
         webView.setValue(false, forKey: "drawsBackground")
         webView.loadFileURL(viewer, allowingReadAccessTo: readAccessRoot)
+        DispatchQueue.main.async { self.webView = webView }
         return webView
     }
 
