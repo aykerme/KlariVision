@@ -39,6 +39,8 @@ final class RecentLibrary {
 
     private(set) var items: [Item] = []
     private(set) var selectedFile: URL?
+    private(set) var isAnalysing = false
+    private(set) var analysisMessage = ""
     var mediaLink = ""
 
     init() {
@@ -70,6 +72,71 @@ final class RecentLibrary {
         selectedFile = url
     }
 
+    func analyseSelectedFile() {
+        guard let selectedFile, !isAnalysing else { return }
+        guard let root = projectRoot() else {
+            analysisMessage = "KlariVision analiz motoru bulunamadı. Projeyi Xcode içinden açtığından emin ol."
+            return
+        }
+        guard let python = pythonExecutable(in: root) else {
+            analysisMessage = "Python çalışma ortamı bulunamadı."
+            return
+        }
+
+        isAnalysing = true
+        analysisMessage = "Pitch analizi hazırlanıyor…"
+        let sourcePath = selectedFile.path.replacingOccurrences(of: "\\\"", with: "\\\\\\\"")
+        let script = """
+        from pathlib import Path
+        from klarivision.local_app import analyse_upload
+        print(analyse_upload(Path(\"\(sourcePath)\"), \"huzzam\", \"dugah\", \"vamp\"))
+        """
+
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            let process = Process()
+            process.executableURL = python
+            process.arguments = ["-c", script]
+            process.currentDirectoryURL = root
+            var environment = ProcessInfo.processInfo.environment
+            environment["PYTHONPATH"] = root.appending(path: "src").path
+            process.environment = environment
+            let output = Pipe()
+            let error = Pipe()
+            process.standardOutput = output
+            process.standardError = error
+
+            do {
+                try process.run()
+                process.waitUntilExit()
+                let standardOutput = String(decoding: output.fileHandleForReading.readDataToEndOfFile(), as: UTF8.self)
+                let standardError = String(decoding: error.fileHandleForReading.readDataToEndOfFile(), as: UTF8.self)
+                DispatchQueue.main.async {
+                    guard let self else { return }
+                    self.isAnalysing = false
+                    guard process.terminationStatus == 0,
+                          let relativeViewer = standardOutput.split(whereSeparator: \.isNewline).last else {
+                        let detail = standardError.isEmpty ? "Lütfen tekrar dene." : standardError
+                        self.analysisMessage = "Analiz oluşturulamadı. \(detail)"
+                        return
+                    }
+                    let viewer = root.appending(path: String(relativeViewer).trimmingCharacters(in: CharacterSet(charactersIn: "/")))
+                    self.analysisMessage = "Pitch eğrisi hazır."
+                    NSWorkspace.shared.open(viewer)
+                    self.reload()
+                }
+            } catch {
+                DispatchQueue.main.async {
+                    self?.isAnalysing = false
+                    self?.analysisMessage = "Analiz motoru başlatılamadı: \(error.localizedDescription)"
+                }
+            }
+        }
+    }
+
+    func explainLinkImport() {
+        analysisMessage = "Bağlantıdan içe aktarma bir sonraki native adımda açılacak."
+    }
+
     func open(_ item: Item) {
         for root in dataRoots() {
             let relativePath = item.viewerURL.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
@@ -92,6 +159,21 @@ final class RecentLibrary {
             cursor.deleteLastPathComponent()
         }
         return roots
+    }
+
+    private func projectRoot() -> URL? {
+        for root in dataRoots() {
+            if FileManager.default.fileExists(atPath: root.appending(path: "src/klarivision/local_app.py").path) {
+                return root
+            }
+        }
+        let documentsRoot = URL(fileURLWithPath: NSHomeDirectory()).appending(path: "Documents/KlariVision")
+        return FileManager.default.fileExists(atPath: documentsRoot.appending(path: "src/klarivision/local_app.py").path) ? documentsRoot : nil
+    }
+
+    private func pythonExecutable(in root: URL) -> URL? {
+        let candidates = [root.appending(path: ".venv/bin/python"), URL(fileURLWithPath: "/usr/bin/python3")]
+        return candidates.first(where: { FileManager.default.isExecutableFile(atPath: $0.path) })
     }
 }
 
@@ -129,16 +211,32 @@ struct WelcomeView: View {
                         return true
                     }
 
+                    if library.selectedFile != nil {
+                        HStack(spacing: 12) {
+                            Button(library.isAnalysing ? "Pitch analiz ediliyor…" : "Pitch Eğrisini Oluştur") {
+                                library.analyseSelectedFile()
+                            }
+                            .buttonStyle(.borderedProminent)
+                            .disabled(library.isAnalysing)
+                            if library.isAnalysing { ProgressView().controlSize(.small) }
+                            if !library.analysisMessage.isEmpty {
+                                Text(library.analysisMessage)
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                    }
+
                     VStack(alignment: .leading, spacing: 9) {
                         Text("Bağlantıdan içe aktar")
                             .font(.headline)
                         HStack {
                             TextField("YouTube veya video bağlantısı", text: $library.mediaLink)
                                 .textFieldStyle(.roundedBorder)
-                            Button("İçe Aktar") { }
+                            Button("İçe Aktar") { library.explainLinkImport() }
                                 .disabled(library.mediaLink.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                         }
-                        Text("Yerel analiz motoru ile bağlantı aktarımı bir sonraki native ekranda bağlanacak.")
+                        Text("Bağlantı aktarımı, yerel dosya analizinden sonra native akışa eklenecek.")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
