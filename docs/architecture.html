@@ -1,0 +1,258 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>KlariVision — Yazılım ve Veri Akışı</title>
+  <style>
+    :root { color-scheme: light dark; --ink:#17233b; --muted:#60708d; --paper:#f5f8ff; --card:#fff; --line:#cbd6ea; --blue:#2f6feb; --cyan:#0b9fb3; --green:#238636; --orange:#b56200; --purple:#8250df; --red:#cf222e; }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body { margin:0; background:var(--paper); color:var(--ink); font:16px/1.58 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; }
+    header { color:#fff; background:linear-gradient(125deg,#12213d,#204b8f 58%,#087f8c); padding:64px max(24px,calc((100vw - 1160px)/2)); }
+    header p { max-width:800px; color:#dce8ff; font-size:1.1rem; }
+    h1 { margin:0 0 12px; font-size:clamp(2rem,5vw,3.8rem); line-height:1.05; }
+    h2 { margin:0 0 18px; font-size:clamp(1.5rem,3vw,2.2rem); }
+    h3 { margin:0 0 8px; }
+    code { font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:.9em; }
+    nav { position:sticky; top:0; z-index:5; display:flex; gap:18px; overflow:auto; padding:12px max(20px,calc((100vw - 1160px)/2)); background:color-mix(in srgb,var(--card) 90%,transparent); border-bottom:1px solid var(--line); backdrop-filter:blur(12px); }
+    nav a { color:var(--blue); white-space:nowrap; text-decoration:none; font-weight:650; }
+    main { width:min(1160px,calc(100% - 36px)); margin:auto; padding:34px 0 80px; }
+    section { margin:0 0 54px; scroll-margin-top:70px; }
+    .lead { color:var(--muted); max-width:850px; }
+    .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(250px,1fr)); gap:16px; }
+    .card,.diagram { background:var(--card); border:1px solid var(--line); border-radius:18px; box-shadow:0 8px 28px rgba(20,46,90,.08); }
+    .card { padding:20px; }
+    .card p { margin-bottom:0; color:var(--muted); }
+    .diagram { padding:16px; overflow:auto; }
+    .eyebrow { color:var(--blue); font-size:.78rem; font-weight:800; letter-spacing:.12em; text-transform:uppercase; }
+    .legend { display:flex; flex-wrap:wrap; gap:16px; margin:10px 0 0; color:var(--muted); font-size:.9rem; }
+    .dot { display:inline-block; width:10px; height:10px; margin-right:6px; border-radius:50%; }
+    svg { display:block; width:100%; min-width:720px; height:auto; }
+    svg text { font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; fill:#17233b; }
+    .box { fill:#fff; stroke:#b8c7df; stroke-width:2; }
+    .platform { fill:#e9f1ff; stroke:#2f6feb; stroke-width:2; }
+    .service { fill:#e7f8fa; stroke:#0b9fb3; stroke-width:2; }
+    .core { fill:#f0eaff; stroke:#8250df; stroke-width:2; }
+    .data { fill:#eaf7ed; stroke:#238636; stroke-width:2; }
+    .warning { fill:#fff3df; stroke:#b56200; stroke-width:2; }
+    .arrow { stroke:#60708d; stroke-width:2.3; fill:none; marker-end:url(#arrow); }
+    .dash { stroke-dasharray:7 6; }
+    .title { font-size:17px; font-weight:750; }
+    .sub { font-size:13px; fill:#60708d; }
+    table { width:100%; border-collapse:collapse; background:var(--card); border:1px solid var(--line); }
+    th,td { padding:12px 14px; text-align:left; vertical-align:top; border-bottom:1px solid var(--line); }
+    th { background:color-mix(in srgb,var(--blue) 9%,var(--card)); }
+    .callout { padding:16px 18px; border-left:5px solid var(--orange); background:color-mix(in srgb,var(--orange) 9%,var(--card)); border-radius:0 12px 12px 0; }
+    footer { color:var(--muted); border-top:1px solid var(--line); padding:24px 0; }
+    @media (prefers-color-scheme:dark) {
+      :root { --ink:#e8eefc; --muted:#aab8d1; --paper:#0e1524; --card:#151f32; --line:#30405d; --blue:#7aa7ff; }
+      svg text { fill:#e8eefc; } .sub { fill:#aab8d1; }
+      .box { fill:#151f32;stroke:#5a6f92}.platform{fill:#172c50;stroke:#7aa7ff}.service{fill:#12353a;stroke:#39c5d5}.core{fill:#2d2148;stroke:#b89cff}.data{fill:#183722;stroke:#56c56d}.warning{fill:#432d12;stroke:#e49a39}
+    }
+    @media (max-width:700px) { header{padding-top:42px;padding-bottom:42px} main{width:min(100% - 24px,1160px)} .diagram{border-radius:12px} }
+    @media print { nav{display:none} body{background:#fff;color:#111} section{break-inside:avoid}.card,.diagram{box-shadow:none} }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="eyebrow" style="color:#8feaf4">Geliştirici rehberi · 20 Ağustos 2026</div>
+    <h1>KlariVision nasıl çalışır?</h1>
+    <p>macOS ve iPhone/iPad uygulamalarının katmanları, çevrimdışı dosya ve canlı mikrofon veri akışları, C ABI sınırı, kalıcı veri sahipliği ve güvenli yaşam döngüsü.</p>
+  </header>
+  <nav aria-label="Belge bölümleri">
+    <a href="#overview">Genel bakış</a><a href="#layers">Katmanlar</a><a href="#offline">Dosya akışı</a><a href="#live">Canlı akış</a><a href="#engines">Pitch motorları</a><a href="#lifecycle">Yaşam döngüsü</a><a href="#storage">Veri sahipliği</a><a href="#map">Kod haritası</a>
+  </nav>
+  <main>
+    <section id="overview">
+      <div class="eyebrow">Bir dakikalık özet</div><h2>Bir çekirdek, iki doğal Apple deneyimi</h2>
+      <div class="grid">
+        <article class="card"><h3>Ölçüm</h3><p>Ses 48 kHz mono Float32 pencerelere dönüşür. C++ motor zaman, frekans, güven ve seslilik kareleri üretir.</p></article>
+        <article class="card"><h3>Bağlam</h3><p>Makam, karar ve Sol klarnet nota gösterimi kullanıcı seçimidir. Fiziksel frekans verisini değiştirmez.</p></article>
+        <article class="card"><h3>Sunum</h3><p>SwiftUI kontrolleri state'i yönetir; tek ve kalıcı WKWebView canvas yoğun pitch eğrisini çizer.</p></article>
+        <article class="card"><h3>Gizlilik</h3><p>Medya, WAV kayıtları, analiz kareleri ve tercihler yereldir. Ürün akışında ağ ya da bulut yoktur.</p></article>
+      </div>
+    </section>
+
+    <section id="layers">
+      <div class="eyebrow">Sistem görünümü</div><h2>Katmanlar ve sorumluluk sınırları</h2>
+      <p class="lead">Oklar çağrı/veri yönünü gösterir. Kesik çizgi, aynı kavramın iki platformda farklı adaptörle uygulandığını belirtir.</p>
+      <div class="diagram">
+        <svg viewBox="0 0 1080 560" role="img" aria-labelledby="layers-title layers-desc">
+          <title id="layers-title">KlariVision sistem katmanları</title><desc id="layers-desc">macOS ve mobil SwiftUI kabukları, platform servisleri, C ABI, C++ pitch motorları ve WebKit grafik katmanı.</desc>
+          <defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#60708d"/></marker></defs>
+          <rect class="platform" x="55" y="55" width="430" height="90" rx="16"/><text class="title" x="270" y="88" text-anchor="middle">macOS SwiftUI</text><text class="sub" x="270" y="116" text-anchor="middle">Dosya seçimi · oynatma · canlı çalışma · ayarlar</text>
+          <rect class="platform" x="595" y="55" width="430" height="90" rx="16"/><text class="title" x="810" y="88" text-anchor="middle">iPhone + iPad SwiftUI</text><text class="sub" x="810" y="116" text-anchor="middle">Compact tab · regular sidebar · ortak state</text>
+          <rect class="service" x="55" y="205" width="430" height="90" rx="16"/><text class="title" x="270" y="238" text-anchor="middle">macOS platform servisleri</text><text class="sub" x="270" y="266" text-anchor="middle">AVFoundation · Python/Vamp · Application Support</text>
+          <rect class="service" x="595" y="205" width="430" height="90" rx="16"/><text class="title" x="810" y="238" text-anchor="middle">iOS/iPadOS platform servisleri</text><text class="sub" x="810" y="266" text-anchor="middle">AVAudioEngine · AVAssetReader · yerel dosya alanı</text>
+          <rect class="core" x="205" y="355" width="670" height="88" rx="16"/><text class="title" x="540" y="388" text-anchor="middle">C ABI v1 → C++ ProductionPitchSession</text><text class="sub" x="540" y="416" text-anchor="middle">YIN v1 · Pitch Engine v2 · VPM-benzeri · 48 kHz / 1536 / 512</text>
+          <rect class="data" x="205" y="485" width="670" height="60" rx="16"/><text class="title" x="540" y="522" text-anchor="middle">Pitch kareleri → kalıcı WKWebView canvas + SwiftUI tüner</text>
+          <path class="arrow" d="M270 145V205"/><path class="arrow" d="M810 145V205"/><path class="arrow" d="M270 295 C270 330 350 330 390 355"/><path class="arrow" d="M810 295 C810 330 730 330 690 355"/><path class="arrow" d="M540 443V485"/>
+        </svg>
+      </div>
+    </section>
+
+    <section id="offline">
+      <div class="eyebrow">Dinleme modu</div><h2>Dosya → analiz → çalışma akışı</h2>
+      <div class="diagram">
+        <svg viewBox="0 0 1120 500" role="img" aria-labelledby="offline-title offline-desc">
+          <title id="offline-title">Çevrimdışı dosya analiz akışı</title><desc id="offline-desc">Kullanıcı dosyasının güvenli kopyalanması, PCM dönüşümü, pitch analizi, yerel kayıt ve görüntüleme sırası.</desc>
+          <rect class="platform" x="25" y="70" width="175" height="86" rx="14"/><text class="title" x="112" y="104" text-anchor="middle">1 · Dosya seç</text><text class="sub" x="112" y="130" text-anchor="middle">Ses veya video</text>
+          <rect class="service" x="245" y="70" width="190" height="86" rx="14"/><text class="title" x="340" y="104" text-anchor="middle">2 · Güvenli kopya</text><text class="sub" x="340" y="130" text-anchor="middle">App-owned Imports</text>
+          <rect class="service" x="480" y="70" width="190" height="86" rx="14"/><text class="title" x="575" y="104" text-anchor="middle">3 · PCM hazırla</text><text class="sub" x="575" y="130" text-anchor="middle">48 kHz · mono · Float32</text>
+          <rect class="core" x="715" y="70" width="175" height="86" rx="14"/><text class="title" x="802" y="104" text-anchor="middle">4 · Pitch üret</text><text class="sub" x="802" y="130" text-anchor="middle">Seçili motor</text>
+          <rect class="data" x="935" y="70" width="160" height="86" rx="14"/><text class="title" x="1015" y="104" text-anchor="middle">5 · Kaydet</text><text class="sub" x="1015" y="130" text-anchor="middle">Kare + metadata</text>
+          <path class="arrow" d="M200 113H245"/><path class="arrow" d="M435 113H480"/><path class="arrow" d="M670 113H715"/><path class="arrow" d="M890 113H935"/>
+          <rect class="box" x="170" y="260" width="780" height="155" rx="18"/><text class="title" x="560" y="295" text-anchor="middle">Çalışma ekranı</text>
+          <text class="sub" x="560" y="326" text-anchor="middle">AVPlayer medya saati → seek / hız / A-B loop / takip</text>
+          <text class="sub" x="560" y="356" text-anchor="middle">Pitch kareleri + makam/karar bağlamı → tek WKWebView canvas</text>
+          <text class="sub" x="560" y="386" text-anchor="middle">SwiftUI kontrolleri komut gönderir; viewer durum snapshot'ı geri döndürür</text>
+          <path class="arrow" d="M1015 156 C1015 220 870 240 870 260"/>
+          <path class="arrow dash" d="M170 338 C100 338 100 155 245 155"/>
+          <text class="sub" x="72" y="285">Tekrar açılışta</text><text class="sub" x="72" y="305">analiz yok</text>
+          <rect class="warning" x="325" y="443" width="470" height="42" rx="12"/><text class="sub" x="560" y="469" text-anchor="middle">Silme eylemi liste kaydını kaldırır; kullanıcı medyasını silmez.</text>
+        </svg>
+      </div>
+      <div class="legend"><span><i class="dot" style="background:var(--blue)"></i>UI</span><span><i class="dot" style="background:var(--cyan)"></i>Platform servisi</span><span><i class="dot" style="background:var(--purple)"></i>Pitch çekirdeği</span><span><i class="dot" style="background:var(--green)"></i>Kalıcı veri</span></div>
+    </section>
+
+    <section id="live">
+      <div class="eyebrow">Çalma modu</div><h2>Mikrofon → düşük gecikmeli pitch akışı</h2>
+      <div class="diagram">
+        <svg viewBox="0 0 1120 510" role="img" aria-labelledby="live-title live-desc">
+          <title id="live-title">Canlı mikrofon veri akışı</title><desc id="live-desc">Ses oturumu, tap, örnek dönüşümü, aktör izolasyonu, C++ pitch oturumu ve arayüz yayın akışı.</desc>
+          <rect class="platform" x="30" y="55" width="180" height="82" rx="14"/><text class="title" x="120" y="88" text-anchor="middle">Kullanıcı başlatır</text><text class="sub" x="120" y="114" text-anchor="middle">Mikrofon izni</text>
+          <rect class="service" x="255" y="55" width="190" height="82" rx="14"/><text class="title" x="350" y="88" text-anchor="middle">AVAudioEngine tap</text><text class="sub" x="350" y="114" text-anchor="middle">Donanım PCM'i</text>
+          <rect class="service" x="490" y="55" width="190" height="82" rx="14"/><text class="title" x="585" y="88" text-anchor="middle">Dönüştürücü</text><text class="sub" x="585" y="114" text-anchor="middle">48 kHz mono Float32</text>
+          <rect class="core" x="725" y="55" width="175" height="82" rx="14"/><text class="title" x="812" y="88" text-anchor="middle">C ABI oturumu</text><text class="sub" x="812" y="114" text-anchor="middle">1536 / 512</text>
+          <rect class="data" x="945" y="55" width="150" height="82" rx="14"/><text class="title" x="1020" y="88" text-anchor="middle">Pitch kareleri</text><text class="sub" x="1020" y="114" text-anchor="middle">t · Hz · güven</text>
+          <path class="arrow" d="M210 96H255"/><path class="arrow" d="M445 96H490"/><path class="arrow" d="M680 96H725"/><path class="arrow" d="M900 96H945"/>
+          <rect class="box" x="155" y="225" width="350" height="120" rx="16"/><text class="title" x="330" y="260" text-anchor="middle">Ana aktör / SwiftUI</text><text class="sub" x="330" y="289" text-anchor="middle">phase · tuner · VU · kullanıcı mesajı</text><text class="sub" x="330" y="316" text-anchor="middle">yaklaşık 30 Hz toplu yayın</text>
+          <rect class="box" x="615" y="225" width="350" height="120" rx="16"/><text class="title" x="790" y="260" text-anchor="middle">Kalıcı Live WebView</text><text class="sub" x="790" y="289" text-anchor="middle">kayan eğri · kılavuzlar · takip</text><text class="sub" x="790" y="316" text-anchor="middle">yeniden boyutta kimlik değişmez</text>
+          <path class="arrow" d="M1020 137 C1020 190 430 185 430 225"/><path class="arrow" d="M505 285H615"/>
+          <rect class="warning" x="155" y="405" width="810" height="72" rx="14"/><text class="title" x="560" y="434" text-anchor="middle">Kesinti / rota / arka plan / reset</text><text class="sub" x="560" y="459" text-anchor="middle">tap kaldır → motoru finish/destroy et → WAV'ı kapat → session'ı pasifleştir → kullanıcıdan yeniden başlatma bekle</text>
+          <path class="arrow dash" d="M560 405V345"/>
+        </svg>
+      </div>
+      <p class="callout"><strong>Eşzamanlılık kuralı:</strong> mobilde dönüştürme, WAV yazımı ve pitch oturumu tek aktörde sıralanır. Audio tap önce sahipli bir Float kopyası üretir; UI güncellemesi yalnız MainActor'a döner.</p>
+    </section>
+
+    <section id="engines">
+      <div class="eyebrow">Ortak analiz çekirdeği</div><h2>Pitch motorları nasıl çalışır?</h2>
+      <p class="lead">Üç üretim motoru aynı PCM penceresini ve aynı C ABI sözleşmesini kullanır. Aralarındaki fark ses yakalama veya nota gösterimi değil; aday frekansların nasıl üretildiği, doğrulandığı ve zaman içinde nasıl yayımlandığıdır.</p>
+      <div class="grid">
+        <article class="card"><h3>YIN v1 · kararlı ve nedensel</h3><p>Gecikmeli örnekler arasındaki farkı ölçer, kümülatif normalize edilmiş fark eğrisinin yerel minimumlarından aday üretir. Güven, spektral oktav kanıtı, önceki perdeye yakınlık, atak/release ve kısa boşluk kurallarıyla tek kare seçer.</p></article>
+        <article class="card"><h3>Pitch Engine v2 · çoklu kanıt</h3><p>YIN, normalize otokorelasyon ve MPM/NSDF adaylarını birleştirir. SWIPE-prime harmonik desteğini ve farklı yöntemlerin uzlaşmasını puana katar; beş karelik sabit gecikmeli yol çözücü ile kararlı kontur seçer.</p></article>
+        <article class="card"><h3>VPM-benzeri · ACF + spektrum</h3><p>Normalize otokorelasyon tepesini çoklu periyotlarla inceltir, doğrudan spektral çizgi ve harmonik kanıtıyla doğrular. Tracker; f/2–f/3 sıçramalarını, release'i, yeni atağı ve en fazla yedi karelik kesintiyi nedensel olarak yönetir.</p></article>
+      </div>
+
+      <h3 style="margin-top:28px">Her motorun aldığı ve ürettiği veri</h3>
+      <div class="diagram">
+        <svg viewBox="0 0 1180 690" role="img" aria-labelledby="engine-flow-title engine-flow-desc">
+          <title id="engine-flow-title">Pitch motorlarının ortak ve motora özel veri akışı</title><desc id="engine-flow-desc">48 kHz ses penceresinin sinyal kapısından üç pitch motoruna, ardından ortak yayın ve nota gösterim katmanına akışı.</desc>
+          <rect class="service" x="35" y="55" width="200" height="86" rx="14"/><text class="title" x="135" y="89" text-anchor="middle">PCM penceresi</text><text class="sub" x="135" y="115" text-anchor="middle">48 kHz · mono · Float32</text>
+          <rect class="warning" x="285" y="55" width="200" height="86" rx="14"/><text class="title" x="385" y="89" text-anchor="middle">Ön kontrol</text><text class="sub" x="385" y="115" text-anchor="middle">1536 örnek · RMS ≥ eşik</text>
+          <rect class="core" x="535" y="55" width="245" height="86" rx="14"/><text class="title" x="657" y="89" text-anchor="middle">ProductionPitchSession</text><text class="sub" x="657" y="115" text-anchor="middle">engine id · state · source time</text>
+          <path class="arrow" d="M235 98H285"/><path class="arrow" d="M485 98H535"/>
+
+          <rect class="platform" x="55" y="245" width="300" height="205" rx="18"/><text class="title" x="205" y="280" text-anchor="middle">YIN v1</text><text class="sub" x="205" y="311" text-anchor="middle">1 · fark + CMNDF yerel minimumları</text><text class="sub" x="205" y="339" text-anchor="middle">2 · parabolik lag inceltme</text><text class="sub" x="205" y="367" text-anchor="middle">3 · spektral f/2 kurtarma</text><text class="sub" x="205" y="395" text-anchor="middle">4 · süreklilik + jump doğrulama</text><text class="sub" x="205" y="423" text-anchor="middle">5 · release ve boşluk köprüsü</text>
+          <rect class="core" x="440" y="215" width="300" height="265" rx="18"/><text class="title" x="590" y="250" text-anchor="middle">Pitch Engine v2</text><text class="sub" x="590" y="281" text-anchor="middle">1 · YIN + ACF + MPM adayları</text><text class="sub" x="590" y="309" text-anchor="middle">2 · SWIPE-prime harmonik desteği</text><text class="sub" x="590" y="337" text-anchor="middle">3 · %40 periyodiklik</text><text class="sub" x="590" y="365" text-anchor="middle">+ %20 yöntem uzlaşması</text><text class="sub" x="590" y="393" text-anchor="middle">+ %40 harmonik destek</text><text class="sub" x="590" y="421" text-anchor="middle">4 · 5 kare fixed-lag yol seçimi</text><text class="sub" x="590" y="449" text-anchor="middle">5 · harmonik/release/boşluk filtreleri</text>
+          <rect class="service" x="825" y="245" width="300" height="205" rx="18"/><text class="title" x="975" y="280" text-anchor="middle">VPM-benzeri</text><text class="sub" x="975" y="311" text-anchor="middle">1 · normalize otokorelasyon</text><text class="sub" x="975" y="339" text-anchor="middle">2 · çoklu periyot inceltme</text><text class="sub" x="975" y="367" text-anchor="middle">3 · spektral temel/harmonik kanıt</text><text class="sub" x="975" y="395" text-anchor="middle">4 · kontur tracker + f/2/f/3 veto</text><text class="sub" x="975" y="423" text-anchor="middle">5 · release/atak/boşluk yönetimi</text>
+          <path class="arrow" d="M610 141 C610 180 205 180 205 245"/><path class="arrow" d="M657 141V215"/><path class="arrow" d="M705 141 C705 180 975 180 975 245"/>
+
+          <rect class="data" x="300" y="545" width="580" height="94" rx="16"/><text class="title" x="590" y="580" text-anchor="middle">Ortak çıktı: kv_pitch_frame</text><text class="sub" x="590" y="607" text-anchor="middle">source time · frequency Hz? · confidence · voiced</text><text class="sub" x="590" y="628" text-anchor="middle">Bir process çağrısı 0, 1 veya köprülenmiş birden çok kare döndürebilir.</text>
+          <path class="arrow" d="M205 450 C205 520 390 520 425 545"/><path class="arrow" d="M590 480V545"/><path class="arrow" d="M975 450 C975 520 790 520 755 545"/>
+          <rect class="box" x="930" y="545" width="210" height="94" rx="16"/><text class="title" x="1035" y="580" text-anchor="middle">Sunum bağlamı</text><text class="sub" x="1035" y="607" text-anchor="middle">Hz → sent / nota adı</text><text class="sub" x="1035" y="628" text-anchor="middle">makam · karar · transpozisyon</text><path class="arrow" d="M880 592H930"/>
+        </svg>
+      </div>
+
+      <h3 style="margin-top:28px">Kod çağrısı nereden nereye gider?</h3>
+      <div class="diagram">
+        <svg viewBox="0 0 1180 560" role="img" aria-labelledby="code-flow-title code-flow-desc">
+          <title id="code-flow-title">Swift arayüzünden C++ algoritmasına kod çağrı zinciri</title><desc id="code-flow-desc">Motor seçiminin Swift state'ten platform adaptörüne, C ABI'ye, ProductionPitchSession'a ve algoritma dosyalarına geçişi.</desc>
+          <text class="title" x="145" y="35" text-anchor="middle">macOS</text><text class="title" x="1035" y="35" text-anchor="middle">iPhone / iPad</text>
+          <rect class="platform" x="35" y="60" width="220" height="72" rx="13"/><text class="title" x="145" y="89" text-anchor="middle">LivePitchEngine</text><text class="sub" x="145" y="113" text-anchor="middle">AppSettings + kullanıcı seçimi</text>
+          <rect class="platform" x="925" y="60" width="220" height="72" rx="13"/><text class="title" x="1035" y="89" text-anchor="middle">iPadPitchEngine</text><text class="sub" x="1035" y="113" text-anchor="middle">AppState + kullanıcı seçimi</text>
+          <rect class="service" x="35" y="175" width="220" height="86" rx="13"/><text class="title" x="145" y="205" text-anchor="middle">LivePitchAnalyzer.swift</text><text class="sub" x="145" y="229" text-anchor="middle">tap · pencere · processingQueue</text><text class="sub" x="145" y="249" text-anchor="middle">coreEngineID(...)</text>
+          <rect class="service" x="925" y="175" width="220" height="86" rx="13"/><text class="title" x="1035" y="205" text-anchor="middle">LiveAnalyzer.swift</text><text class="sub" x="1035" y="229" text-anchor="middle">tap · converter · actor</text><text class="sub" x="1035" y="249" text-anchor="middle">PitchABIAdapter.swift</text>
+          <path class="arrow" d="M145 132V175"/><path class="arrow" d="M1035 132V175"/>
+
+          <rect class="warning" x="370" y="90" width="440" height="84" rx="14"/><text class="title" x="590" y="121" text-anchor="middle">analysis_engine_c.h / .cpp</text><text class="sub" x="590" y="146" text-anchor="middle">ABI v1 doğrulama · opaque session · sahiplik · hata sınırı</text>
+          <path class="arrow" d="M255 218 C310 218 320 132 370 132"/><path class="arrow" d="M925 218 C870 218 860 132 810 132"/>
+          <rect class="core" x="370" y="220" width="440" height="86" rx="14"/><text class="title" x="590" y="251" text-anchor="middle">analysis_engine.cpp</text><text class="sub" x="590" y="276" text-anchor="middle">ProductionPitchSession::process_frame / finish / reset</text><path class="arrow" d="M590 174V220"/>
+
+          <rect class="box" x="35" y="380" width="320" height="105" rx="14"/><text class="title" x="195" y="412" text-anchor="middle">YIN v1 yolu</text><text class="sub" x="195" y="439" text-anchor="middle">analysis_engine.cpp</text><text class="sub" x="195" y="463" text-anchor="middle">yin_candidates + causal_yin_choice</text>
+          <rect class="box" x="430" y="365" width="320" height="135" rx="14"/><text class="title" x="590" y="397" text-anchor="middle">V2 yolu</text><text class="sub" x="590" y="424" text-anchor="middle">pitch_engine_v2_session.cpp</text><text class="sub" x="590" y="448" text-anchor="middle">mpm.cpp + swipe_prime.cpp</text><text class="sub" x="590" y="472" text-anchor="middle">fixed_lag_tracker.cpp</text>
+          <rect class="box" x="825" y="380" width="320" height="105" rx="14"/><text class="title" x="985" y="412" text-anchor="middle">VPM-benzeri yolu</text><text class="sub" x="985" y="439" text-anchor="middle">vpm_like.cpp</text><text class="sub" x="985" y="463" text-anchor="middle">VPMLikeTracker + spektral veto</text>
+          <path class="arrow" d="M510 306 C510 345 195 340 195 380"/><path class="arrow" d="M590 306V365"/><path class="arrow" d="M670 306 C670 345 985 340 985 380"/>
+          <text class="sub" x="590" y="535" text-anchor="middle">Python dosya analizi de cpp_engine.py → pitch_track_cli.cpp üzerinden aynı C++ ProductionPitchSession davranışını kullanır.</text>
+        </svg>
+      </div>
+
+      <h3 style="margin-top:28px">Motor davranışlarının karşılaştırması</h3>
+      <table>
+        <thead><tr><th>Boyut</th><th>YIN v1</th><th>Pitch Engine v2</th><th>VPM-benzeri</th></tr></thead>
+        <tbody>
+          <tr><td>Aday kaynağı</td><td>YIN fark/CMNDF minimumları</td><td>YIN + normalize ACF + MPM/NSDF + gerektiğinde spektral 2× aday</td><td>Normalize ACF tepeleri ve çoklu-periyot inceltmesi</td></tr>
+          <tr><td>Frekans alanı kanıtı</td><td>Dar kapsamlı f/2 ve yüksek-register kurtarma</td><td>SWIPE-prime harmonik desteği; toplam puanın %40'ı</td><td>Temel çizgi genliği, harmonikler ve yerleşik üst kontur kanıtı</td></tr>
+          <tr><td>Zaman sürekliliği</td><td>Önceki aday cezası; büyük aşağı sıçrama için üç doğrulama</td><td>Beş kare fixed-lag/Viterbi yol çözümü</td><td>VPMLikeTracker; f/2/f/3 geçiş doğrulaması</td></tr>
+          <tr><td>Yayın davranışı</td><td>Düşük gecikmeli; güven/release kapıları ve ≤7 kare boşluk köprüsü</td><td>Yaklaşık 5 hop karar gecikmesi; startup/gap/harmonik filtreleri</td><td>Düşük gecikmeli; normal/weak tahmin, atak ve release durum makinesi</td></tr>
+          <tr><td><code>finish()</code></td><td>Ek kare üretmez</td><td>Fixed-lag kuyruğunun çözülebilen kuyruğunu boşaltır</td><td>Ek kare üretmez</td></tr>
+          <tr><td>Ana kod</td><td><code>analysis_engine.cpp</code></td><td><code>pitch_engine_v2_session.cpp</code>, <code>mpm.cpp</code>, <code>swipe_prime.cpp</code>, <code>fixed_lag_tracker.cpp</code></td><td><code>vpm_like.cpp</code> + <code>analysis_engine.cpp</code></td></tr>
+        </tbody>
+      </table>
+      <p class="callout"><strong>Önemli ayrım:</strong> motor yalnız fiziksel <code>frequency_hz</code> üretir. Makam, karar perdesi ve Sol klarnet transpozisyonu motorun girdisi değildir; bunlar çıktıdan sonra sent/nota etiketi üreten sunum katmanında uygulanır. Bu nedenle nota adı tercihi ölçülen frekansı değiştiremez.</p>
+    </section>
+
+    <section id="lifecycle">
+      <div class="eyebrow">Güvenlik modeli</div><h2>Canlı oturum durum makinesi</h2>
+      <div class="diagram">
+        <svg viewBox="0 0 1040 420" role="img" aria-labelledby="state-title state-desc">
+          <title id="state-title">Canlı oturum durum makinesi</title><desc id="state-desc">Boşta, izin isteniyor, çalışıyor, kesildi ve hata durumları arasındaki kullanıcı ve sistem geçişleri.</desc>
+          <rect class="box" x="40" y="160" width="145" height="70" rx="35"/><text class="title" x="112" y="202" text-anchor="middle">idle</text>
+          <rect class="platform" x="275" y="160" width="190" height="70" rx="35"/><text class="title" x="370" y="202" text-anchor="middle">izin isteniyor</text>
+          <rect class="data" x="555" y="160" width="150" height="70" rx="35"/><text class="title" x="630" y="202" text-anchor="middle">running</text>
+          <rect class="warning" x="800" y="70" width="180" height="70" rx="35"/><text class="title" x="890" y="112" text-anchor="middle">interrupted</text>
+          <rect x="800" y="265" width="180" height="70" rx="35" fill="color-mix(in srgb,#cf222e 10%,#fff)" stroke="#cf222e" stroke-width="2"/><text class="title" x="890" y="307" text-anchor="middle">failed</text>
+          <path class="arrow" d="M185 195H275"/><text class="sub" x="230" y="183" text-anchor="middle">Başlat</text>
+          <path class="arrow" d="M465 195H555"/><text class="sub" x="510" y="183" text-anchor="middle">İzin + kurulum</text>
+          <path class="arrow" d="M705 180 C760 165 760 105 800 105"/><text class="sub" x="750" y="126">sistem olayı</text>
+          <path class="arrow" d="M705 210 C760 225 760 300 800 300"/><text class="sub" x="744" y="282">hata</text>
+          <path class="arrow" d="M800 120 C700 55 135 55 112 160"/><text class="sub" x="500" y="45" text-anchor="middle">Kapat / başka ekrana geç</text>
+          <path class="arrow" d="M800 300 C660 385 160 350 112 230"/><text class="sub" x="500" y="374" text-anchor="middle">Kullanıcı kapatır</text>
+          <path class="arrow dash" d="M890 140 C810 190 790 195 705 195"/><text class="sub" x="790" y="181" text-anchor="end">Yeniden başlat</text>
+        </svg>
+      </div>
+    </section>
+
+    <section id="storage">
+      <div class="eyebrow">Yerel veri</div><h2>Hangi veri nerede yaşar?</h2>
+      <table>
+        <thead><tr><th>Veri</th><th>Sahip</th><th>Ömür</th><th>Kural</th></tr></thead>
+        <tbody>
+          <tr><td>Kullanıcının seçtiği medya</td><td>Kullanıcı</td><td>Kullanıcı yönetir</td><td>Kaynak URL tutulmaz; analiz için app-owned kopya alınır.</td></tr>
+          <tr><td>Imports kopyası</td><td>Uygulama</td><td>Çalışma boyunca</td><td>Application Support altında UUID adla saklanır.</td></tr>
+          <tr><td>Pitch kareleri</td><td>Uygulama</td><td>Önbellek/çalışma boyunca</td><td>Motor kimliği ve kaynak zamanıyla birlikte saklanır.</td></tr>
+          <tr><td><code>Studies-v1.json</code></td><td>Mobil uygulama</td><td>Kalıcı</td><td>Atomik yazılır; liste kaydı silinince medya silinmez.</td></tr>
+          <tr><td>Canlı WAV kaydı</td><td>Mobil uygulama</td><td>Kullanıcı çalışması</td><td>Recordings altında gerçek WAV; başarısız analizde korunur.</td></tr>
+          <tr><td>Tema/motor/makam/karar</td><td>Uygulama</td><td>Kalıcı</td><td>UserDefaults; Dinleme ve Çalma motor seçimleri ayrıdır.</td></tr>
+          <tr><td>Canlı PCM tamponu</td><td>Aktif oturum</td><td>Milisaniyeler</td><td>Yalnız analiz/kayıt için; oturum kapanınca bırakılır.</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="map">
+      <div class="eyebrow">Kaynak kod rehberi</div><h2>Bir değişiklik için nereye bakılır?</h2>
+      <div class="grid">
+        <article class="card"><h3>Uygulama kabuğu</h3><p><code>macos/.../KlariVisionApp.swift</code><br><code>ipad/.../KlariVisioniPadApp.swift</code><br>Gezinme, ekran bileşimi ve kök state.</p></article>
+        <article class="card"><h3>Tercihler ve müzik</h3><p><code>AppSettings.swift</code><br><code>AppState.swift</code><br>Tema, motor, makam, karar ve grafik renkleri.</p></article>
+        <article class="card"><h3>Dosya çalışması</h3><p><code>StudyModels.swift</code><br><code>StudyState.swift</code><br><code>StudyWorkspace.swift</code><br>Import, analiz, kütüphane ve oynatma.</p></article>
+        <article class="card"><h3>Canlı ses</h3><p><code>LivePitchAnalyzer.swift</code><br><code>LiveAnalyzer.swift</code><br><code>LiveModels.swift</code><br>Tap, dönüştürme, oturum ve teardown.</p></article>
+        <article class="card"><h3>C ABI sınırı</h3><p><code>analysis_engine_c.h</code><br><code>PitchABIAdapter.swift</code><br>Platformların ortak çekirdekle tek sözleşmesi.</p></article>
+        <article class="card"><h3>Grafik köprüsü</h3><p><code>StudyWebView.swift</code><br><code>LiveWebView.swift</code><br><code>StudyWorkspace.swift</code><br>Swift ↔ JavaScript payload ve kalıcı canvas.</p></article>
+      </div>
+    </section>
+    <footer>Bu belge güncel davranışı açıklar. Sayısal kabul için <code>TEST_BASELINE.md</code>, kalıcı kararlar için <code>DECISIONS.md</code>, sıradaki iş için <code>CODEX_HANDOFF.md</code> esas alınır.</footer>
+  </main>
+</body>
+</html>

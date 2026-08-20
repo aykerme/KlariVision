@@ -1,0 +1,139 @@
+<!--
+  KlariVision canlı grafik yüzeyi.
+  Swift appendFrames/setContext/setStyle ile veri yollar; sayfa yalnız canvas
+  çizimi ve viewport takibini yapar. Ağ erişimi ve pitch hesabı yoktur.
+-->
+<!doctype html>
+<html lang="tr">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style>
+  :root { background: #0d1725 }
+  html, body { margin: 0; width: 100%; height: 100%; min-height: 100dvh; overflow: hidden; background: #0d1725 }
+  canvas { display: block; width: 100%; height: 100%; padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom); box-sizing: border-box }
+</style>
+<canvas></canvas>
+<script>
+(() => {
+  const canvas = document.querySelector('canvas');
+  const drawing = canvas.getContext('2d');
+  let frames = [];
+  let context = { guides: [], makam: '', karar: '', pitchColor: '#67d5ff', guideColor: '#b7d8ff' };
+  let framePending = false;
+  let frameFallback = 0;
+  let lastWidth = 0;
+  let lastHeight = 0;
+
+  function draw() {
+    framePending = false;
+    if (frameFallback) {
+      clearTimeout(frameFallback);
+      frameFallback = 0;
+    }
+
+    const bounds = canvas.getBoundingClientRect();
+    const scale = Math.max(1, devicePixelRatio || 1);
+    const width = Math.max(1, Math.round(bounds.width));
+    const height = Math.max(1, Math.round(bounds.height));
+    const backingWidth = Math.max(1, Math.round(width * scale));
+    const backingHeight = Math.max(1, Math.round(height * scale));
+    if (width !== lastWidth || height !== lastHeight || canvas.width !== backingWidth || canvas.height !== backingHeight) {
+      lastWidth = width;
+      lastHeight = height;
+      canvas.width = backingWidth;
+      canvas.height = backingHeight;
+    }
+
+    drawing.setTransform(scale, 0, 0, scale, 0, 0);
+    drawing.clearRect(0, 0, width, height);
+    const voiced = frames.filter(point => point.v && point.f);
+    const allFrequencies = [...voiced.map(point => point.f), ...context.guides];
+    const low = allFrequencies.length ? Math.max(30, Math.min(...allFrequencies)) : 100;
+    const high = allFrequencies.length ? Math.max(low + 1, ...allFrequencies) : 800;
+
+    drawing.strokeStyle = 'rgba(180,215,245,.18)';
+    for (let index = 1; index < 5; index++) {
+      drawing.beginPath();
+      drawing.moveTo(0, height * index / 5);
+      drawing.lineTo(width, height * index / 5);
+      drawing.stroke();
+    }
+
+    drawing.strokeStyle = context.guideColor;
+    drawing.globalAlpha = .6;
+    for (const guide of context.guides) {
+      const y = height - (guide - low) / (high - low) * height;
+      drawing.beginPath();
+      drawing.moveTo(0, y);
+      drawing.lineTo(width, y);
+      drawing.stroke();
+    }
+
+    drawing.globalAlpha = 1;
+    drawing.fillStyle = context.guideColor;
+    drawing.font = '12px -apple-system';
+    drawing.fillText(`${context.makam || 'Makam'} · ${context.karar || 'Karar'}`, 12, 20);
+
+    if (voiced.length) {
+      const start = voiced[Math.max(0, voiced.length - 360)].t;
+      const end = voiced[voiced.length - 1].t || start + 1;
+      drawing.strokeStyle = context.pitchColor;
+      drawing.lineWidth = 2;
+      drawing.lineCap = 'round';
+      drawing.lineJoin = 'round';
+      drawing.beginPath();
+      let open = false;
+      let lastX = 0;
+      let lastY = 0;
+      for (const point of voiced) {
+        const x = (point.t - start) / Math.max(.1, end - start) * width;
+        const y = height - (point.f - low) / (high - low) * height;
+        if (open) drawing.lineTo(x, y);
+        else {
+          drawing.moveTo(x, y);
+          open = true;
+        }
+        lastX = x;
+        lastY = y;
+      }
+      drawing.stroke();
+      if (voiced.length === 1) {
+        drawing.fillStyle = context.pitchColor;
+        drawing.beginPath();
+        drawing.arc(lastX, lastY, 2.5, 0, Math.PI * 2);
+        drawing.fill();
+      }
+    }
+  }
+
+  function schedule() {
+    if (framePending) return;
+    framePending = true;
+    requestAnimationFrame(draw);
+    frameFallback = setTimeout(() => {
+      if (framePending) draw();
+    }, 100);
+  }
+
+  window.kvLive = {
+    append: values => {
+      frames.push(...values);
+      if (frames.length > 2400) frames = frames.slice(-2400);
+      schedule();
+    },
+    context: value => {
+      context = { ...context, ...value };
+      schedule();
+    },
+    reset: () => {
+      frames = [];
+      schedule();
+    }
+  };
+
+  new ResizeObserver(schedule).observe(canvas);
+  addEventListener('resize', schedule);
+  if (window.visualViewport) visualViewport.addEventListener('resize', schedule);
+  draw();
+})();
+</script>
+</html>

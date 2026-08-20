@@ -1,76 +1,59 @@
 # KlariVision
 
-## Sürüm
+KlariVision, Türk müziği ve klarnet çalışması için yerel pitch analiz ve
+görselleştirme uygulamasıdır. macOS ile iPhone/iPad uygulamaları aynı C++ pitch
+sözleşmesini kullanır; ses ve çalışma kayıtları cihazdan çıkmaz.
 
-Mevcut kararlı sürüm: **v0.5.0 — Stable**. Bu sürüm yerel video/ses ve
-YouTube bağlantılarından pYIN pitch grafiği oluşturur; önceki analizleri
-önbellekten yeniden açar ve son kullanılan çalışmaları saklar.
+## Uygulamalar
 
-## Uygulamayı kullanma
+| Hedef | Kaynak | Arayüz | Analiz |
+| --- | --- | --- | --- |
+| macOS | `macos/KlariVision/` | SwiftUI + WebKit | Dosyada Vamp pYIN, canlıda C++ motorları |
+| iPhone/iPad | `ipad/KlariVisioniPadCoreSmoke/` | SwiftUI + WebKit | C++ C ABI v1 |
 
-`dist/KlariVision.app` dosyasını aç.
+Her iki uygulamada kullanıcı makamı, karar perdesini ve pitch motorunu seçer.
+Nota adı/transpozisyon yalnız gösterimi değiştirir; ölçülen fiziksel frekansı
+değiştirmez. Otomatik makam ve süsleme tespiti ana ürün kapsamında değildir.
 
-1. **Video veya ses seç** ile yerel bir kayıt aç veya YouTube/video bağlantısını
-   yapıştırıp **Linkten aç** düğmesine bas.
-2. Analiz tamamlandığında video/ses ile senkron pitch grafiği açılır.
-3. Aynı kaynak yeniden açıldığında grafik üstünde **Önceki pitch analizi
-   kullanıldı** bilgisi görünür; ağır pitch işlemi tekrarlanmaz.
-4. Açılış ekranındaki **Son kullanılanlar** listesinden daha önceki grafiklere
-   doğrudan dön.
+## İlk kez geliştirecekler için
 
-Bu sürümde pitch grafiği ürünün doğrulanmış çekirdeğidir. Otomatik süsleme
-tanıma deneysel kapsamda tutulur; SwiftUI tabanlı yerel arayüz dönüşümü sonraki
-ana geliştirme fazıdır.
+1. Görsel sistem ve veri akışı için [`docs/architecture.html`](docs/architecture.html)
+   dosyasını tarayıcıda açın.
+2. Güncel durum için [`docs/PROJECT_STATE.md`](docs/PROJECT_STATE.md), yalnız
+   sıradaki iş için [`docs/CODEX_HANDOFF.md`](docs/CODEX_HANDOFF.md) okuyun.
+3. Kalıcı ürün kararları için [`docs/DECISIONS.md`](docs/DECISIONS.md), C ABI
+   ayrıntısı için [`docs/PITCH_ENGINE_C_ABI_V1.md`](docs/PITCH_ENGINE_C_ABI_V1.md)
+   kullanın.
+4. Platform kurulum ve çalıştırma adımlarını
+   [`macos/KlariVision/README.md`](macos/KlariVision/README.md) ve
+   [`ipad/README.md`](ipad/README.md) içinde izleyin.
 
-## Kod inceleme
-
-- `KlariVision.code-workspace`: Projeyi Visual Studio Code ile tek çalışma alanı olarak açar.
-- `scripts/build_code_review.py`: Kaynak, test, betik ve belgeleri tek yerel HTML sayfasında toplar.
-
-## Pitch motorları
-
-- **Hızlı pYIN (Vamp)**: Varsayılan seçenek. Yerel Sonic Annotator ve Vamp pYIN
-  eklentisini kullanır; uzun kayıtlar için tasarlanmıştır.
-- **Ayrıntılı pYIN (Python)**: Librosa tabanlı deneysel yol. Daha maliyetli
-  parametre araştırmaları için korunur.
-
-## Türk müziği perde referansı
-
-`data/reference/perde-esleme.xlsx` dosyasının **Perde Eşleme** sayfası,
-gelecekteki Türk müziği notasyon görünümü için yerel kaynak dosyadır. Pitch
-eğrisi gerçek sesi ölçtüğünden, bu görünüm eklendiğinde **Duyulan Hz** sütunu
-kullanılacak; **Sol klarnet yazılı Hz** değeri yazılı nota görünümü için
-ayrıca saklanacaktır.
-
-**Türk müziği icrasında perde hareketini ve süslemeleri görünür kılan analiz ve eğitim platformu.**
-
-KlariVision'ın ilk hedefi bir ses dosyasındaki baskın melodik çizgiyi çıkarıp zamanla birlikte göstermektir. Sonraki katmanlar bu çizgi üzerinden nota/perde eşleme, makam bağlamı ve süsleme analizi ekleyecektir.
-
-## İlk hedef: Pitch Engine
-
-1. WAV/MP3 girdisini analiz için hazırla.
-2. Her zaman karesi için perde, seslilik ve güven değeri üret.
-3. Sonucu ortak bir veri modeliyle dışarı ver.
-
-Bu depo başlangıçta yerel geliştirme içindir. Referans kayıtlarının kullanım hakları ayrıca ele alınacaktır; yalnızca izinli veya kişisel kayıtlar `data/` altında tutulmalıdır.
-
-## Başlangıç yapısı
-
-    docs/                   Ürün ve teknik kararlar
-    src/klarivision/pitch/  Pitch Engine çekirdeği
-    tests/                  Otomatik kontroller
-    data/                   Yerel çalışma verileri
-    research/               Müzikoloji ve algoritma notları
-
-## Tek komutla analiz
-
-22.050 Hz WAV kaydı için:
+## Doğrulama
 
 ```bash
-PYTHONPATH=src .venv/bin/python -m klarivision.cli data/audio/kaydiniz.wav --makam huzzam --karar dugah
+zsh scripts/test_core.sh
+.venv/bin/python -B -m pytest -q
+cd macos/KlariVision && swift test
+xcodebuild -project ipad/KlariVisioniPadCoreSmoke.xcodeproj \
+  -scheme KlariVisioniPad -sdk iphonesimulator build-for-testing
 ```
 
-Komut `outputs/` içinde pYIN JSON verisini ve sesle senkron HTML pitch
-görünümünü oluşturur. Makam ve karar sesi iki ayrı menüden değiştirilebilir.
-Karar sesi, yalnızca görsel pitch eğrisini transpoze eder; ses kaydını
-değiştirmez. Otomatik makam tespiti henüz yapılmaz.
+macOS paketini üretmek için:
+
+```bash
+zsh scripts/build_beta_app.sh
+```
+
+`data/audio/`, `data/video/`, `data/annotations/`, `outputs/` ve `dist/`
+kullanıcı/yerel çıktı alanlarıdır; kaynak kontrolüne eklenmez.
+
+## Belge düzeni
+
+- `docs/architecture.html`: güncel, grafikli sistem açıklaması
+- `docs/PROJECT_STATE.md`: doğrulanmış güncel ürün durumu
+- `docs/CODEX_HANDOFF.md`: son çalışma ve sıradaki tek somut iş
+- `docs/DECISIONS.md`: kalıcı karar günlüğü
+- `docs/TEST_BASELINE.md`: sayısal regresyon tabanı
+- `docs/*ACCEPTANCE*.md`: fiziksel ve otomatik kabul kanıtları
+- `docs/MeetingNotes.md`, `docs/PRD.md`, `docs/RoadMap.md`: tarihsel başlangıç
+  kayıtları; güncel durum kaynağı değildir

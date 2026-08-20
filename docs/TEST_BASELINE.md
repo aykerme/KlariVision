@@ -1,0 +1,534 @@
+# Pitch Test Tabanı
+
+Son güncelleme: 13 Ağustos 2026
+
+Bu yaşayan belge, bir pitch motoru değişikliğinin kabul edilmesi için korunacak
+ölçümleri ve doğrulama komutlarını tanımlar. YIN v1'in tarihsel kararlı sınırı
+`PitchEngineBaseline.md` içinde saklanır.
+
+## Ürün motor politikası
+
+YIN v1, Pitch Engine v2 ve VPM-benzeri üç eşit son kullanıcı seçeneğidir.
+Buradaki sentetik turnuva, parite, gecikme ve RTF ölçümleri motoru terfi
+ettirmek, kullanıcıya öneri sunmak veya bir kalite kazananı ilan etmek için
+kullanılmaz; yalnız her motorun regresyon güvenliğini izler. YIN v1'in ilk
+açılıştaki seçili değeri geriye uyumluluk içindir. Her motor değişikliğinde
+üç kimlik de aynı kapılardan geçer; Çalışma önbelleğinde motor kimliği ve
+`offline_track` profil sürümü ayrık kalır.
+
+## Ortak C ABI v1 sözleşme kapısı
+
+`core/tests/analysis_engine_c_tests.cpp`, ABI sürümü, üç motor yeteneği,
+48 kHz mono Float32 PCM sözleşmesi, `1536/512` pencere-hop, v2'nin beş kare
+sabit gecikmesi, create/reset/process/finish/destroy yaşam döngüsü ve C++
+`ProductionPitchSession` ile C adaptörü kare eşitliğini korur. Python
+`tests/test_cpp_engine.py`, paketli CLI'nin aynı `--contract` projeksiyonunu
+ve `offline_track_v1` şemasını doğrular. Bu kapı motor kalitesini sıralamaz.
+
+## Üç kullanıcı-seçeneği v1 yeniden kabulü
+
+13 Ağustos'ta dondurulmuş v6 clean/room/adverse fixtures, üretim C++ Çalışma
+yolunda üç motor için yeniden ölçüldü: ciddi hata YIN/V2/VPM için sırasıyla
+`0/0/0`. Ham sesli/sessiz/harmonik muhasebesi, CLI duvar-zamanı RTF'i ve
+fiziksel kabul kapsamı `PITCH_ENGINE_USER_OPTION_ACCEPTANCE_V1.md` içindedir.
+Bu yalnız seçenek kabulüdür; motor sıralaması, önerisi veya varsayılan değişimi
+değildir.
+
+## Beta snapshot doğrulaması — v0.6.0-beta.2
+
+13 Ağustos'ta fiziksel macOS beta kabulünün ardından aynı kaynakta C++ çekirdek
+testleri, Python `77 passed`, Swift Package `41` test (iki isteğe bağlı parite
+dışa aktarma testi atlandı), imzasız Debug derlemesi ve Release paketleme
+yeniden geçti. Bu snapshot üç son kullanıcı motorunu (`yin_v1`,
+`pitch_engine_v2`, `vpm_like`) birlikte içerir; bu kayıt motor terfisi veya
+varsayılan değişikliği değildir.
+
+## Beta snapshot doğrulaması — v0.6.0-beta.3
+
+13 Ağustos'ta P1 erişilebilirlik kabul kaydından sonra oluşturulan annotated
+kaynak kontrol noktasıdır. C++ çekirdek testleri, tam Python paketi (`79
+passed`), Swift Package (`44 passed`, iki isteğe bağlı çapraz-dil parite dışa
+aktarma testi atlandı), imzasız Release paketleme, sıkı ad-hoc imza doğrulaması
+ve paketli `pitch-track-cli --contract` geçti. Kontrat ABI v1,
+`offline_track_v1` ve `yin_v1`, `pitch_engine_v2`, `vpm_like` üçlüsünü
+doğrular. Bu kayıt yalnız sürüm tekrarlanabilirliği içindir; motor terfisi,
+önerisi veya varsayılan değişikliği değildir.
+
+## VPM-benzeri r5 ciddi-hata sıfır kabulü — 12 Ağustos 2026
+
+VPM kare kestiricisi ve `0.80` normal yayın eşiği değişmeden, ortak
+`ProductionPitchSession` yayın katmanı güçlü kontur, en çok yedi karelik
+geri-dönebilir dropout ve gerçek release durumlarını ayırır. Zayıf kontur
+tutma yalnız `periodicity >= 0.38`, `±90 sent` ve doğrudan temel desteğiyle
+çalışır; güçlü ankrajı değiştirmez. Kurulmuş üst çizginin düşük aday çizgisine
+oranı en az `2.5x` ise yalnız aşağı harmonik ada veto edilir; spektrum yeni üst
+perde üretmez ve D-011 korunur.
+
+| Motor | Nedensel ciddi | Ham ciddi | Görünen ciddi | Ham toplam |
+|---|---:|---:|---:|---:|
+| VPM-benzeri (26 WAV) | 0 | 0 | 0 | 5130 |
+
+Başlangıç VPM sonucu `43/43/43` ciddi ve `5722` ham hataydı. Yeni rapor
+`outputs/study-mode-vpm-remediation.*`, parmak izi
+`7017a860bd5cfd27791e714a62338b162f0cbee23779cfa76c75f000ed0b8499`.
+V6 clean/room/adverse ayrı ayrı `0/0/0`; rapor parmak izi
+`61ec82a8d1c1ba78dc05323951379c8dc29e28ae3f3e2b8759ce99602f4434d3`.
+YIN v1 kabul özeti değişmedi; V2 raporu parmak izi dahil aynı kaldı.
+Üç motorun 78 vakalık birleşik r5 rapor parmak izi
+`99019e5e5238e40daa1efadaf0f7832de67d2ef6c1642061934bb675c82a6909`.
+
+Şükrü Tunar gerçek kayıt tanısında önceki yayın katmanına göre ortak pYIN
+kapsaması `%98.009 -> %96.754`, p95 `22.514 -> 22.220 sent`, harmonik sapma
+`41 -> 30` oldu. Bu yalnız regresyon tanısıdır; pYIN gerçek-değer sayılmaz ve
+kare kestiricisi eşikleri yeniden kalibre edilmedi. Rapor:
+`outputs/vpm-real-recording-regression-r5.json`.
+
+`pitch_track_cli --diagnostic` VPM için normal `offline_track_v1` şemasından
+ayrı RMS/tepe, periodicity, normal/zayıf kestirim, doğrudan destek, release,
+pending-gap, harmonik veto ve yayın gerekçesi JSON'u üretir. Revizyon
+`shared-production-session-r5`; `1536/512`, `0.015 RMS` ve 16 ms karar
+gecikmesi değişmemiştir.
+
+## Pitch Engine v2 r4 ciddi-hata sıfır kabulü — 12 Ağustos 2026
+
+V2 sabit-gecikme kuyruğu artık yapay sıfır analiz pencereleriyle değil,
+oturumun `finish` çağrısında elde kalan gerçek aday tamponuyla çözülür.
+Sonlandırılmış oturum yeni giriş kabul etmez; `reset` yeni yol açar. Yayın
+kapıları her zaman çözülen kaynak karenin RMS/release durumuna uygulanır.
+
+Hızlı iki RMS düşüşü release’i etkinleştirir; yavaş fade’de aynı konturdaki
+en az `0.55` kanıtlı adaylar ve kısa (en çok yedi kare) dönüş köprüsü korunur.
+Normal yayın kapısı `0.70`, ortak RMS eşiği `0.015`, pencere/hop `1536/512`
+ve V2’nin beş-hop gecikmesi değişmemiştir.
+
+| Motor | Nedensel ciddi | Ham ciddi | Görünen ciddi |
+|---|---:|---:|---:|
+| Pitch Engine v2 (26 WAV) | 0 | 0 | 0 |
+
+V2 ham toplamları önceki `5694/5678/5678`den `5191/5191/5191`e indi.
+Geliştirme raporu `outputs/study-mode-v2-remediation.*`, parmak izi
+`20cb002f5df18a1bfbb5d370b8d5728de040c9381d072c4cec77490e00bbf4c3`.
+V6 clean/room/adverse üçlüsünde de V2 `0/0/0`dır; parmak izi
+`bfb3c9f8767b8427ba3749a289eb29f172c51145feab07895f5eebe315e6e4f3`.
+
+## Tek üretim oturumu ve Çalışma kabulü — 12 Ağustos 2026
+
+Canlı Swift ve dosyadan Çalışma artık üç motor için aynı durumlu C++
+`ProductionPitchSession` oturumunu kullanır. `offline_track_v1` JSON'u nihai
+`frames` yanında `causal_baseline`, kare başına `change_reason`, motor profili
+ve `shared-production-session-r3` uygulama revizyonunu taşır. YIN ve VPM'de
+çevrimdışı iz nedensel tabanla aynıdır; V2 yalnız dosya sonundaki sabit gecikme
+kuyruğunu kaynak zamanlarını değiştirmeden boşaltır.
+
+26 geliştirme WAV'ının son tek kabul koşusu:
+
+| Motor | Nedensel ciddi | Ham ciddi | Görünen ciddi |
+|---|---:|---:|---:|
+| YIN v1 | 0 | 0 | 0 |
+| VPM-benzeri | 43 | 43 | 43 |
+| Pitch Engine v2 | 78 | 65 | 65 |
+
+YIN düzeltmesi, güçlü doğrudan üst-register çizgisini düşük alt-periyot yerine
+seçer, yalnız aşağı yönlü büyük harmonik sıçramayı onaylar ve ani release'i
+uzun müzikal fade'den ayırır. Tam YIN raporu
+`outputs/study-mode-yin-v1-remediation.*`; parmak izi
+`c5003d284f6a59feab44a7d8f521553df8975066723d68ac48da596f4b14557a`.
+Ham YIN hata toplamı `5.126`; ciddi toplam `0`dır.
+
+Sonuçları görülmeden üretilip dondurulan holdout v6 kabulü:
+
+| Motor | Clean | Room | Adverse |
+|---|---:|---:|---:|
+| YIN v1 | 0 | 0 | 0 |
+| Pitch Engine v2 | 0 | 0 | 0 |
+| VPM-benzeri | 0 | 0 | 7 |
+
+v6 rapor parmak izi
+`a1ae287d75b04fb64f52e5ded871be44c827b2a8ee0fad84cc475e60b9587346`.
+VPM adverse hataları `0.59–0.62 sn` dört harmonik ve `3.94–3.96 sn` üç
+harmonik karedir. Sonuç açıldıktan sonra eşik ayarlanmadı; bu nedenle VPM'nin
+adverse kabul kapısı açıkça başarısız ve motor deneysel kalır.
+
+Son doğrulama: C++ çekirdek ve C ABI oturum testleri geçti; Python
+`75 passed`; Swift Package `11 passed`, yalnız ortam değişkeni isteyen iki iz
+dışa aktarma testi atlandı; kod imzasız macOS Debug derlemesi başarılıdır.
+
+## Taşınabilir C++ çalışma profili — 10 Ağustos 2026
+
+`core/include/klarivision/core/analysis_engine.hpp` üç ürün motoru için ortak
+PCM sınırını tanımlar. `klarivision_pitch_track_cli`, WAV'ı mono 48 kHz
+Float32'a getirir ve seçili motorun `offline_track_v1` JSON'unu üretir.
+Çalışma profilinde YIN/V2/VPM ayrı aday ve yol kuralları taşır; sonuçta
+hareketli ortalama veya pYIN/Vamp bağımlılığı yoktur.
+
+Başlangıç birim kapısı, 48 kHz 440 Hz sentetik tonun üç motorla sesli ve
+yaklaşık 440 Hz çıkmasını; eşik altı sessizliğin boş kalmasını doğrular.
+Kapsamlı sentetik turnuva ve Swift canlı-C++ iz paritesi, Swift üretim
+uygulamaları kaldırılmadan önce zorunlu terfi kapılarıdır.
+
+## Çalışma modu sentetik gerçek-değer kapısı — 12 Ağustos 2026
+
+`scripts/run_study_mode_synthetic_validation.py`, uygulamanın Çalışma
+yolunu doğrudan ölçer: kaynak WAV önce aynı mono/48 kHz dönüşümden geçer,
+ardından paketli C++ `offline_track_v1` CLI sonucu oluşturulur. Her sentetik
+WAV, ham JSON ve `prepare_display_frames` sonrası kullanıcıya çizilen eğri
+olarak ayrı ayrı matematiksel hedefe karşı beşli muhasebeyle puanlanır.
+Gerçek `klarnet_gercek_*` kayıtları bu gerçek-değer raporunun dışındadır.
+
+```bash
+.venv/bin/python -B scripts/run_study_mode_synthetic_validation.py
+```
+
+Raporlar `outputs/study-mode-synthetic-validation.json` ve `.md` dosyalarına
+yazılır. Sentetik bir kaynak Çalışma'da açıldığında hedef eğri ve kalıcı hata
+aralıkları grafikte isteğe bağlı katman olarak görünür; normal kullanıcı
+kayıtlarına doğrulama katmanı eklenmez.
+
+## Pitch Engine v2 geçiş ve üretim paritesi — 10 Ağustos 2026
+
+V2 önce Python benchmark aynası ile gerçek Swift referans yayın yolunda,
+ardından ortak C++ oturumu ile aynı Swift referansında doğrulandı. Her iki kapı
+26 sentetik WAV'ın tamamını aynı Float32 giriş, `1536/512` pencere-hop ve
+`0.015 RMS` kapısıyla çalıştırır. Kabul sınırı aynı sesli/sessiz karar,
+`≤1 sent` frekans ve `≤0.01` güven farkıdır.
+
+- Python / Swift geçiş kanıtı: `67.354 / 67.354` kare, `0` ayrışma
+- C++ / Swift üretim paritesi: `67.354 / 67.354` kare, `0` ayrışma
+- C++ stress-adverse canlı profili: `66.39 sn` ses, `1.3576 sn` çalışma,
+  RTF `0.02045`
+- Sabit gecikme: `5` hop; yayın kapısı: `0.70`; kısa boşluk: en çok `7` kare
+
+Raporlar `outputs/v2-python-swift-trace-parity.*`,
+`outputs/v2-cpp-swift-trace-parity.*` ve
+`outputs/v2-cpp-realtime-profile.json` içindedir. Swift canlı V2 seçimi C ABI
+oturumuna, Python turnuva adaptörü aynı C++ iz aracına yönelir. Swift/Python
+algoritma gövdeleri yalnız geçiş oracle'ı olarak kalır. Kararlı YIN v1
+varsayılanı değiştirilmemiştir.
+
+```bash
+.venv/bin/python -B scripts/check_v2_swift_python_parity.py
+.venv/bin/python -B scripts/check_v2_swift_python_parity.py --cpp \
+  --output outputs/v2-cpp-swift-trace-parity.json
+```
+
+## VPM-benzeri C++ / Swift üretim paritesi — 10 Ağustos 2026
+
+`scripts/check_vpm_swift_cpp_parity.py`, gerçek C++ turnuva izini uygulamanın
+gerçek Swift VPM yayın yoluyla karşılaştırır. İki taraf aynı Float32 örnekleri,
+`1536` pencereyi, `512` hop'u, `0.015 RMS` kapısını ve kaynak analiz penceresi
+merkezi zamanını kullanır; karar gecikmesi izden çıkarılmaz. Sesli/sessiz
+kararı birebir aynı olmalı, eşleşen sesli karelerde frekans farkı `≤1 sent`,
+güven farkı `≤0.01` kalmalıdır.
+
+Turnuvadaki iki gerçek kayıt dışındaki 26 sentetik WAV sonucu:
+
+- C++ yayımlanmış kare: `67.595`
+- Swift yayımlanmış kare: `67.595`
+- sesli/sessiz ayrışması: `0`
+- frekans ayrışması: `0`
+- güven ayrışması: `0`
+
+Kalıcı rapor: `outputs/vpm-swift-cpp-trace-parity.json` ve `.md`. Bu kapı VPM
+için geçmiştir; V2 için kanıt sayılmaz. Pariteyi sağlayan sözleşme Swift'te
+C++ ile aynı `0.80` yayın eşiği, üç-onaylı yalnız-aşağı harmonik kapısı, Hann
+spektral genlik normalizasyonu ve sert sinyal kapısında sona eren en çok yedi
+karelik VPM boşluk köprüsüdür. V2'nin ayrı köprü davranışı korunur.
+
+```bash
+.venv/bin/python -B scripts/check_vpm_swift_cpp_parity.py
+```
+
+## Beşli kare muhasebesi
+
+Sentetik gerçek-değer raporları kapsama, medyan, p95 ve yüzde/oran metrikleri
+kullanmaz. Referansın her 10 ms karesi, motor karesiyle `0.55 × hop` zaman
+toleransında bire bir eşleştirilir; bir motor karesi ikinci kez kullanılamaz.
+
+- **Yanlış sesli:** Referans sessizken motorun sesli kare yayımlaması.
+- **Eksik sesli:** Referans sesliyken motor karesi olmaması.
+- **Doğru perde:** İki kare sesliyken mutlak sent farkının `≤50` olması.
+  Sayı ile yalnız bu karelerin ortalama mutlak sent farkı raporlanır.
+- **Harmonik hata:** Fark `>50` sentken imzalı farkın `1/3×`, `1/2×`, `2×`
+  veya `3×` hedefine en fazla `90` sent uzak olması.
+- **Harmonik olmayan hata:** Fark `>50` sentken harmonik koşulunun sağlanmaması.
+
+Her rapor `reference_voiced_frames`, `reference_silent_frames`, beşli sayımlar,
+`correct_pitch_absolute_cents_sum`, `correct_pitch_mean_absolute_cents` ve
+`total_error_frames` alanlarını taşır. Sesli toplam, `eksik + doğru + harmonik
++ harmonik olmayan`; sessiz toplam, `doğru sessizlik + yanlış sesli` olmalıdır.
+- **Kalıcı ayrışma:** Kısa tek-kare gürültüsünden farklı olarak belirli süre
+  devam eden motor/referans uyuşmazlığı.
+- **Eksik sesli nokta:** Matematiksel hedef sesliyken, `0.55 × hop` zaman
+  toleransında motorun hiç yayınlamadığı referans örneği. Üç ardışık örnek
+  (yaklaşık 30 ms) kalıcı eksik perde aralığı olarak ayrıca raporlanır.
+
+## Algılanabilir hata katmanı
+
+Ham beşli sayımlar değişmez; `near_pitch_frames` ham harmonik-olmayan
+sayımın `50–100 sent` alt kümesidir. Renkli hata katmanı ve turnuva seçimi
+yalnız ciddi sayımları kullanır: `serious_*_frames` ve
+`serious_total_error_frames`.
+
+- Hedef rejimi geçişinin `±30 ms` içindeki hata kareleri
+  `transition_tolerated_frames` olur.
+- Geçiş dışında üç ardışık kareye ulaşmayan hata koşuları
+  `transient_tolerated_frames` olur.
+- Harmonik olmayan ciddi hata `>100 sent` olmalıdır; harmonik hedefler
+  mevcut `±90 sent` penceresini kullanır.
+- Turnuva vetosu, bir vakada ciddi sınıf oranının YIN v1'i ilgili referans
+  paydasında `0.5` yüzde puanından fazla aşmasıdır.
+
+Holdout v2 bu politikanın geliştirme kanıtıdır. Kabul sonucu, politika
+kilitlendikten sonra üretilen `klarivision_pitch_tournament_holdout_*_v3`
+üzerinden alınır.
+
+## Yüksek glissando ve eksik-perde kontrolü
+
+Doğrudan kaynak doğrulaması artık hem yayımlanmış noktaları hedefe karşı
+ölçer hem de her sesli hedef örneği için bir motor noktası arar. Böylece
+yüksek glissando sonunda çizginin kaybolması yalnız p95 hesabından düşmez;
+`missing_voiced_points`, kapsama, en uzun boşluk ve `900–1500 Hz` bandı
+ayrıca raporlanır. Grafikte bu aralıklar pembe bant, beklenen perdeler pembe
+nokta olarak gösterilir.
+
+V2 yüksek-register adayını yalnız en az iki kestirici `55 sent` içinde
+uzlaşıyorsa yayınlar. VPM-benzeri yeni iz için `0.80` güveni korur; kurulmuş
+bir `>900 Hz` konturunda ACF/spektrum uzlaşıyor, hareket `180 sent/hop`u
+aşmıyor ve güven `≥0.70` ise yayın sürer. Desteklenen aralık `80–1500 Hz`dir.
+
+Kilitli holdout v2 sonucu: clean/room/adverse varyantlarının her birinde V2
+ve VPM-benzeri `900–1500 Hz` kapsaması `%100`, eksik nokta sayısı `0`dır.
+YIN v1 aynı bandın clean/room/adverse varyantlarında sırasıyla `14/17/51`
+eksik nokta üretmiştir. Turnuva v2 parmak izi
+`ef7d4aaeaadbba9f0eb7f2b8910a39c7b48f15069a0120a3662a2189db5ba264`.
+
+## YIN v1 holdout v2 ciddi-hata sıfır adayı
+
+## YIN v1 v1–v3 ciddi-hata sıfır doğrulaması — 9 Ağustos 2026
+
+YIN v1 aynası, bağımsız v1, v2 ve v3 holdout'larının clean/room/adverse
+varyantlarının her birinde `0` ciddi hata verdi. İyileştirme v4 ile
+ayarlanmadı: kısa giriş kesintisi ancak ham aday ve düzeltilmiş kontur önceki
+perdeye `±90 sent` içinde dönüyorsa kaynak zamanında tamamlanır; düşük enerjili
+oda kuyruğu `güven < 0.90` ve göreli RMS kapısıyla sessiz bırakılır; sürekli
+üst kontur tek pencerenin alt-harmonik enerji tercihiyle aşağı çekilmez.
+
+Swift YIN v1 yolu aynı kapıları uygular. v4 yalnız kabul kontrolüdür; bu
+değişiklikten sonra clean/room/adverse sonuçları `0/0/0` ciddi hatadır.
+Dosyadan doğrulamada v3/v4 için açık analitik-manifest yönlendirmesi zorunludur;
+aksi halde v1 hedefinin yanlış seçilmesi motorla ilgisiz büyük hata sayımları
+üretir.
+
+## Pitch Engine v2 v1–v3 geliştirme sonucu — 9 Ağustos 2026
+
+V2 aynası v1–v3 clean/room/adverse dokuz varyantında `0` ciddi hata verdi.
+Yüksek register yayınında çapraz uzlaşı kaybolursa yalnız `>900 Hz`,
+periyodiklik `≥0.90` ve prime-harmonic destek `≥0.75` ortak koşuluyla yayın
+sürer. Düşük enerjili release kuyruğu sessizdir; sabit-gecikmeli yol kısa
+boşluğu yalnız aynı kaynak konturu `±90 sent` içinde geri dönerse tamamlar.
+
+Bu kurallar v1–v3 geliştirme setleriyle ayarlandığı için kabul kanıtı değildir.
+V4, ilk ölçümde `accept4_anchor_1489.1` bölümünde harmonik hata gösterdi.
+V2 analiz aday aramasına (gösterim aralığı değişmeden) `1650 Hz` koruma bandı,
+güçlü `2x` spektral ortak aday ve dengeli periyodiklik/prime-harmonic yolu
+eklendi. Kullanıcı onayıyla V4 zorlu varyantı doğrudan düzeltildi; yüksek
+register yayın kapısının prime-harmonic eşiği `0.80 -> 0.75` oldu. V1–V5
+clean/room/adverse bütün ölçümlerde ciddi hata `0`dır.
+
+## VPM-benzeri V1–V5 ciddi-hata sıfır doğrulaması — 9 Ağustos 2026
+
+VPM-benzeri C++ çekirdek, 1500 Hz ekran sınırını değiştirmeden `1650 Hz`
+analiz koruma bandı kullanır. Böylece sınırdaki gerçek temel, f/2 adayına
+karşı değerlendirmeye alınır. C++ turnuva yayımlayıcısı ve Swift canlı yolu,
+kısa boşluğu yalnız önceki kontura `±90 sent` içinde geri dönüş varsa en çok
+yedi kaynak karesiyle tamamlar. V1–V5 clean/room/adverse 15 ölçümün tamamında
+ciddi hata `0`dır.
+
+9 Ağustos 2026'da üst-register kurtarma, seçilmiş tek YIN sonucundan bütün
+`>=0.55` güvenli YIN adaylarının güçlü `2x/3x` spektral eşlerine genişletildi.
+Her üst eş kendi kaynak tepesine göre `80x` ve pencere enerji ölçeğine göre
+`0.008` kapısını birlikte geçer. `0.76` altı güven ile yakın RMS tepesinin
+`%20` altına düşen kısa release kuyruğu yayınlanmaz.
+
+| V2 vaka | Önce ciddi toplam | Sonra ciddi toplam | Önce ham toplam | Sonra ham toplam | Sonra doğru ort. sent |
+|---|---:|---:|---:|---:|---:|
+| clean | 59 | 0 | 191 | 113 | 1.524912 |
+| room | 122 | 0 | 299 | 147 | 1.572736 |
+| adverse | 263 | 0 | 431 | 106 | 1.591347 |
+
+Holdout v3 ve v4 clean/room/adverse vakalarının her birinde YIN ciddi toplamı
+`0` kaldı. Azami YIN CPU RTF `0.22244`, karar gecikmesi `16 ms`; tam turnuva
+parmak izi `c84fbbad45f3c526802e1eab42a9c2105dfde06e73d00ba6fbd05897db299db8`.
+Bu değişiklik v2'ye göre geliştirildiğinden bağımsız yeni kabul kanıtı değildir
+ve kullanıcı kontrolü beklenmektedir.
+
+## Deneysel kısa harmonik sıçrama koruması
+
+Swift canlı/dosyadan-test V2 ve VPM-benzeri yolları, önceki yayınlanmış
+perdeyle yaklaşık `1/3`, `1/2` veya `2/3` ilişkili aşağı yönlü büyük bir
+sıçramayı ilk karede tutar; aynı yeni perde bir sonraki hopta sürerse kabul
+eder. Yanlış alt harmonikten doğru perdeye yukarı dönüş geciktirilmez. Bu bir
+hareketli ortalama değildir: normal küçük nota hareketi ve vibrato korunur.
+V2'nin mevcut beş-hop gecikmesine ek olarak yalnız bir onay-hop'u gerektirir;
+VPM-benzeri yolda bu varsayılan `512` örnek hop ile yaklaşık 11 ms'dir.
+
+Bu değişiklik için henüz turnuva sonucu yoktur; kullanıcı önce canlı deneme
+istemiştir. Turnuva çalıştırıldığında önce/sonra raporu, tek-hop harmonik hata
+oranını ayrıca vermeli; kapsama, gerçek nota geçiş yerleşme süresi ve vibrato
+genliği de korunmalıdır.
+
+Adverse holdout v1 ile yapılan ilk kullanıcı denemesi iki ek kusuru gösterdi:
+VPM spektrumu bazı doğru/en-güçlü ACF sonuçlarını `f/2` değerine indiriyor ve
+simetrik çıkış kapısı doğru perdeye yukarı dönüşü de geciktiriyordu. C++/Swift
+güçlü-ACF kilidi ve yalnız-aşağı çıkış kapısıyla güncellendi. Matematiksel
+referans değerlendirmesinde `25 ms` üzerindeki boşluklar artık interpole
+edilmez. Holdout v1 bu teşhiste kullanıldığından yeni kural için bağımsız
+holdout sayılmaz; kabul ölçümü görülmemiş yeni holdout v2 üzerinde yapılmalıdır.
+
+## Referans hiyerarşisi
+
+1. Matematiksel hedefi bulunan sentetik benchmark gerçek-değerdir.
+2. Doğrulanmış bağımsız clean/room kayıtları holdout testidir.
+3. Gerçek icralarda pYIN kararlı referanstır; gerçek-değer değildir.
+4. Mikrofon testi, hoparlör/oda/dış ses sağlamlığını gösterir fakat otomatik
+   eşik ayarının tek kaynağı olamaz.
+
+## VPM-benzeri kabul tabanı
+
+`outputs/vpm-like-calibration.json` içindeki seçili konfigürasyon korunur:
+
+| Kayıt | Kapsama | p95 sent | Harmonik hata |
+|---|---:|---:|---:|
+| stress clean | %99.882 | 24.258 | %0.0000 |
+| stress clarinet | %99.882 | 24.263 | %0.0000 |
+| stress adverse | %100.000 | 28.143 | %1.2036 |
+| Şükrü Tunar / pYIN ortak kareleri | %100.000 | 32.614 | %0.4251 |
+| validated clean holdout | %100.000 | 25.274 | %0.0000 |
+| validated room holdout | %100.000 | 25.796 | %0.0000 |
+
+Kalibrasyon seçim kuralı: ağırlıklı pitch/harmonik hata azalmalı ve hiçbir
+kaynakta kapsama başlangıca göre 2 yüzde puanından fazla düşmemelidir.
+
+Şükrü Tunar için izlenecek aralıklar:
+
+- `79–83 sn`: p95 `14.70`, 0 harmonik kare
+- `106–107 sn`: p95 `23.65`, 0 harmonik kare
+- `111–113 sn`: p95 `1207.78`, 7 harmonik kare; bağımsız doğrulama gerekli
+- `130–133 sn`: p95 `7.94`, 0 harmonik kare
+- `150–154 sn`: p95 `15.94`, 3 harmonik kare
+
+Tam aday raporunda eski seçimdeki 45 harmonik ayrışmanın 32 tanesi ACF/pYIN
+uzlaşmasına rağmen spektral `2x/3x` terfisiydi. Düzeltmeden sonra aynı üç hedef
+aralıkta 16 harmonik ayrışma kaldı. Kalanlar otomatik olarak motor hatası kabul
+edilmez; gerçek kayıtta pYIN kesin gerçek-değer değildir ve JSON'daki `0.95`
+güven alanı gerçek Vamp olasılığı değil sabit içe aktarma vekilidir.
+
+## Otomatik kontroller
+
+```bash
+zsh scripts/test_core.sh
+.venv/bin/python -B -m pytest -q
+.venv/bin/python scripts/calibrate_vpm_like_engine.py
+.venv/bin/python scripts/run_pitch_engine_tournament.py
+```
+
+## Tüm sentetik WAV turnuvası — 9 Ağustos 2026
+
+26 sentetik WAV'ın tümü ortak `0.015 RMS` kapısı ve 10 ms etkin analitik
+gerçek-değerle ölçüldü; iki gerçek `klarnet_gercek_*` WAV dışarıda bırakıldı.
+Toplam 22 sesli formül karesi WAV'ın merkezlenmiş penceresi eşik altında
+kaldığı için etkin hedefte boş bırakıldı. İki koşu aynı deterministik parmak
+izini (`685e73dda06e598b2c56afc51cfdcfa5aff2202bba31ffd5e62fc8f4da467b4d`)
+verdi.
+
+| Motor | Ciddi toplam | Ciddi olmayan | Ham toplam | Doğru-kare ort. sent |
+|---|---:|---:|---:|---:|
+| YIN v1 | 48 | 5686 | 5734 | 1.668 |
+| Pitch Engine v2 | 58 | 5577 | 5635 | 1.600 |
+| VPM-benzeri | 40 | 5686 | 5726 | 1.543 |
+
+Sayısal kazanan VPM-benzeridir. Bu 9 Ağustos raporu üretildiğinde C++/Swift iz
+paritesi doğrulanmadığı için `candidate_requires_parity` sonucu oluştu ve
+kullanıcı varsayılanı YIN v1 olarak kaldı. VPM paritesi 10 Ağustos'ta üstteki
+ayrı kapıyla doğrulandı; tarihsel turnuva kararı geriye dönük değiştirilmedi.
+Rapor şeması `klarivision-pitch-engine-tournament-all-synthetic-v2`dir.
+
+## Pitch motoru turnuvası v1
+
+## Turnuva v4 geliştirme aynası — 9 Ağustos 2026
+
+VPM-benzeri C++ izleyicisi kısa aşağı `1/2`/`1/3` harmonik adayını, yerleşik
+üst konturun spektral desteği sürerken üç kare doğrulamayla sınırlar. V3 adverse
+holdout'ta ciddi harmonik hata `4 -> 0`, VPM ham toplamı `336 -> 279` oldu.
+V2 gecikme adayları `{2,3,4,5}` sözleşmesine açıldı; dört-hop denemesi v2
+adverse kaydında üç ciddi hata verdiği için kabul edilmedi ve beş-hop
+gecikme korundu.
+Bu ölçümler V1–V3 holdout'larıyla ayarlandığı için kabul kanıtı değildir;
+ayrı, dondurulmuş V4 holdout üzerinde tek sefer çalıştırıldı. V4'te iki aday
+`accept4_anchor_1489.1` yüksek-anchor bölümünde ciddi harmonik hata sınıf
+vetosunu geçti; bu nedenle resmi kazanan ve varsayılan YIN v1 olarak kaldı.
+V4'e göre yeniden ayar yapılmaz; sonraki deneme yeni V5 holdout gerektirir.
+
+Turnuva `klarivision-pitch-engine-tournament-v1` rapor şemasını kullanır.
+Pitch zaman damgası kaynak analiz penceresinin merkezidir; otomatik global
+offset yoktur. Yarım pencere ve v2'nin beş hop sabit gecikmesi ayrı raporlanır.
+
+Seçim kapıları: hiçbir holdout varyantında YIN v1'e göre kapsama `2` yüzde
+puanından, harmonik hata `0.5` yüzde puanından, p95 `15` sentten veya yanlış
+sesli oranı `5` yüzde puanından fazla kötüleşemez. Aday ayrıca p95'te en az
+`%10` ya da p95'i korurken harmonik hatada en az `%50` iyileşmelidir.
+
+Kilitli holdout v1 sonucu:
+
+| Motor | Kapsama | p95 sent | Harmonik hata | Yanlış sesli | CPU RTF azami |
+|---|---:|---:|---:|---:|---:|
+| YIN v1 | %98.451 | 1902.532 | %10.7405 | %0.000 | ~0.18 |
+| Pitch Engine v2 | %99.749 | 7.817 | %0.0592 | %0.303 | ~0.52 |
+| VPM-benzeri | %99.749 | 9.440 | %1.3309 | %0.303 | ~0.13 |
+
+Benchmark kazananı v2, kullanıcı varsayılanı YIN v1'dir. V2'nin üretim
+C++/Swift paritesi artık doğrulanmıştır; bu mimari geçiş varsayılan motoru
+kendiliğinden değiştirmez. Pitch ölçümlerinin
+CPU sürelerinden arındırılmış deterministik parmak izi:
+`56d319c5d5dadbda73e73178946d53005f9dfb0a2faedf7970de9eea10e2ff34`.
+CPU RTF gözlemi makine yüküne göre küçük değişiklik gösterebilir ve parmak
+izine dahil değildir; pitch, kapsama, harmonik hata ve seçim sonucu dahildir.
+
+Bilinen temiz durum:
+
+- C++20 çekirdek testlerinin tamamı geçer.
+- Python: `69 passed`.
+- Swift Package testleri başarılıdır. C++ canlı köprülü kod imzasız Xcode
+  Debug derlemesi geçti; son RMS-setter çağrısından sonraki tekrar araç onay
+  kotasında başlatılamadı, son ek C ABI ve Swift Package tarafında ayrı ayrı
+  derlendi.
+- Xcode'da mevcut, işlev dışı uyarı: eski `onChange` kullanımı.
+
+## Kısa sessizlikte yanlış sesli yayın kontrolü
+
+`klarivision_pitch_tournament_holdout_adverse_v1` dosyasındaki analitik hedef
+boşlukları ayrıca ölçülür. Dosyadan-test ekranı ve doğrulama JSON'u, eşleşen
+sesli karelerden bağımsız olarak `false_voiced_points`,
+`false_voiced_percent` ve örnek zaman/frekansları raporlar. 150 ms'den kısa
+boşluklar artık bu kontrolden çıkarılmaz.
+
+8 Ağustos 2026 odaklı ayna ölçümü (tam turnuva değildir):
+
+| Motor | Yayın güven eşiği | Önce yanlış sessizlik karesi | Sonra | Elenen sesli hedef karesi |
+|---|---:|---:|---:|---:|
+| Pitch Engine v2 | 0.70 | 80 | 6 | 40/2208 (%1.8) |
+| VPM-benzeri | 0.80 | 81 | 7 | 37/2208 (%1.7) |
+
+Bu dosya teşhis ve eşik seçimi için kullanıldığından değişiklik bakımından
+artık geliştirme verisidir. Terfi kararı görülmemiş holdout v2 ve tam turnuva
+sonucuna dayanmalıdır.
+
+## Motor değişikliğinde raporlanacaklar
+
+Her değişiklik için önce/sonra şu değerler verilir:
+
+1. her sentetik WAV ve motor için beşli kare sayımı ve doğru-kare ortalaması;
+2. referans sesli/sessiz toplamlarının muhasebe denklikleri;
+3. holdout sonuçları ve toplam hata sıralaması;
+4. toplam gecikme ve CPU RTF değiştiyse bunlar;
+5. hangi motorun kullanıcı varsayılanı olduğu.

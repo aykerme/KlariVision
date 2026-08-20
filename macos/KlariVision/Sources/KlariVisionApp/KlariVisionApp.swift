@@ -1,32 +1,17 @@
+// KlariVision macOS — uygulama girişi, ana gezinme ve çalışma kütüphanesi.
+// RecentLibrary dosya seçimi → yerel analiz → viewer açılışı zincirini yönetir;
+// görünümler yalnız kullanıcı niyetini state'e iletir. Kullanıcı medyası
+// silinmez; arka plan sonucu MainActor üzerinde yayınlanır.
+
 import AppKit
+import Accelerate
+import AVFoundation
+import Combine
+import QuartzCore
 import SwiftUI
+import UniformTypeIdentifiers
 import WebKit
-
-@main
-struct KlariVisionApp: App {
-    @State private var library = RecentLibrary()
-
-    init() {
-        // Swift Package uygulamaları Xcode'dan çalıştırıldığında bazen arka
-        // planda kalabiliyor. Normal bir macOS uygulaması gibi etkinleştir.
-        NSApplication.shared.setActivationPolicy(.regular)
-        DispatchQueue.main.async {
-            NSApplication.shared.activate(ignoringOtherApps: true)
-        }
-    }
-
-    var body: some Scene {
-        WindowGroup {
-            WelcomeView(library: library)
-                .frame(minWidth: 860, minHeight: 620)
-        }
-        .defaultSize(width: 1060, height: 720)
-
-        Settings {
-            SettingsView()
-        }
-    }
-}
+import os
 
 @Observable
 @MainActor
@@ -47,18 +32,32 @@ final class RecentLibrary {
         }
     }
 
+    struct StudyMetadata: Codable, Hashable {
+        var title: String
+        var makam: String
+        var karar: Int
+    }
+
     private(set) var items: [Item] = []
+    private var studyMetadata: [String: StudyMetadata] = [:]
     private(set) var selectedFile: URL?
     private(set) var isAnalysing = false
     private(set) var analysisMessage = ""
     private(set) var activeViewer: URL?
-    var mediaLink = ""
+
+    private var selectedStudyEngine: String {
+        PitchEngineSettings.storedSelection(for: PitchEngineSettings.studyEngineKey)
+    }
 
     init() {
         reload()
     }
 
     func reload() {
+        if let metadataData = try? Data(contentsOf: metadataURL()),
+           let stored = try? JSONDecoder().decode([String: StudyMetadata].self, from: metadataData) {
+            studyMetadata = stored
+        }
         for root in dataRoots() {
             let file = root.appending(path: "data/recent_analyses.json")
             guard let data = try? Data(contentsOf: file),
@@ -67,6 +66,83 @@ final class RecentLibrary {
             return
         }
         items = []
+    }
+
+    func study(for item: Item) -> StudyMetadata {
+        studyMetadata[item.id] ?? StudyMetadata(title: item.label, makam: "major", karar: 0)
+    }
+
+    func studySummary(for item: Item) -> String {
+        let study = study(for: item)
+        return "\(makamName(study.makam)) · \(kararName(study.karar)) karar"
+    }
+
+    func formattedAnalysisDate(for item: Item) -> String {
+        let parser = DateFormatter()
+        parser.locale = Locale(identifier: "tr_TR")
+        parser.dateFormat = "dd.MM.yyyy HH:mm"
+        guard let date = parser.date(from: item.analysedAt) else { return item.analysedAt }
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "tr_TR")
+        formatter.dateFormat = "d MMM · HH:mm"
+        return formatter.string(from: date)
+    }
+
+    func saveStudy(_ item: Item, title: String, makam: String, karar: Int) {
+        let cleanedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        studyMetadata[item.id] = StudyMetadata(
+            title: cleanedTitle.isEmpty ? item.label : cleanedTitle,
+            makam: makam,
+            karar: karar
+        )
+        let destination = metadataURL()
+        try? FileManager.default.createDirectory(at: destination.deletingLastPathComponent(), withIntermediateDirectories: true)
+        if let data = try? JSONEncoder().encode(studyMetadata) {
+            try? data.write(to: destination, options: .atomic)
+        }
+    }
+
+    /// Removes a study from the sidebar only. Its cached media and pitch data
+    /// remain available on disk, so an accidental removal never loses a recording.
+    func removeFromLibrary(_ item: Item) {
+        items.removeAll { $0.id == item.id }
+        studyMetadata.removeValue(forKey: item.id)
+        if activeViewer.flatMap(item(for:))?.id == item.id {
+            closeWorkspace()
+        }
+        saveMetadata()
+        persistItems()
+    }
+
+    private func metadataURL() -> URL {
+        dataRoots().first!.appending(path: "data/study_metadata.json")
+    }
+
+    private func saveMetadata() {
+        let destination = metadataURL()
+        try? FileManager.default.createDirectory(at: destination.deletingLastPathComponent(), withIntermediateDirectories: true)
+        if let data = try? JSONEncoder().encode(studyMetadata) {
+            try? data.write(to: destination, options: .atomic)
+        }
+    }
+
+    private func persistItems() {
+        let destination = dataRoots().first!.appending(path: "data/recent_analyses.json")
+        try? FileManager.default.createDirectory(at: destination.deletingLastPathComponent(), withIntermediateDirectories: true)
+        if let data = try? JSONEncoder().encode(items) {
+            try? data.write(to: destination, options: .atomic)
+        }
+    }
+
+    func makamName(_ value: String) -> String {
+        [
+            "major": "Majör", "minor": "Minör", "nihavent": "Nihavend", "kurdi": "Kürdi",
+            "ussak": "Uşşak", "hicaz": "Hicaz", "kurdilihicazkar": "Kürdilihicazkâr", "hicazkar": "Hicazkâr",
+        ][value] ?? "Majör"
+    }
+
+    func kararName(_ value: Int) -> String {
+        [0: "Do", 2: "Re", 4: "Mi", 5: "Fa", 7: "Sol", 9: "La", 11: "Si"][value] ?? "Do"
     }
 
     func chooseFile() {
@@ -80,12 +156,46 @@ final class RecentLibrary {
     }
 
     func selectFile(_ url: URL) {
+        guard Self.isSupportedMediaFile(url) else {
+            selectedFile = nil
+            analysisMessage = "Bu dosya desteklenen bir ses veya video biçimi değil. WAV, MP3, M4A ya da desteklenen bir video seçin."
+            return
+        }
         selectedFile = url
         analyseSelectedFile()
     }
 
+    func acceptDroppedFile(_ url: URL) -> Bool {
+        guard Self.isSupportedMediaFile(url) else {
+            analysisMessage = "Bırakılan dosya desteklenmiyor. WAV, MP3, M4A veya video dosyası bırakın."
+            return false
+        }
+        selectFile(url)
+        return true
+    }
+
+    func reportDroppedFileFailure() {
+        analysisMessage = AccessibilityText.unsupportedDrop
+    }
+
+    static func isSupportedMediaFile(_ url: URL) -> Bool {
+        guard url.isFileURL else { return false }
+        let knownExtensions: Set<String> = [
+            "wav", "wave", "mp3", "m4a", "aac", "aiff", "aif", "flac",
+            "mp4", "m4v", "mov", "avi", "mkv", "webm",
+        ]
+        if knownExtensions.contains(url.pathExtension.lowercased()) { return true }
+        guard let values = try? url.resourceValues(forKeys: [.contentTypeKey]),
+              let type = values.contentType else { return false }
+        return type.conforms(to: .audio) || type.conforms(to: .movie)
+    }
+
     func analyseSelectedFile() {
         guard let selectedFile, !isAnalysing else { return }
+        if let bundledEngine = bundledEngineExecutable() {
+            analyseWithBundledEngine(selectedFile, executable: bundledEngine)
+            return
+        }
         guard let root = projectRoot() else {
             analysisMessage = "KlariVision analiz motoru bulunamadı. Projeyi Xcode içinden açtığından emin ol."
             return
@@ -98,10 +208,11 @@ final class RecentLibrary {
         isAnalysing = true
         analysisMessage = "Pitch analizi hazırlanıyor…"
         let sourcePath = selectedFile.path.replacingOccurrences(of: "\\\"", with: "\\\\\\\"")
+        let selectedEngine = selectedStudyEngine
         let script = """
         from pathlib import Path
         from klarivision.local_app import analyse_upload
-        print(analyse_upload(Path(\"\(sourcePath)\"), \"huzzam\", \"dugah\", \"vamp\"))
+        print(analyse_upload(Path(\"\(sourcePath)\"), \"huzzam\", \"dugah\", \"\(selectedEngine)\"))
         """
 
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
@@ -145,8 +256,45 @@ final class RecentLibrary {
         }
     }
 
-    func explainLinkImport() {
-        analysisMessage = "Bağlantıdan içe aktarma bir sonraki native adımda açılacak."
+    private func analyseWithBundledEngine(_ source: URL, executable: URL) {
+        isAnalysing = true
+        analysisMessage = "Pitch analizi hazırlanıyor…"
+        let selectedEngine = selectedStudyEngine
+
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            let process = Process()
+            process.executableURL = executable
+            process.arguments = [source.path, "--makam", "huzzam", "--karar", "dugah", "--engine", selectedEngine]
+            let output = Pipe()
+            let error = Pipe()
+            process.standardOutput = output
+            process.standardError = error
+
+            do {
+                try process.run()
+                process.waitUntilExit()
+                let standardOutput = String(decoding: output.fileHandleForReading.readDataToEndOfFile(), as: UTF8.self)
+                let standardError = String(decoding: error.fileHandleForReading.readDataToEndOfFile(), as: UTF8.self)
+                DispatchQueue.main.async {
+                    guard let self else { return }
+                    self.isAnalysing = false
+                    guard process.terminationStatus == 0,
+                          let viewerPath = standardOutput.split(whereSeparator: \.isNewline).last else {
+                        let detail = standardError.isEmpty ? "Lütfen tekrar dene." : standardError
+                        self.analysisMessage = "Analiz oluşturulamadı. \(detail)"
+                        return
+                    }
+                    self.analysisMessage = "Pitch eğrisi hazır."
+                    self.activeViewer = URL(fileURLWithPath: String(viewerPath))
+                    self.reload()
+                }
+            } catch {
+                DispatchQueue.main.async {
+                    self?.isAnalysing = false
+                    self?.analysisMessage = "Analiz motoru başlatılamadı: \(error.localizedDescription)"
+                }
+            }
+        }
     }
 
     func open(_ item: Item) {
@@ -154,8 +302,100 @@ final class RecentLibrary {
             let relativePath = item.viewerURL.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
             let viewer = root.appending(path: relativePath)
             if FileManager.default.fileExists(atPath: viewer.path) {
-                activeViewer = viewer
+                if let bundledEngine = bundledEngineExecutable() {
+                    refreshWithBundledEngine(viewer, executable: bundledEngine)
+                } else {
+                    activeViewer = viewer
+                }
                 return
+            }
+        }
+    }
+
+    func item(for viewer: URL) -> Item? {
+        for root in dataRoots() where viewer.path.hasPrefix(root.path) {
+            let relative = "/" + viewer.path.dropFirst(root.path.count).trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+            return items.first(where: { $0.viewerURL == relative })
+        }
+        return nil
+    }
+
+    private func refreshWithBundledEngine(_ viewer: URL, executable: URL) {
+        isAnalysing = true
+        analysisMessage = "Çalışma güncel arayüzle hazırlanıyor…"
+
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            let process = Process()
+            process.executableURL = executable
+            process.arguments = ["--refresh-viewer", viewer.path]
+            let output = Pipe()
+            let error = Pipe()
+            process.standardOutput = output
+            process.standardError = error
+
+            do {
+                try process.run()
+                process.waitUntilExit()
+                let standardOutput = String(decoding: output.fileHandleForReading.readDataToEndOfFile(), as: UTF8.self)
+                DispatchQueue.main.async {
+                    guard let self else { return }
+                    self.isAnalysing = false
+                    if process.terminationStatus == 0,
+                       let refreshedPath = standardOutput.split(whereSeparator: \.isNewline).last {
+                        self.activeViewer = URL(fileURLWithPath: String(refreshedPath))
+                    } else {
+                        // A legacy item can still be opened if a very old cache
+                        // no longer contains every file needed for refresh.
+                        self.activeViewer = viewer
+                    }
+                }
+            } catch {
+                DispatchQueue.main.async {
+                    self?.isAnalysing = false
+                    self?.activeViewer = viewer
+                }
+            }
+        }
+    }
+
+    func reanalyse(_ viewer: URL) {
+        guard !isAnalysing else { return }
+        guard let executable = bundledEngineExecutable() else {
+            analysisMessage = "Seçili motorla yeniden analiz yalnız paketlenmiş C++ analiz motorunda kullanılabilir."
+            return
+        }
+        let selectedEngine = selectedStudyEngine
+        isAnalysing = true
+        analysisMessage = "\(selectedEngine) ile pitch eğrisi hazırlanıyor…"
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            let process = Process()
+            process.executableURL = executable
+            process.arguments = ["--reanalyze-viewer", viewer.path, "--engine", selectedEngine]
+            let output = Pipe()
+            let error = Pipe()
+            process.standardOutput = output
+            process.standardError = error
+            do {
+                try process.run()
+                process.waitUntilExit()
+                let standardOutput = String(decoding: output.fileHandleForReading.readDataToEndOfFile(), as: UTF8.self)
+                let standardError = String(decoding: error.fileHandleForReading.readDataToEndOfFile(), as: UTF8.self)
+                DispatchQueue.main.async {
+                    guard let self else { return }
+                    self.isAnalysing = false
+                    guard process.terminationStatus == 0,
+                          let refreshedPath = standardOutput.split(whereSeparator: \.isNewline).last else {
+                        self.analysisMessage = "Seçili motorla analiz yapılamadı. \(standardError)"
+                        return
+                    }
+                    self.activeViewer = URL(fileURLWithPath: String(refreshedPath))
+                    self.analysisMessage = "\(selectedEngine) pitch eğrisi hazır."
+                }
+            } catch {
+                DispatchQueue.main.async {
+                    self?.isAnalysing = false
+                    self?.analysisMessage = "Motor başlatılamadı: \(error.localizedDescription)"
+                }
             }
         }
     }
@@ -197,230 +437,403 @@ final class RecentLibrary {
         let candidates = [root.appending(path: ".venv/bin/python"), URL(fileURLWithPath: "/usr/bin/python3")]
         return candidates.first(where: { FileManager.default.isExecutableFile(atPath: $0.path) })
     }
+
+    private func bundledEngineExecutable() -> URL? {
+        guard let resources = Bundle.main.resourceURL else { return nil }
+        let executable = resources.appending(path: "Engine/KlariVisionEngine")
+        return FileManager.default.isExecutableFile(atPath: executable.path) ? executable : nil
+    }
 }
 
 struct WelcomeView: View {
     @Bindable var library: RecentLibrary
-    @State private var isDropTarget = false
+    @State private var isLivePractice = false
+    @State private var itemToRemove: RecentLibrary.Item?
+    @State private var itemToEdit: RecentLibrary.Item?
+    @State private var selectedStudyID: RecentLibrary.Item.ID?
 
     var body: some View {
         NavigationSplitView {
-            List {
-                Section("Çalışmalar") {
+            List(selection: $selectedStudyID) {
+                Section {
                     if library.items.isEmpty {
-                        Text("Henüz kayıt yok")
-                            .foregroundStyle(.secondary)
+                        ContentUnavailableView {
+                            Label("Kayıt Bulunmadı", systemImage: "waveform.slash")
+                        } description: {
+                            Text("Henüz analiz edilmiş bir çalışma yok.")
+                        }
+                        .padding(.vertical, 20)
                     } else {
                         ForEach(library.items) { item in
-                            Button { library.open(item) } label: {
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text(item.label).lineLimit(1)
-                                    Text(item.analysedAt)
-                                        .font(.caption2)
-                                        .foregroundStyle(.secondary)
+                            RecentRow(
+                                item: item,
+                                title: library.study(for: item).title,
+                                summary: library.studySummary(for: item)
+                            )
+                            .tag(item.id)
+                            .help(item.label)
+                            .contextMenu {
+                                Button {
+                                    itemToEdit = item
+                                } label: {
+                                    Label("Çalışmayı Düzenle", systemImage: "pencil")
+                                }
+                                Divider()
+                                Button(role: .destructive) {
+                                    itemToRemove = item
+                                } label: {
+                                    Label("Listeden Kaldır", systemImage: "minus.circle")
                                 }
                             }
                         }
                     }
+                } header: {
+                    Text("Çalışmalar")
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(.secondary)
                 }
             }
             .listStyle(.sidebar)
             .navigationTitle("KlariVision")
         } detail: {
-            if let viewer = library.activeViewer {
+            if isLivePractice {
+                LivePracticeView {
+                    isLivePractice = false
+                }
+            } else if let viewer = library.activeViewer {
                 WorkspaceView(viewer: viewer, library: library)
             } else {
-                ScrollView {
-                VStack(alignment: .leading, spacing: 24) {
-                    VStack(alignment: .leading, spacing: 5) {
-                        Text("Yeni çalışma")
-                            .font(.title2.weight(.semibold))
-                        Text("Video veya ses kaydından pitch eğrisi oluştur.")
-                            .foregroundStyle(.secondary)
-                    }
+                ModeSelectionView(library: library, isLivePractice: $isLivePractice)
+            }
+        }
+        .sheet(item: $itemToEdit) { item in
+            StudyEditor(item: item, library: library) { _, _ in }
+        }
+        .onChange(of: selectedStudyID) { _, identifier in
+            guard let identifier,
+                  let item = library.items.first(where: { $0.id == identifier }) else { return }
+            library.open(item)
+        }
+        .onChange(of: library.activeViewer) { _, viewer in
+            selectedStudyID = viewer.flatMap { library.item(for: $0)?.id }
+        }
+        .alert(
+            "Çalışma listeden kaldırılsın mı?",
+            isPresented: Binding(
+                get: { itemToRemove != nil },
+                set: { if !$0 { itemToRemove = nil } }
+            ),
+            presenting: itemToRemove
+        ) { item in
+            Button("Vazgeç", role: .cancel) {}
+            Button("Listeden Kaldır", role: .destructive) {
+                library.removeFromLibrary(item)
+                itemToRemove = nil
+            }
+        } message: { item in
+            Text("\(library.study(for: item).title) yalnızca Çalışmalar listesinden kaldırılır. Video, ses ve pitch verileri silinmez.")
+        }
+    }
+}
 
-                    DropZone(isTargeted: $isDropTarget, selectedFile: library.selectedFile) {
-                        library.chooseFile()
-                    }
+/// Changes placement without changing the identity or parentage of either
+/// child.  Conditional HStack/VStack branches recreated WKWebView exactly at
+/// the 900 pt threshold, leaving the old media element audible in the process.
+private struct ModeSelectionView: View {
+    @Bindable var library: RecentLibrary
+    @Binding var isLivePractice: Bool
+    @State private var isDropTarget = false
+
+    var body: some View {
+        ScrollView {
+            VStack(spacing: 28) {
+                VStack(spacing: 7) {
+                    Label("KlariVision", systemImage: "waveform.path.ecg")
+                        .font(.title2.weight(.bold))
+                    Text("Pitch analizine nasıl başlamak istersiniz?")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+
+                HStack(alignment: .center, spacing: 20) {
+                    ListeningModeCard(
+                        isTargeted: $isDropTarget,
+                        selectedFile: library.selectedFile,
+                        chooseFile: library.chooseFile
+                    )
                     .onDrop(of: [.fileURL], isTargeted: $isDropTarget) { providers in
-                        guard let provider = providers.first else { return false }
-                        provider.loadItem(forTypeIdentifier: "public.file-url", options: nil) { value, _ in
-                            guard let url = value as? URL else { return }
-                            Task { @MainActor in library.selectFile(url) }
+                        guard let provider = providers.first(where: { $0.canLoadObject(ofClass: URL.self) }) else {
+                            library.reportDroppedFileFailure()
+                            return false
+                        }
+                        _ = provider.loadObject(ofClass: URL.self) { value, _ in
+                            DispatchQueue.main.async {
+                                guard let url = value else {
+                                    library.reportDroppedFileFailure()
+                                    return
+                                }
+                                _ = library.acceptDroppedFile(url)
+                            }
                         }
                         return true
                     }
 
-                    if library.selectedFile != nil, !library.analysisMessage.isEmpty {
-                        HStack(spacing: 10) {
-                            if library.isAnalysing { ProgressView().controlSize(.small) }
-                            Text(library.analysisMessage)
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
+                    PlayingModeCard {
+                        library.closeWorkspace()
+                        isLivePractice = true
                     }
-
-                    VStack(alignment: .leading, spacing: 9) {
-                        Text("Bağlantıdan içe aktar")
-                            .font(.headline)
-                        HStack {
-                            TextField("YouTube veya video bağlantısı", text: $library.mediaLink)
-                                .textFieldStyle(.roundedBorder)
-                            Button("İçe Aktar") { library.explainLinkImport() }
-                                .disabled(library.mediaLink.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                        }
-                        Text("Bağlantı aktarımı, yerel dosya analizinden sonra native akışa eklenecek.")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-
                 }
-                .padding(32)
-                .frame(maxWidth: 860, alignment: .leading)
+
+                if library.selectedFile != nil || !library.analysisMessage.isEmpty {
+                    HStack(spacing: 12) {
+                        if library.isAnalysing {
+                            ProgressView()
+                                .controlSize(.small)
+                        } else {
+                            Image(systemName: "info.circle.fill")
+                                .foregroundStyle(Color.accentColor)
+                        }
+                        Text(library.analysisMessage)
+                            .font(.callout)
+                            .foregroundStyle(.primary)
+                        Spacer()
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 12)
+                    .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
+                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(.quaternary))
+                    .accessibilityElement(children: .combine)
+                    .accessibilityLabel(AccessibilityText.listeningStatus)
+                    .accessibilityValue(library.analysisMessage)
                 }
             }
+            .padding(36)
+            .frame(maxWidth: 920)
         }
     }
 }
 
-private struct WorkspaceView: View {
-    let viewer: URL
-    @Bindable var library: RecentLibrary
-    @State private var webView: WKWebView?
-
-    var body: some View {
-        VStack(spacing: 0) {
-            HStack(spacing: 10) {
-                Button("Yeni çalışma", systemImage: "plus") { library.closeWorkspace() }
-                Divider().frame(height: 18)
-                Text(viewer.deletingPathExtension().lastPathComponent)
-                    .lineLimit(1)
-                    .foregroundStyle(.secondary)
-                Spacer()
-                Button("Ayarlar", systemImage: "gearshape") {
-                    webView?.evaluateJavaScript("document.getElementById('makam-settings-open')?.click()")
-                }
-                .disabled(webView == nil)
-            }
-            .padding(.horizontal, 16)
-            .frame(height: 44)
-            .background(.bar)
-
-            LocalViewer(viewer: viewer, readAccessRoot: library.viewerReadAccessRoot(for: viewer), webView: $webView)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-        }
-    }
-}
-
-private struct LocalViewer: NSViewRepresentable {
-    let viewer: URL
-    let readAccessRoot: URL
-    @Binding var webView: WKWebView?
-
-    func makeNSView(context: Context) -> WKWebView {
-        let configuration = WKWebViewConfiguration()
-        let hideStandaloneControls = """
-        (() => {
-            document.body.classList.add('native-shell');
-            const newRecording = document.getElementById('new-recording');
-            if (newRecording) newRecording.style.display = 'none';
-            const makamSettings = document.getElementById('makam-settings-open');
-            if (makamSettings) makamSettings.style.display = 'none';
-        })();
-        """
-        configuration.userContentController.addUserScript(
-            WKUserScript(source: hideStandaloneControls, injectionTime: .atDocumentEnd, forMainFrameOnly: true)
-        )
-        let webView = WKWebView(frame: .zero, configuration: configuration)
-        webView.setValue(false, forKey: "drawsBackground")
-        webView.loadFileURL(viewer, allowingReadAccessTo: readAccessRoot)
-        DispatchQueue.main.async { self.webView = webView }
-        return webView
-    }
-
-    func updateNSView(_ webView: WKWebView, context: Context) {
-        guard webView.url != viewer else { return }
-        webView.loadFileURL(viewer, allowingReadAccessTo: readAccessRoot)
-    }
-}
-
-private struct DropZone: View {
+private struct ListeningModeCard: View {
     @Binding var isTargeted: Bool
     let selectedFile: URL?
     let chooseFile: () -> Void
 
     var body: some View {
-        VStack(spacing: 12) {
-            Image(systemName: selectedFile == nil ? "film.stack" : "checkmark.circle.fill")
-                .font(.system(size: 34))
-                .foregroundStyle(selectedFile == nil ? Color.accentColor : Color.green)
-            Text(selectedFile?.lastPathComponent ?? "Dosyayı buraya sürükleyin")
-                .font(.headline)
-            Text(selectedFile == nil ? "veya bilgisayarınızdan bir video ya da ses kaydı seçin." : "Native analiz akışı için hazır.")
-                .foregroundStyle(.secondary)
-            Button("Dosya Seç", action: chooseFile)
-                .buttonStyle(.borderedProminent)
+        VStack(spacing: 17) {
+            ZStack {
+                Circle()
+                    .fill(Color.blue.opacity(isTargeted ? 0.24 : 0.14))
+                    .frame(width: 72, height: 72)
+
+                Image(systemName: selectedFile == nil ? "headphones" : "checkmark.circle.fill")
+                    .font(.system(size: 32, weight: .semibold))
+                    .foregroundStyle(selectedFile == nil ? Color.blue : Color.green)
+            }
+
+            VStack(spacing: 6) {
+                Text("Dinleme Modu")
+                    .font(.title3.weight(.bold))
+
+                Text(selectedFile?.lastPathComponent ?? "Ses veya video dosyanızı yükleyin, pitch analizini başlatın.")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .lineLimit(2)
+            }
+
+            Button(action: chooseFile) {
+                Label("Dosya Seç / Yükle", systemImage: "folder")
+            }
+            .buttonStyle(.borderedProminent)
+            .controlSize(.large)
+            .tint(.blue)
+            .keyboardShortcut("o", modifiers: .command)
         }
-        .frame(maxWidth: .infinity, minHeight: 210)
-        .background(isTargeted ? Color.accentColor.opacity(0.13) : Color(nsColor: .controlBackgroundColor))
+        .padding(28)
+        .frame(maxWidth: .infinity, minHeight: 260)
+        .background(
+            RoundedRectangle(cornerRadius: 20)
+                .fill(Color.blue.opacity(isTargeted ? 0.12 : 0.055))
+        )
         .overlay {
-            RoundedRectangle(cornerRadius: 14)
-                .stroke(isTargeted ? Color.accentColor : Color.secondary.opacity(0.35), style: StrokeStyle(lineWidth: 1.5, dash: [7]))
+            RoundedRectangle(cornerRadius: 20)
+                .stroke(
+                    isTargeted ? Color.blue : Color.blue.opacity(0.28),
+                    style: StrokeStyle(lineWidth: isTargeted ? 2 : 1)
+                )
         }
-        .clipShape(.rect(cornerRadius: 14))
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("Dinleme Modu")
+        .accessibilityHint("Bir ses veya video dosyası seçin ya da bu karta sürükleyin.")
+    }
+}
+
+private struct PlayingModeCard: View {
+    let start: () -> Void
+
+    var body: some View {
+        VStack(spacing: 17) {
+            ZStack {
+                Circle()
+                    .fill(Color.green.opacity(0.14))
+                    .frame(width: 72, height: 72)
+
+                Image(systemName: "mic.fill")
+                    .font(.system(size: 32, weight: .semibold))
+                    .foregroundStyle(.green)
+            }
+
+            VStack(spacing: 6) {
+                Text("Çalma Modu")
+                    .font(.title3.weight(.bold))
+
+                Text("Mikrofonunuzu kullanarak canlı, gerçek zamanlı pitch analizi yapın.")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .lineLimit(2)
+            }
+
+            Button(action: start) {
+                Label("Başlat", systemImage: "mic.fill")
+            }
+            .buttonStyle(.borderedProminent)
+            .controlSize(.large)
+            .tint(.green)
+        }
+        .padding(28)
+        .frame(maxWidth: .infinity, minHeight: 260)
+        .background(
+            RoundedRectangle(cornerRadius: 20)
+                .fill(Color.green.opacity(0.055))
+        )
+        .overlay {
+            RoundedRectangle(cornerRadius: 20)
+                .stroke(Color.green.opacity(0.28), lineWidth: 1)
+        }
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("Çalma Modu")
+        .accessibilityHint("Mikrofonla canlı pitch analizini başlatır.")
     }
 }
 
 private struct RecentRow: View {
     let item: RecentLibrary.Item
+    let title: String
+    let summary: String
 
     var body: some View {
         HStack(spacing: 12) {
-            Image(systemName: "waveform")
-                .foregroundStyle(.tint)
-                .frame(width: 24)
+            ZStack {
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(Color.accentColor.opacity(0.12))
+                    .frame(width: 32, height: 32)
+                Image(systemName: "waveform.path")
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundStyle(Color.accentColor)
+            }
+
             VStack(alignment: .leading, spacing: 3) {
-                Text(item.label)
+                Text(title)
+                    .font(.body.weight(.medium))
                     .lineLimit(1)
-                Text(item.analysedAt)
+                Text("\(summary) · \(date)")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
-            Spacer()
+
+            Spacer(minLength: 4)
+
             if item.cacheHit {
-                Text("Pitch hazır")
-                    .font(.caption.weight(.medium))
+                Text("Hazır")
+                    .font(.caption2.weight(.semibold))
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(Color.green.opacity(0.15), in: Capsule())
                     .foregroundStyle(.green)
             }
-            Image(systemName: "chevron.right")
-                .font(.caption)
-                .foregroundStyle(.tertiary)
         }
-        .padding(12)
-        .background(.background, in: RoundedRectangle(cornerRadius: 10))
-        .overlay {
-            RoundedRectangle(cornerRadius: 10).stroke(.quaternary)
-        }
+        .padding(.vertical, 6)
+        .contentShape(Rectangle())
+    }
+
+    private var date: String {
+        let parser = DateFormatter()
+        parser.locale = Locale(identifier: "tr_TR")
+        parser.dateFormat = "dd.MM.yyyy HH:mm"
+        guard let value = parser.date(from: item.analysedAt) else { return item.analysedAt }
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "tr_TR")
+        formatter.dateFormat = "d MMM · HH:mm"
+        return formatter.string(from: value)
     }
 }
 
-private struct SettingsView: View {
+struct StudyEditor: View {
+    let item: RecentLibrary.Item
+    @Bindable var library: RecentLibrary
+    let onApply: (String, Int) -> Void
+
+    @Environment(\.dismiss) private var dismiss
+    @State private var title: String
+    @State private var makam: String
+    @State private var karar: Int
+
+    init(
+        item: RecentLibrary.Item,
+        library: RecentLibrary,
+        onApply: @escaping (String, Int) -> Void
+    ) {
+        self.item = item
+        self.library = library
+        self.onApply = onApply
+        let study = library.study(for: item)
+        _title = State(initialValue: study.title)
+        _makam = State(initialValue: study.makam)
+        _karar = State(initialValue: study.karar)
+    }
+
     var body: some View {
-        Form {
-            Section("Görünüm") {
-                Toggle("Koyu görünümü sistemden al", isOn: .constant(true))
-                Toggle("Eğriyi dikey takip et", isOn: .constant(true))
-            }
-            Section("Çalışma") {
-                Picker("Çalma hızı", selection: .constant(1.0)) {
-                    Text("0,50×").tag(0.5)
-                    Text("0,75×").tag(0.75)
-                    Text("1,00×").tag(1.0)
+        VStack(alignment: .leading, spacing: 18) {
+            Text("Çalışmayı Düzenle")
+                .font(.title3.weight(.semibold))
+
+            Form {
+                TextField("Çalışma adı", text: $title)
+                Picker("Makam / dizi", selection: $makam) {
+                    Text("Majör").tag("major")
+                    Text("Minör").tag("minor")
+                    Text("Nihavend").tag("nihavent")
+                    Text("Kürdi").tag("kurdi")
+                    Text("Uşşak").tag("ussak")
+                    Text("Hicaz").tag("hicaz")
+                    Text("Kürdilihicazkâr").tag("kurdilihicazkar")
+                    Text("Hicazkâr").tag("hicazkar")
+                }
+                Picker("Karar", selection: $karar) {
+                    Text("Do").tag(0)
+                    Text("Re").tag(2)
+                    Text("Mi").tag(4)
+                    Text("Fa").tag(5)
+                    Text("Sol").tag(7)
+                    Text("La").tag(9)
+                    Text("Si").tag(11)
                 }
             }
+            .formStyle(.grouped)
+
+            HStack {
+                Button("Vazgeç") { dismiss() }
+                Spacer()
+                Button("Kaydet") {
+                    library.saveStudy(item, title: title, makam: makam, karar: karar)
+                    onApply(makam, karar)
+                    dismiss()
+                }
+                .buttonStyle(.borderedProminent)
+            }
         }
-        .formStyle(.grouped)
-        .frame(width: 430, height: 230)
-        .padding()
+        .padding(22)
+        .frame(width: 430)
     }
 }
