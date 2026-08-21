@@ -13,6 +13,12 @@ tools/sonic-annotator/sonic-annotator
 data/audio/*
 data/video/*
 data/annotations/*
+data/imports/*
+data/benchmarks/*.wav
+data/benchmarks/*.m4a
+data/benchmarks/*.mp3
+data/benchmarks/*.mp4
+data/recent_analyses.json
 !data/**/.gitkeep
 outputs/
 build/
@@ -22,6 +28,8 @@ KlariVision.spec
 # Swift Package build output
 macos/KlariVision/.build/
 macos/KlariVision/.swiftpm/
+macos/KlariVision/KlariVision.xcodeproj/xcuserdata/
+macos/KlariVision/KlariVision.xcodeproj/project.xcworkspace/xcuserdata/
 
 # Operating-system files
 .DS_Store

@@ -9,6 +9,34 @@
 
 ## Faz 1 — Pitch prototipi
 
+### Kilometre taşı — Çok platformlu çekirdek
+
+- [x] Platformdan bağımsız C++ pitch veri modeli
+- [x] Python görüntü temizleme davranışına eş C++ ilk işlem katmanı
+- [x] Yerel C++ doğrulama testi
+- [ ] Referans kayıtlarından golden karşılaştırma veri kümesi
+- [ ] Yerel, pYIN-uyumlu C++ pitch çıkarıcı
+- [ ] Swift ve Android bağ katmanları
+
+### Kilometre taşı — Canlı Çalışma (ilk macOS sürümü)
+
+- [x] Mikrofon izni ve yerel, kaydedilmeyen canlı ses girişi
+- [x] Düşük gecikmeli canlı YIN pitch prototipi
+- [x] Kayan pitch grafiği ile makam / karar frekans çizgileri
+- [ ] Ortak C++ çekirdeğinin canlı YIN katmanına bağlanması
+- [ ] iPad/iPhone ve Android mikrofon bağ katmanları
+
+### Kilometre taşı — Pitch Engine v2 (deneysel)
+
+- [x] Kararlı motordan ayrılmış Git dalı ve geri dönüş etiketi
+- [x] Kaynak/provenans taşıyan platformdan bağımsız aday sözleşmesi
+- [x] Ayrı durum belleğine sahip çalıştırılabilir Swift deney motoru
+- [x] Aynı kaynak dosyayla v1/v2 doğrulama girişleri
+- [x] MPM/NSDF aday üreticisi
+- [x] SWIPE' benzeri asal-harmonik puanlama
+- [x] Yaklaşık 5 kare / 50–55 ms sabit gecikmeli yol seçimi (özgün zaman damgasını korur)
+- [ ] V2'nin tüm regresyonlarda V1'i geçmesi
+
 ### Kilometre taşı — v0.5.0 Stable
 
 - [x] Yerel video/ses ve YouTube bağlantısından medya alma

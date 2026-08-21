@@ -1,51 +1,270 @@
 // !$*UTF8*$!
 {
-    archiveVersion = 1;
-    classes = {};
-    objectVersion = 56;
-    objects = {
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
 
 /* Begin PBXBuildFile section */
-        A10000000000000000000011 /* KlariVisionApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000010 /* KlariVisionApp.swift */; };
+		A10000000000000000000011 /* Sources/KlariVisionApp/KlariVisionApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000010 /* Sources/KlariVisionApp/KlariVisionApp.swift */; };
+		A10000000000000000000041 /* analysis_engine.cpp in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000040 /* analysis_engine.cpp */; };
+		A10000000000000000000043 /* analysis_engine_c.cpp in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000042 /* analysis_engine_c.cpp */; };
+		A10000000000000000000045 /* mpm.cpp in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000044 /* mpm.cpp */; };
+		A10000000000000000000047 /* pitch_engine_v2.cpp in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000046 /* pitch_engine_v2.cpp */; };
+		A10000000000000000000049 /* swipe_prime.cpp in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000048 /* swipe_prime.cpp */; };
+		A10000000000000000000051 /* vpm_like.cpp in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000050 /* vpm_like.cpp */; };
+		A10000000000000000000055 /* fixed_lag_tracker.cpp in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000054 /* fixed_lag_tracker.cpp */; };
+		A10000000000000000000057 /* pitch_engine_v2_session.cpp in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000056 /* pitch_engine_v2_session.cpp */; };
+		A10000000000000000000061 /* AppSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000060 /* AppSettings.swift */; };
+		A10000000000000000000063 /* StudyModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000062 /* StudyModels.swift */; };
+		A10000000000000000000065 /* StudyWorkspace.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000064 /* StudyWorkspace.swift */; };
+		A10000000000000000000067 /* PracticeViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000066 /* PracticeViews.swift */; };
+		A10000000000000000000069 /* LivePitchAnalyzer.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000068 /* LivePitchAnalyzer.swift */; };
+		A10000000000000000000071 /* LiveVisuals.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000070 /* LiveVisuals.swift */; };
+		A10000000000000000000031 /* canli_pitch_referans_v1.wav in Resources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000030 /* canli_pitch_referans_v1.wav */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-        A10000000000000000000010 /* KlariVisionApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/KlariVisionApp/KlariVisionApp.swift; sourceTree = "<group>"; };
-        A10000000000000000000012 /* KlariVision.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = KlariVision.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		3B26BD003018B5F90047710D /* frequency_viewer.py */ = {isa = PBXFileReference; lastKnownFileType = text.script.python; path = frequency_viewer.py; sourceTree = "<group>"; };
+		A10000000000000000000010 /* Sources/KlariVisionApp/KlariVisionApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/KlariVisionApp/KlariVisionApp.swift; sourceTree = "<group>"; };
+		A10000000000000000000060 /* AppSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/KlariVisionApp/AppSettings.swift; sourceTree = "<group>"; };
+		A10000000000000000000062 /* StudyModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/KlariVisionApp/StudyModels.swift; sourceTree = "<group>"; };
+		A10000000000000000000064 /* StudyWorkspace.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/KlariVisionApp/StudyWorkspace.swift; sourceTree = "<group>"; };
+		A10000000000000000000066 /* PracticeViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/KlariVisionApp/PracticeViews.swift; sourceTree = "<group>"; };
+		A10000000000000000000068 /* LivePitchAnalyzer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/KlariVisionApp/LivePitchAnalyzer.swift; sourceTree = "<group>"; };
+		A10000000000000000000070 /* LiveVisuals.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/KlariVisionApp/LiveVisuals.swift; sourceTree = "<group>"; };
+		A10000000000000000000040 /* analysis_engine.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ../../core/src/analysis_engine.cpp; sourceTree = "<group>"; };
+		A10000000000000000000042 /* analysis_engine_c.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ../../core/src/analysis_engine_c.cpp; sourceTree = "<group>"; };
+		A10000000000000000000044 /* mpm.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ../../core/src/mpm.cpp; sourceTree = "<group>"; };
+		A10000000000000000000046 /* pitch_engine_v2.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ../../core/src/pitch_engine_v2.cpp; sourceTree = "<group>"; };
+		A10000000000000000000048 /* swipe_prime.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ../../core/src/swipe_prime.cpp; sourceTree = "<group>"; };
+		A10000000000000000000050 /* vpm_like.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ../../core/src/vpm_like.cpp; sourceTree = "<group>"; };
+		A10000000000000000000052 /* KlariVisionBridge.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Sources/KlariVisionApp/KlariVisionBridge.h; sourceTree = "<group>"; };
+		A10000000000000000000054 /* fixed_lag_tracker.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ../../core/src/fixed_lag_tracker.cpp; sourceTree = "<group>"; };
+		A10000000000000000000056 /* pitch_engine_v2_session.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ../../core/src/pitch_engine_v2_session.cpp; sourceTree = "<group>"; };
+		A10000000000000000000030 /* canli_pitch_referans_v1.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; name = canli_pitch_referans_v1.wav; path = ../../data/benchmarks/canli_pitch_referans_v1.wav; sourceTree = "<group>"; };
+		A10000000000000000000012 /* KlariVision.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = KlariVision.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
-        A10000000000000000000013 /* Frameworks */ = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+		A10000000000000000000013 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
-        A10000000000000000000014 = {isa = PBXGroup; children = (A10000000000000000000010 /* KlariVisionApp.swift */, A10000000000000000000015 /* Products */); sourceTree = "<group>"; };
-        A10000000000000000000015 /* Products */ = {isa = PBXGroup; children = (A10000000000000000000012 /* KlariVision.app */); name = Products; sourceTree = "<group>"; };
+		A10000000000000000000014 = {
+			isa = PBXGroup;
+			children = (
+				A10000000000000000000010 /* Sources/KlariVisionApp/KlariVisionApp.swift */,
+				A10000000000000000000060 /* AppSettings.swift */,
+				A10000000000000000000062 /* StudyModels.swift */,
+				A10000000000000000000064 /* StudyWorkspace.swift */,
+				A10000000000000000000066 /* PracticeViews.swift */,
+				A10000000000000000000068 /* LivePitchAnalyzer.swift */,
+				A10000000000000000000070 /* LiveVisuals.swift */,
+				A10000000000000000000052 /* KlariVisionBridge.h */,
+				A10000000000000000000040 /* analysis_engine.cpp */,
+				A10000000000000000000042 /* analysis_engine_c.cpp */,
+				A10000000000000000000044 /* mpm.cpp */,
+				A10000000000000000000046 /* pitch_engine_v2.cpp */,
+				A10000000000000000000048 /* swipe_prime.cpp */,
+				A10000000000000000000050 /* vpm_like.cpp */,
+				A10000000000000000000054 /* fixed_lag_tracker.cpp */,
+				A10000000000000000000056 /* pitch_engine_v2_session.cpp */,
+				A10000000000000000000030 /* canli_pitch_referans_v1.wav */,
+				A10000000000000000000015 /* Products */,
+				3B26BD003018B5F90047710D /* frequency_viewer.py */,
+			);
+			sourceTree = "<group>";
+		};
+		A10000000000000000000015 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				A10000000000000000000012 /* KlariVision.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-        A10000000000000000000016 /* KlariVision */ = {isa = PBXNativeTarget; buildConfigurationList = A10000000000000000000017 /* Build configuration list for PBXNativeTarget \"KlariVision\" */; buildPhases = (A10000000000000000000018 /* Sources */, A10000000000000000000013 /* Frameworks */); buildRules = (); dependencies = (); name = KlariVision; productName = KlariVision; productReference = A10000000000000000000012 /* KlariVision.app */; productType = "com.apple.product-type.application"; };
+		A10000000000000000000016 /* KlariVision */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A10000000000000000000017 /* Build configuration list for PBXNativeTarget "KlariVision" */;
+			buildPhases = (
+				A10000000000000000000018 /* Sources */,
+				A10000000000000000000032 /* Resources */,
+				A10000000000000000000013 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = KlariVision;
+			productName = KlariVision;
+			productReference = A10000000000000000000012 /* KlariVision.app */;
+			productType = "com.apple.product-type.application";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
-        A10000000000000000000019 /* Project object */ = {isa = PBXProject; attributes = { BuildIndependentTargetsInParallel = 1; LastSwiftUpdateCheck = 1600; LastUpgradeCheck = 1600; TargetAttributes = { A10000000000000000000016 = { CreatedOnToolsVersion = 16.0; }; }; }; buildConfigurationList = A10000000000000000000020 /* Build configuration list for PBXProject \"KlariVision\" */; compatibilityVersion = "Xcode 14.0"; developmentRegion = en; hasScannedForEncodings = 0; knownRegions = (en, Base); mainGroup = A10000000000000000000014; productRefGroup = A10000000000000000000015 /* Products */; projectDirPath = ""; projectRoot = ""; targets = (A10000000000000000000016 /* KlariVision */); };
+		A10000000000000000000019 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1600;
+				LastUpgradeCheck = 1600;
+				TargetAttributes = {
+					A10000000000000000000016 = {
+						CreatedOnToolsVersion = 16.0;
+					};
+				};
+			};
+			buildConfigurationList = A10000000000000000000020 /* Build configuration list for PBXProject "KlariVision" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = A10000000000000000000014;
+			productRefGroup = A10000000000000000000015 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				A10000000000000000000016 /* KlariVision */,
+			);
+		};
 /* End PBXProject section */
 
+/* Begin PBXResourcesBuildPhase section */
+		A10000000000000000000032 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A10000000000000000000031 /* canli_pitch_referans_v1.wav in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
 /* Begin PBXSourcesBuildPhase section */
-        A10000000000000000000018 /* Sources */ = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (A10000000000000000000011 /* KlariVisionApp.swift in Sources */); runOnlyForDeploymentPostprocessing = 0; };
+		A10000000000000000000018 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A10000000000000000000011 /* Sources/KlariVisionApp/KlariVisionApp.swift in Sources */,
+				A10000000000000000000061 /* AppSettings.swift in Sources */,
+				A10000000000000000000063 /* StudyModels.swift in Sources */,
+				A10000000000000000000065 /* StudyWorkspace.swift in Sources */,
+				A10000000000000000000067 /* PracticeViews.swift in Sources */,
+				A10000000000000000000069 /* LivePitchAnalyzer.swift in Sources */,
+				A10000000000000000000071 /* LiveVisuals.swift in Sources */,
+				A10000000000000000000041 /* analysis_engine.cpp in Sources */,
+				A10000000000000000000043 /* analysis_engine_c.cpp in Sources */,
+				A10000000000000000000045 /* mpm.cpp in Sources */,
+				A10000000000000000000047 /* pitch_engine_v2.cpp in Sources */,
+				A10000000000000000000049 /* swipe_prime.cpp in Sources */,
+				A10000000000000000000051 /* vpm_like.cpp in Sources */,
+				A10000000000000000000055 /* fixed_lag_tracker.cpp in Sources */,
+				A10000000000000000000057 /* pitch_engine_v2_session.cpp in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin XCBuildConfiguration section */
-        A10000000000000000000021 /* Debug */ = {isa = XCBuildConfiguration; buildSettings = { ALWAYS_SEARCH_USER_PATHS = NO; CLANG_ENABLE_MODULES = YES; CLANG_ENABLE_OBJC_ARC = YES; MACOSX_DEPLOYMENT_TARGET = 14.0; SDKROOT = macosx; SWIFT_VERSION = 5.0; }; name = Debug; };
-        A10000000000000000000022 /* Release */ = {isa = XCBuildConfiguration; buildSettings = { ALWAYS_SEARCH_USER_PATHS = NO; CLANG_ENABLE_MODULES = YES; CLANG_ENABLE_OBJC_ARC = YES; MACOSX_DEPLOYMENT_TARGET = 14.0; SDKROOT = macosx; SWIFT_VERSION = 5.0; }; name = Release; };
-        A10000000000000000000023 /* Debug */ = {isa = XCBuildConfiguration; buildSettings = { CODE_SIGN_STYLE = Automatic; DEVELOPMENT_TEAM = ""; GENERATE_INFOPLIST_FILE = NO; INFOPLIST_FILE = Info.plist; MACOSX_DEPLOYMENT_TARGET = 14.0; PRODUCT_BUNDLE_IDENTIFIER = com.aykerme.KlariVisionNative; PRODUCT_NAME = KlariVision; SWIFT_VERSION = 5.0; }; name = Debug; };
-        A10000000000000000000024 /* Release */ = {isa = XCBuildConfiguration; buildSettings = { CODE_SIGN_STYLE = Automatic; DEVELOPMENT_TEAM = ""; GENERATE_INFOPLIST_FILE = NO; INFOPLIST_FILE = Info.plist; MACOSX_DEPLOYMENT_TARGET = 14.0; PRODUCT_BUNDLE_IDENTIFIER = com.aykerme.KlariVisionNative; PRODUCT_NAME = KlariVision; SWIFT_VERSION = 5.0; }; name = Release; };
+		A10000000000000000000021 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_CXX_LANGUAGE_STANDARD = "c++20";
+				HEADER_SEARCH_PATHS = "$(SRCROOT)/../../core/include";
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				SDKROOT = macosx;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		A10000000000000000000022 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_CXX_LANGUAGE_STANDARD = "c++20";
+				HEADER_SEARCH_PATHS = "$(SRCROOT)/../../core/include";
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				SDKROOT = macosx;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		A10000000000000000000023 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CLANG_CXX_LANGUAGE_STANDARD = "c++20";
+				HEADER_SEARCH_PATHS = "$(SRCROOT)/../../core/include";
+				DEVELOPMENT_TEAM = "";
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Info.plist;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.aykerme.KlariVisionNative;
+				PRODUCT_NAME = KlariVision;
+				SWIFT_VERSION = 5.0;
+				SWIFT_OBJC_BRIDGING_HEADER = Sources/KlariVisionApp/KlariVisionBridge.h;
+			};
+			name = Debug;
+		};
+		A10000000000000000000024 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CLANG_CXX_LANGUAGE_STANDARD = "c++20";
+				HEADER_SEARCH_PATHS = "$(SRCROOT)/../../core/include";
+				DEVELOPMENT_TEAM = "";
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Info.plist;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.aykerme.KlariVisionNative;
+				PRODUCT_NAME = KlariVision;
+				SWIFT_VERSION = 5.0;
+				SWIFT_OBJC_BRIDGING_HEADER = Sources/KlariVisionApp/KlariVisionBridge.h;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-        A10000000000000000000020 /* Build configuration list for PBXProject \"KlariVision\" */ = {isa = XCConfigurationList; buildConfigurations = (A10000000000000000000021 /* Debug */, A10000000000000000000022 /* Release */); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
-        A10000000000000000000017 /* Build configuration list for PBXNativeTarget \"KlariVision\" */ = {isa = XCConfigurationList; buildConfigurations = (A10000000000000000000023 /* Debug */, A10000000000000000000024 /* Release */); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
+		A10000000000000000000017 /* Build configuration list for PBXNativeTarget "KlariVision" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A10000000000000000000023 /* Debug */,
+				A10000000000000000000024 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		A10000000000000000000020 /* Build configuration list for PBXProject "KlariVision" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A10000000000000000000021 /* Debug */,
+				A10000000000000000000022 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 /* End XCConfigurationList section */
-    };
-    rootObject = A10000000000000000000019 /* Project object */;
+	};
+	rootObject = A10000000000000000000019 /* Project object */;
 }

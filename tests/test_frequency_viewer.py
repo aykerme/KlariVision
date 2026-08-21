@@ -16,7 +16,7 @@ def test_frequency_viewer_uses_physical_hertz_grid(tmp_path) -> None:
 
     html = output.read_text(encoding="utf-8")
     assert "Duyulan frekans" in html
-    assert "KlariVision v0.5 Stable" in html
+    assert "KlariVision v0.6 Beta 1" in html
     assert '"minor"' in html
     assert "Ölçülen eğri değiştirilmez" in html
     assert "followPlayback" in html
@@ -34,6 +34,9 @@ def test_frequency_viewer_uses_physical_hertz_grid(tmp_path) -> None:
     assert ".workspace.side-right{grid-template-columns" in html
     assert "verticalSpan" in html
     assert "function followValues()" in html
+    assert "function updateVerticalFollow()" in html
+    assert "edge=verticalSpan*.45,restingEdge=verticalSpan*.35" in html
+    assert "verticalCenter+=((middle(target)-verticalCenter)*.14)" not in html
     assert "function centerOnPlayhead()" in html
     assert "viewStart=-6" in html
     assert "loadedmetadata" in html
@@ -115,7 +118,34 @@ def test_frequency_viewer_uses_physical_hertz_grid(tmp_path) -> None:
     assert "chartGrid.after(timeScroll)" in html
     assert "height:calc(var(--chart-height) + 130px)" in html
     assert "function setPlaybackRate(value)" in html
+    assert "Math.min(2,Math.round(value*20)/20)" in html
+    assert "media.defaultPlaybackRate=rate;media.playbackRate=rate" in html
     assert "speedStepper.append(speedDown,playbackRateStatus,speedUp)" in html
+    assert "window.klariVisionStudyViewer" in html
+    assert "snapshot()" in html
+    assert "loopEnabled,loopA,loopB,theme:activeAppearance()" in html
+    assert "value.type==='seek'" in html
+    assert "nearest&&delta<=.15?nearest.hz:null" in html
+    assert "if(value==='toggle')" in html
+    assert "if(value==='follow')" in html
+    assert "function installTooltips()" in html
+    assert "klarivision-tooltip" in html
+    assert "transport-more" not in html
+    assert "graphAppearanceKey='klarivision-graph-appearance-v1'" in html
+    assert "defaultGraphAppearance={pitchHex:'#0A84FF',noteGuideHex:'#8E8E93'}" in html
+    assert "function setGraphAppearance(value" in html
+    assert "setGraphAppearance," in html
+    assert "settingsSnapshot()" in html
+    assert "applySettings(value)" in html
+    assert "localStorage.setItem(makamSettingsKey" in html
+    assert "standaloneSettingsStyle" in html
+    assert "max-height:calc(100vh - 28px);overflow-y:auto" in html
+    assert "id='graph-pitch-color'" in html
+    assert "id='graph-note-guide-color'" in html
+    assert "Varsayılan renklere dön" in html
+    assert "colorWithAlpha(palette.guide,.42)" in html
+    assert "colorWithAlpha(palette.guide,.88)" in html
+    assert "p.t-previous.t>.040" in html
 
 
 def test_frequency_viewer_can_embed_video(tmp_path) -> None:
@@ -125,6 +155,25 @@ def test_frequency_viewer_can_embed_video(tmp_path) -> None:
     build_frequency_viewer(pitch_json, "audio.wav", output, video_relative_path="video.mp4")
 
     assert '<video id="media" controls src="video.mp4"></video>' in output.read_text(encoding="utf-8")
+
+
+def test_frequency_viewer_keeps_validation_data_off_the_pitch_graph(tmp_path) -> None:
+    pitch_json = tmp_path / "pitch.json"
+    pitch_json.write_text(json.dumps({"frames": []}), encoding="utf-8")
+    output = tmp_path / "viewer.html"
+    validation = {
+        "reference_frames": [{"t": 0.0, "hz": 220.0}],
+        "raw": {"serious_total_error_frames": 2},
+        "display": {"serious_total_error_frames": 1, "serious_error_ranges": []},
+    }
+    build_frequency_viewer(pitch_json, "audio.wav", output, validation=validation)
+    html = output.read_text(encoding="utf-8")
+    assert "const validation=" in html
+    assert 'id="show-measured"' not in html
+    assert 'id="show-reference"' not in html
+    assert "Matematiksel hedef" not in html
+    assert "validation.display.serious_error_ranges" not in html
+    assert "validation.reference_frames" not in html
 
 
 def test_frequency_viewer_uses_compact_audio_player(tmp_path) -> None:
@@ -154,3 +203,10 @@ def test_frequency_viewer_removes_weak_and_isolated_pitch_candidates() -> None:
 
     assert len(result) == 2
     assert all(point["hz"] == 220.0 for point in result)
+
+
+def test_frequency_viewer_keeps_supported_low_register_pitch() -> None:
+    result = prepare_display_frames({"frames": [
+        {"time_seconds": 0.0, "frequency_hz": 82.4069, "voiced": True, "confidence": .9},
+    ]})
+    assert result == [{"t": 0.0, "hz": 82.4069}]

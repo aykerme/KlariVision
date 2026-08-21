@@ -22,12 +22,13 @@ from urllib.parse import parse_qs, quote, unquote, urlparse
 import imageio_ffmpeg
 
 from .contour_viewer import KARAR_TONES, MAKAM_PROFILES
-from .frequency_viewer import build_frequency_viewer
+from .frequency_viewer import build_frequency_viewer, prepare_display_frames
+from .pitch.cpp_engine import ENGINES as CPP_ENGINES, OFFLINE_TRACK_REVISION, extract as extract_cpp_pitch
 from .pitch.models import AudioSource
-from .pitch.pyin import PyinPitchExtractor
 from .pitch.serialize import write_json
 from .pitch.vamp_pyin import VampPyinPitchExtractor
 from .runtime_paths import user_data_root
+from .study_validation import validation_for_study
 
 
 PROJECT_ROOT = user_data_root()
@@ -143,7 +144,7 @@ def _store_recent_analysis(source: Path, viewer_url: str, *, cache_hit: bool) ->
 
 
 def _to_wav(source: Path, destination: Path) -> None:
-    """Extract mono, 22.05 kHz WAV audio required by the pYIN extractor."""
+    """Extract portable mono 48 kHz PCM for the production C++ engines."""
     destination.parent.mkdir(parents=True, exist_ok=True)
     subprocess.run(
         [
@@ -155,7 +156,7 @@ def _to_wav(source: Path, destination: Path) -> None:
             "-ac",
             "1",
             "-ar",
-            "22050",
+            "48000",
             str(destination),
         ],
         check=True,
@@ -210,6 +211,24 @@ def _import_from_url(url: str) -> Path:
     raise RuntimeError("Bağlantıdan medya alınamadı.")
 
 
+def _persist_video_source(source: Path, analysis_id: str) -> Path:
+    """Keep locally selected videos inside the app data folder.
+
+    The native viewer can reliably read files below Application Support.  A
+    video selected from Downloads/Desktop therefore needs a local copy, while
+    audio is already represented by the extracted WAV cache.
+    """
+    if source.suffix.lower() not in VIDEO_SUFFIXES:
+        return source
+    IMPORTS_DIR.mkdir(parents=True, exist_ok=True)
+    if source.parent.resolve() == IMPORTS_DIR.resolve():
+        return source
+    destination = IMPORTS_DIR / f"{analysis_id}{source.suffix.lower()}"
+    if not destination.is_file():
+        shutil.copy2(source, destination)
+    return destination
+
+
 def analyse_upload(source: Path, makam: str, karar: str, engine: str = "vamp") -> str:
     """Analyse one local media file and return its project-relative viewer URL."""
     if makam not in MAKAM_PROFILES or karar not in KARAR_TONES:
@@ -217,34 +236,107 @@ def analyse_upload(source: Path, makam: str, karar: str, engine: str = "vamp") -
 
     signature = _file_signature(source)
     analysis_id = f"{_analysis_stem(source)}-{signature}"
+    media_source = _persist_video_source(source, analysis_id)
     wav = AUDIO_DIR / f"{analysis_id}.wav"
-    if engine not in {"vamp", "python"}:
+    if engine not in {"vamp", "python", *CPP_ENGINES}:
         raise ValueError("Geçersiz pitch motoru seçimi.")
-    pitch_json = OUTPUTS_DIR / f"{analysis_id}.{engine}.json"
+    profile = f".offline_track_v1.{OFFLINE_TRACK_REVISION}" if engine in CPP_ENGINES else ""
+    pitch_json = OUTPUTS_DIR / f"{analysis_id}.{engine}{profile}.json"
     viewer = OUTPUTS_DIR / f"{analysis_id}.html"
     if not wav.is_file():
-        _to_wav(source, wav)
+        _to_wav(media_source, wav)
     cache_hit = pitch_json.is_file()
     if not cache_hit:
-        extractor = VampPyinPitchExtractor() if engine == "vamp" else PyinPitchExtractor()
-        track = extractor.extract(AudioSource(wav))
-        write_json(track, pitch_json)
+        if engine in CPP_ENGINES:
+            extract_cpp_pitch(wav, engine, pitch_json)
+        else:
+            if engine == "vamp":
+                extractor = VampPyinPitchExtractor()
+            else:
+                # Kept only for development comparisons; packaged production
+                # analysis always routes through one of the C++ engines.
+                from .pitch.pyin import PyinPitchExtractor
+
+                extractor = PyinPitchExtractor()
+            track = extractor.extract(AudioSource(wav))
+            write_json(track, pitch_json)
     build_frequency_viewer(
         pitch_json,
         os.path.relpath(wav, start=viewer.parent).replace(os.sep, "/"),
         viewer,
         video_relative_path=(
-            os.path.relpath(source, start=viewer.parent).replace(os.sep, "/")
-            if source.suffix.lower() in VIDEO_SUFFIXES
+            os.path.relpath(media_source, start=viewer.parent).replace(os.sep, "/")
+            if media_source.suffix.lower() in VIDEO_SUFFIXES
             else None
         ),
         analysis_status=(
             "Önceki pitch analizi kullanıldı." if cache_hit else "Yeni pitch analizi oluşturuldu."
         ),
+        validation=validation_for_study(source.name, wav, pitch_json, engine, prepare_display_frames),
     )
     viewer_url = "/" + quote(viewer.relative_to(PROJECT_ROOT).as_posix())
     _store_recent_analysis(source, viewer_url, cache_hit=cache_hit)
     return viewer_url
+
+
+def refresh_existing_viewer(viewer: Path) -> Path:
+    """Refresh a saved HTML viewer without running pitch analysis again."""
+    viewer = viewer.expanduser().resolve()
+    if viewer.parent != OUTPUTS_DIR.resolve() or viewer.suffix.lower() != ".html":
+        raise ValueError("Geçersiz kayıt görünümü.")
+    if not viewer.is_file():
+        raise FileNotFoundError("Kaydedilmiş çalışma bulunamadı.")
+
+    pitch_candidates = sorted(
+        viewer.parent.glob(f"{viewer.stem}.*.json"),
+        key=lambda path: path.stat().st_mtime,
+        reverse=True,
+    )
+    if not pitch_candidates:
+        raise FileNotFoundError("Bu çalışma için pitch verisi bulunamadı.")
+    wav = AUDIO_DIR / f"{viewer.stem}.wav"
+    if not wav.is_file():
+        raise FileNotFoundError("Bu çalışma için ses önbelleği bulunamadı.")
+
+    previous_html = viewer.read_text(encoding="utf-8")
+    video_match = re.search(r'<video[^>]*\bsrc="([^"]+)"', previous_html, re.IGNORECASE)
+    video_relative_path = html.unescape(video_match.group(1)) if video_match else None
+    build_frequency_viewer(
+        pitch_candidates[0],
+        os.path.relpath(wav, start=viewer.parent).replace(os.sep, "/"),
+        viewer,
+        video_relative_path=video_relative_path,
+        analysis_status="Önceki pitch analizi kullanıldı. Arayüz güncellendi.",
+        validation=validation_for_study(viewer.stem, wav, pitch_candidates[0], "cached", prepare_display_frames),
+    )
+    return viewer
+
+
+def reanalyse_existing_viewer(viewer: Path, engine: str) -> Path:
+    """Create or reuse the selected portable C++ track for one saved study."""
+    viewer = viewer.expanduser().resolve()
+    if viewer.parent != OUTPUTS_DIR.resolve() or viewer.suffix.lower() != ".html":
+        raise ValueError("Geçersiz kayıt görünümü.")
+    if engine not in CPP_ENGINES:
+        raise ValueError("Çalışma için taşınabilir bir C++ motor seç.")
+    wav = AUDIO_DIR / f"{viewer.stem}.wav"
+    if not wav.is_file():
+        raise FileNotFoundError("Bu çalışma için ses önbelleği bulunamadı.")
+    pitch_json = OUTPUTS_DIR / f"{viewer.stem}.{engine}.offline_track_v1.{OFFLINE_TRACK_REVISION}.json"
+    if not pitch_json.is_file():
+        extract_cpp_pitch(wav, engine, pitch_json)
+    previous_html = viewer.read_text(encoding="utf-8")
+    video_match = re.search(r'<video[^>]*\bsrc="([^"]+)"', previous_html, re.IGNORECASE)
+    video_relative_path = html.unescape(video_match.group(1)) if video_match else None
+    build_frequency_viewer(
+        pitch_json,
+        os.path.relpath(wav, start=viewer.parent).replace(os.sep, "/"),
+        viewer,
+        video_relative_path=video_relative_path,
+        analysis_status=f"{engine} C++ çalışma eğrisi kullanılıyor.",
+        validation=validation_for_study(viewer.stem, wav, pitch_json, engine, prepare_display_frames),
+    )
+    return viewer
 
 
 def _form_page(message: str = "") -> str:

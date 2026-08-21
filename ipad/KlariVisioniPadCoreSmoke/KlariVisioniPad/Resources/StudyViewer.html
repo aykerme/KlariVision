@@ -1,0 +1,84 @@
+<!--
+  KlariVision analiz edilmiş çalışma yüzeyi.
+  Swift pitch payloadını ve oynatma komutlarını yollar; sayfa yerel medya
+  saatiyle canvas'ı senkronlar. JavaScript API'si StudyWebView ile ortaktır.
+-->
+<!doctype html>
+<html lang="tr">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>
+  :root { color-scheme: light dark; background:#111827; color:#f4f7fb; font-family:-apple-system,system-ui,sans-serif; --marker-a:#49e3a1; --marker-b:#ffc35c; --marker-label:#101827; }
+  @media (prefers-color-scheme: light) { :root { --marker-a:#087f5b; --marker-b:#a55a00; --marker-label:#ffffff; } }
+  html,body,#stage { margin:0; width:100%; height:100%; height:100dvh; min-height:0; overflow:hidden; background:#111827; }
+  #stage { display:grid; grid-template-rows:minmax(0,1fr) auto; padding-top:env(safe-area-inset-top); padding-bottom:env(safe-area-inset-bottom); box-sizing:border-box; }
+  #curve { width:100%; height:100%; min-height:0; display:block; background:linear-gradient(160deg,#172437,#0e1420); }
+  #mediaSlot { width:100%; min-height:0; background:#000; overflow:hidden; }
+  audio, video { display:block; width:100%; max-height:32dvh; min-height:44px; background:#000; }
+  video { object-fit:contain; }
+  #empty { display:grid; place-items:center; height:100%; color:#9eb2cc; font-size:16px; }
+  @media (orientation:landscape) {
+    #stage { grid-template-rows:minmax(0,1fr) auto; }
+    audio, video { max-height:24dvh; }
+  }
+  @media (prefers-reduced-motion:reduce) { * { scroll-behavior:auto !important; } }
+</style>
+<body><div id="stage"><canvas id="curve"></canvas><div id="mediaSlot"><div id="empty">Yerel çalışma hazırlanıyor…</div></div></div>
+<script>
+(() => {
+  const bridge = window.webkit?.messageHandlers?.studyPlayback;
+  const canvas = document.getElementById('curve'), ctx = canvas.getContext('2d');
+  const slot = document.getElementById('mediaSlot');
+  var media = null, frames = [], a = null, b = null, looping = false, following = false, verticalCenter = null;
+  let context = {guides:[], makam:'', karar:'', pitchColor:'#67d5ff', guideColor:'#b7d8ff'};
+  const verticalSpan = 2400;
+  const cents = frequency => 1200*Math.log2(frequency/440);
+  const median = values => { const sorted=[...values].sort((x,y)=>x-y), middle=Math.floor(sorted.length/2);return sorted.length%2?sorted[middle]:(sorted[middle-1]+sorted[middle])/2; };
+  // Keep the active pitch away from the viewport edge. This mirrors the native
+  // macOS follow contract while leaving the full-range view untouched when off.
+  const followedCenter = (current,pitch) => {
+    const edge=verticalSpan*.45, restingEdge=verticalSpan*.35;
+    if(pitch>current+edge)return pitch-restingEdge;
+    if(pitch<current-edge)return pitch+restingEdge;
+    return current;
+  };
+  const send = () => bridge?.postMessage({time:Number(media?.currentTime)||0,duration:Number(media?.duration)||0,isPlaying:media ? !media.paused : false,rate:Number(media?.playbackRate)||1,loopA:a,loopB:b,loopEnabled:looping,followsCurve:following});
+  const resize = () => { const r=canvas.getBoundingClientRect(), scale=devicePixelRatio||1; canvas.width=r.width*scale; canvas.height=r.height*scale; ctx.setTransform(scale,0,0,scale,0,0); draw(); };
+  const draw = () => {
+    const r=canvas.getBoundingClientRect(), w=r.width, h=r.height, d=Math.max(0.001,Number(media?.duration)||1);
+    const visibleDuration=following?Math.min(12,d):d, currentTime=Number(media?.currentTime)||0;
+    const windowStart=following?Math.min(Math.max(-visibleDuration/2,currentTime-visibleDuration/2),Math.max(-visibleDuration/2,d-visibleDuration/2)):0;
+    const windowEnd=windowStart+visibleDuration, timeX=time=>(time-windowStart)/visibleDuration*w;
+    ctx.clearRect(0,0,w,h); ctx.strokeStyle='rgba(174,208,245,.16)'; ctx.lineWidth=1;
+    for(let i=1;i<5;i++){ctx.beginPath();ctx.moveTo(0,h*i/5);ctx.lineTo(w,h*i/5);ctx.stroke();}
+    if(a!==null&&b!==null&&looping){const left=Math.max(a,windowStart),right=Math.min(b,windowEnd);if(right>left){ctx.fillStyle='rgba(62,184,199,.18)';ctx.fillRect(timeX(left),0,timeX(right)-timeX(left),h);}}
+    const voiced=frames.filter(x=>x.v&&x.f>0), all=[...voiced.map(x=>x.f),...context.guides];
+    let lo=all.length?Math.max(40,Math.min(...all)):100, hi=all.length?Math.max(lo+1,Math.max(...all)):800;
+    if(following&&all.length){
+      const allCents=all.map(cents);
+      if(verticalCenter===null)verticalCenter=median(allCents);
+      const time=Number(media?.currentTime)||0, nearby=voiced.filter(x=>Math.abs(x.t-time)<=.25).map(x=>cents(x.f));
+      if(nearby.length)verticalCenter=followedCenter(verticalCenter,median(nearby));
+      lo=verticalCenter-verticalSpan/2;hi=verticalCenter+verticalSpan/2;
+    }
+    const verticalValue = frequency => following ? cents(frequency) : frequency;
+    ctx.strokeStyle=context.guideColor;ctx.globalAlpha=.55;for(const g of context.guides){const y=h-(verticalValue(g)-lo)/(hi-lo)*h;if(y<0||y>h)continue;ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(w,y);ctx.stroke();}ctx.globalAlpha=1;ctx.fillStyle=context.guideColor;ctx.font='12px -apple-system';ctx.fillText(`${context.makam||'Makam'} · ${context.karar||'Karar'}`,12,18);
+    if(voiced.length){
+      ctx.strokeStyle=context.pitchColor;ctx.lineWidth=1.8;ctx.lineJoin='round';ctx.beginPath();let open=false;
+      for(const x of frames){if(!x.v||!x.f||x.t<windowStart||x.t>windowEnd){open=false;continue;}const px=timeX(x.t), py=h-(verticalValue(x.f)-lo)/(hi-lo)*h;if(py<0||py>h){open=false;continue;}if(!open){ctx.moveTo(px,py);open=true}else ctx.lineTo(px,py)}ctx.stroke();}
+    const cssColor = name => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+    const drawMarker = (time,label,colorVariable,labelTop) => {
+      if(time===null||time<windowStart||time>windowEnd) return;
+      const x=Math.max(1,Math.min(w-1,timeX(time))), color=cssColor(colorVariable), labelColor=cssColor('--marker-label');
+      ctx.save();ctx.strokeStyle=color;ctx.lineWidth=2.5;ctx.setLineDash([7,4]);ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,h);ctx.stroke();ctx.setLineDash([]);
+      ctx.font='700 12px -apple-system';const labelWidth=22,labelHeight=19,labelX=Math.max(2,Math.min(w-labelWidth-2,x-labelWidth/2));
+      ctx.fillStyle=color;ctx.fillRect(labelX,labelTop,labelWidth,labelHeight);ctx.fillStyle=labelColor;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(label,labelX+labelWidth/2,labelTop+labelHeight/2+0.5);ctx.restore();
+    };
+    drawMarker(a,'A','--marker-a',4);drawMarker(b,'B','--marker-b',28);
+    if(media){ctx.strokeStyle='#ffffff';ctx.lineWidth=1;const x=timeX(currentTime);ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,h);ctx.stroke();}
+  };
+  const tick = () => { if(media && looping && a!==null && b!==null && media.currentTime>=b){media.currentTime=a;media.play();} draw(); requestAnimationFrame(tick); };
+  const install = (url, data) => { if(media){media.pause();media.remove();} frames=data||[];verticalCenter=null; media=document.createElement(/\.(mp4|mov|m4v)$/i.test(url)?'video':'audio');media.controls=true;media.preload='metadata';media.src=url;slot.replaceChildren(media);['loadedmetadata','play','pause','ratechange','seeked','timeupdate','ended'].forEach(e=>media.addEventListener(e,send));media.addEventListener('loadedmetadata',()=>{resize();send();}); };
+  window.kvStudy={receive(p){switch(p.type){case'load':install(p.url,p.frames);break;case'context':Object.assign(context,p);break;case'playPause':media?.paused?media.play():media?.pause();break;case'pause':media?.pause();break;case'seek':if(media)media.currentTime=Math.max(0,Math.min(p.time,media.duration||p.time));break;case'rate':if(media)media.playbackRate=p.rate;break;case'markA':a=media?.currentTime||0;break;case'markB':b=media?.currentTime||0;break;case'loop':looping=!looping;break;case'follow':following=!following;break;}send();draw();}};
+  addEventListener('resize',resize); resize(); requestAnimationFrame(tick);
+})();
+</script></body></html>
