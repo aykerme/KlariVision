@@ -1,5 +1,10 @@
 # Yol Haritası
 
+> Bu belge tarihsel planı korur. Güncel ürün durumu için
+> `PROJECT_STATE.md`, güncel mimari için `architecture.html` esas alınır.
+> Android ve otomatik makam tespiti bu yol haritasında olsa da güncel ürün
+> kapsamına alınmamıştır.
+
 ## Faz 0 — Temel kararlar
 
 - [x] Yerel proje yapısı
@@ -16,15 +21,17 @@
 - [x] Yerel C++ doğrulama testi
 - [ ] Referans kayıtlarından golden karşılaştırma veri kümesi
 - [ ] Yerel, pYIN-uyumlu C++ pitch çıkarıcı
-- [ ] Swift ve Android bağ katmanları
+- [x] Swift (macOS/iPhone/iPad) bağ katmanları
+- [ ] Android bağ katmanı (ürün kapsamı dışında)
 
 ### Kilometre taşı — Canlı Çalışma (ilk macOS sürümü)
 
 - [x] Mikrofon izni ve yerel, kaydedilmeyen canlı ses girişi
 - [x] Düşük gecikmeli canlı YIN pitch prototipi
 - [x] Kayan pitch grafiği ile makam / karar frekans çizgileri
-- [ ] Ortak C++ çekirdeğinin canlı YIN katmanına bağlanması
-- [ ] iPad/iPhone ve Android mikrofon bağ katmanları
+- [x] Ortak C++ çekirdeğinin canlı YIN katmanına bağlanması
+- [x] iPad/iPhone mikrofon bağ katmanı
+- [ ] Android mikrofon bağ katmanı (ürün kapsamı dışında)
 
 ### Kilometre taşı — Pitch Engine v2 (deneysel)
 
@@ -67,7 +74,7 @@ A/B loop ve mevcut eksen davranışları geriye dönük kontrol edilmeden deği�
 - [x] JSON çıktısı
 - [x] Pitch grafiği ve sesle zaman eşleme
 - [x] Zaman aralığı seçimi, döngüde dinleme ve seçime yakınlaşma
-- [ ] Klarnet kaydı üzerinde manuel kalite kontrolü
+- [x] Klarnet kaydı üzerinde manuel kalite kontrolü
 - [x] Süslemesiz ve süslemeli eş kayıtlar için A/B karşılaştırma ekranı
 
 ## Faz 2 — Müzikal katman
