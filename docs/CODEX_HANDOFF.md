@@ -27,6 +27,11 @@ motorun gerçek C++ kaynak dosyalarına kadar kod çağrı zinciri ile canlı/do
 veri akışı ayrıca eşleme tablosunda kayıtlıdır. HTML parse ve yinelenen DOM
 kimliği denetimi temizdir; pitch davranışı veya eşikleri değiştirilmedi.
 
+Kaynak kontrolüne alınmayan yerel sentetik WAV corpus'u olmayan temiz çalışma
+ağacında Python paketi artık fixture bağımlı iki entegrasyon testini açık
+gerekçeyle atlar. Böylece uygulama ve birim testleri, kişisel/yerel veriyi
+Git'e ekleme zorunluluğu olmadan tekrarlanabilir kalır.
+
 Bu turda pitch motoru, eşikleri ve kalıcı veri biçimi değişmedi. SwiftUI güncel
 API denetiminde bulunan tek eski `onChange(of:perform:)` kullanımı modern
 sıfır-parametreli closure'a geçirildi. C++ `scripts/test_core.sh`, Python

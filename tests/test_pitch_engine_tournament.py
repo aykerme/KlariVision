@@ -268,6 +268,12 @@ def test_tournament_inventory_is_exactly_all_synthetic_wavs() -> None:
         for path in manifests:
             manifest = legacy_manifest_with_truth(path) if group == "legacy_diagnostics" else json.loads(path.read_text())
             sources.extend(f"data/benchmarks/{name}" for name in manifest["variants"])
+    missing = [source for source in sources if not (ROOT / source).is_file()]
+    if missing:
+        pytest.skip(
+            "Yerel sentetik WAV corpus'u eksik; fixture gerektiren turnuva denetimi atlandı "
+            f"({len(missing)} dosya)."
+        )
     inventory = verify_inventory(sources)
     assert len(inventory["used_synthetic_wavs"]) == 26
     assert inventory["excluded_real_wavs"] == [

@@ -47,6 +47,11 @@ zsh scripts/build_beta_app.sh
 `data/audio/`, `data/video/`, `data/annotations/`, `outputs/` ve `dist/`
 kullanıcı/yerel çıktı alanlarıdır; kaynak kontrolüne eklenmez.
 
+Sentetik WAV turnuva corpus'u da yerel doğrulama girdisidir. Bu corpus yoksa
+fixture'a bağlı iki Python entegrasyon testi açık gerekçeyle atlanır; birim
+testleri ve uygulama kaynakları bundan etkilenmez. Corpus'u olan geliştirme
+ortamında aynı komut tüm turnuva denetimlerini de çalıştırır.
+
 ## Belge düzeni
 
 - `docs/architecture.html`: güncel, grafikli sistem açıklaması
