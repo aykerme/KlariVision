@@ -1,0 +1,91 @@
+{
+  "format": "48 kHz, mono, 16-bit PCM WAV",
+  "duration_seconds": 49.05,
+  "purpose": "Vibrato rate and ornament resolution comparison for live pitch monitors.",
+  "sections": [
+    {
+      "label": "A3_sabit",
+      "start_seconds": 1.0,
+      "end_seconds": 3.0,
+      "description": "Sabit La3; temel çizgi ve gürültü kontrolü.",
+      "frequency_formula": "220 Hz"
+    },
+    {
+      "label": "A3_vibrato_0_5Hz",
+      "start_seconds": 3.35,
+      "end_seconds": 11.35,
+      "description": "La3 üzerinde ±35 cent, 0.5 Hz vibrato.",
+      "frequency_formula": "220 * 2^(35*sin(2π*0.5t)/1200)"
+    },
+    {
+      "label": "A3_vibrato_1_5Hz",
+      "start_seconds": 11.7,
+      "end_seconds": 16.7,
+      "description": "La3 üzerinde ±35 cent, 1.5 Hz vibrato.",
+      "frequency_formula": "220 * 2^(35*sin(2π*1.5t)/1200)"
+    },
+    {
+      "label": "A3_vibrato_3_0Hz",
+      "start_seconds": 17.05,
+      "end_seconds": 21.05,
+      "description": "La3 üzerinde ±35 cent, 3 Hz vibrato.",
+      "frequency_formula": "220 * 2^(35*sin(2π*3t)/1200)"
+    },
+    {
+      "label": "A3_vibrato_5_5Hz",
+      "start_seconds": 21.4,
+      "end_seconds": 24.9,
+      "description": "La3 üzerinde ±35 cent, 5.5 Hz vibrato.",
+      "frequency_formula": "220 * 2^(35*sin(2π*5.5t)/1200)"
+    },
+    {
+      "label": "A3_vibrato_7_5Hz",
+      "start_seconds": 25.25,
+      "end_seconds": 28.75,
+      "description": "La3 üzerinde ±35 cent, 7.5 Hz vibrato.",
+      "frequency_formula": "220 * 2^(35*sin(2π*7.5t)/1200)"
+    },
+    {
+      "label": "A3_vibrato_10_0Hz",
+      "start_seconds": 29.1,
+      "end_seconds": 32.6,
+      "description": "La3 üzerinde ±35 cent, 10 Hz vibrato.",
+      "frequency_formula": "220 * 2^(35*sin(2π*10t)/1200)"
+    },
+    {
+      "label": "A3_vibrato_13_0Hz",
+      "start_seconds": 32.95,
+      "end_seconds": 36.45,
+      "description": "La3 üzerinde ±35 cent, 13 Hz vibrato.",
+      "frequency_formula": "220 * 2^(35*sin(2π*13t)/1200)"
+    },
+    {
+      "label": "A3_vibrato_dar",
+      "start_seconds": 36.8,
+      "end_seconds": 40.3,
+      "description": "La3 üzerinde dar (±10 cent), 5.5 Hz vibrato.",
+      "frequency_formula": "220 * 2^(10*sin(2π*5.5t)/1200)"
+    },
+    {
+      "label": "A3_vibrato_genis",
+      "start_seconds": 40.65,
+      "end_seconds": 44.15,
+      "description": "La3 üzerinde geniş (±60 cent), 5.5 Hz vibrato.",
+      "frequency_formula": "220 * 2^(60*sin(2π*5.5t)/1200)"
+    },
+    {
+      "label": "A3_C4_glissando",
+      "start_seconds": 44.5,
+      "end_seconds": 46.5,
+      "description": "La3'ten Do4'e sürekli glissando.",
+      "frequency_formula": "220 * 2^(log2(261.625565/220)*t/2)"
+    },
+    {
+      "label": "G3_yukari_carpma",
+      "start_seconds": 46.85,
+      "end_seconds": 48.05,
+      "description": "Sol3 öncesinde 70 ms yukarı çarpma: La3 → Sol3.",
+      "frequency_formula": "0–70 ms: 220 Hz; sonra 195.997718 Hz"
+    }
+  ]
+}

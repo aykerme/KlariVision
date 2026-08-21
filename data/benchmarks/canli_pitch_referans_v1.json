@@ -1,0 +1,105 @@
+{
+  "format": "48 kHz, mono, 16-bit PCM WAV",
+  "duration_seconds": 23.8,
+  "purpose": "Deterministic live pitch-engine comparison without room noise.",
+  "sections": [
+    {
+      "label": "A3_sabit",
+      "start_seconds": 1.0,
+      "end_seconds": 3.0,
+      "description": "Sabit La3; temel doğruluk.",
+      "frequency_formula": "220 Hz"
+    },
+    {
+      "label": "C4_sabit",
+      "start_seconds": 3.3,
+      "end_seconds": 4.3,
+      "description": "Sabit Do4; nota geçişi.",
+      "frequency_formula": "261.625565 Hz"
+    },
+    {
+      "label": "E4_sabit",
+      "start_seconds": 4.6,
+      "end_seconds": 5.6,
+      "description": "Sabit Mi4; orta ses kontrolü.",
+      "frequency_formula": "329.627557 Hz"
+    },
+    {
+      "label": "A4_sabit",
+      "start_seconds": 5.9,
+      "end_seconds": 6.9,
+      "description": "Sabit La4; üst oktav kontrolü.",
+      "frequency_formula": "440 Hz"
+    },
+    {
+      "label": "A3_vibrato",
+      "start_seconds": 7.2,
+      "end_seconds": 9.6,
+      "description": "La3 üzerinde ±30 cent, 5.5 Hz vibrato.",
+      "frequency_formula": "220 * 2^(30*sin(2π*5.5t)/1200)"
+    },
+    {
+      "label": "A3_C4_glissando",
+      "start_seconds": 9.9,
+      "end_seconds": 11.4,
+      "description": "La3'ten Do4'e sürekli glissando.",
+      "frequency_formula": "220 * 2^(log2(261.625565/220)*t/1.5)"
+    },
+    {
+      "label": "C3_sabit",
+      "start_seconds": 11.7,
+      "end_seconds": 12.7,
+      "description": "Sabit Do3; alt ses kontrolü.",
+      "frequency_formula": "130.812783 Hz"
+    },
+    {
+      "label": "C4_ani_gecis",
+      "start_seconds": 13.0,
+      "end_seconds": 14.0,
+      "description": "Do3'ten Do4'e ani oktav geçişinin ikinci notası.",
+      "frequency_formula": "261.625565 Hz"
+    },
+    {
+      "label": "E4_vibrato",
+      "start_seconds": 14.3,
+      "end_seconds": 16.5,
+      "description": "Mi4 üzerinde ±22 cent, 6 Hz vibrato.",
+      "frequency_formula": "329.627557 * 2^(22*sin(2π*6t)/1200)"
+    },
+    {
+      "label": "G3_yukari_carpma",
+      "start_seconds": 16.8,
+      "end_seconds": 17.8,
+      "description": "Sol3 öncesinde 60 ms yukarı çarpma: La3 → Sol3.",
+      "frequency_formula": "0–60 ms: 220 Hz; sonra 195.997718 Hz"
+    },
+    {
+      "label": "G3_asagi_carpma",
+      "start_seconds": 18.1,
+      "end_seconds": 19.1,
+      "description": "Sol3 öncesinde 60 ms aşağı çarpma: Fa3 → Sol3.",
+      "frequency_formula": "0–60 ms: 174.614116 Hz; sonra 195.997718 Hz"
+    },
+    {
+      "label": "A3_10cent_pes",
+      "start_seconds": 19.4,
+      "end_seconds": 20.4,
+      "description": "La3, 10 cent pes.",
+      "frequency_formula": "220 * 2^(-10/1200)"
+    },
+    {
+      "label": "A3_tam",
+      "start_seconds": 20.6,
+      "end_seconds": 21.6,
+      "description": "Tam La3.",
+      "frequency_formula": "220 Hz"
+    },
+    {
+      "label": "A3_10cent_tiz",
+      "start_seconds": 21.8,
+      "end_seconds": 22.8,
+      "description": "La3, 10 cent tiz.",
+      "frequency_formula": "220 * 2^(10/1200)"
+    }
+  ]
+}

@@ -1,0 +1,394 @@
+{
+  "schema": "klarivision-full-range-pitch-benchmark-v1",
+  "sample_rate_hz": 48000,
+  "note_duration_seconds": 0.62,
+  "gap_duration_seconds": 0.1,
+  "description": "E2–E6 kromatik klarnet-benzeri tarama; düşük kayıt tekrarları ve logaritmik glide.",
+  "sections": [
+    {
+      "start_seconds": 0.0,
+      "end_seconds": 0.62,
+      "midi": 40,
+      "frequency_hz": 82.4069,
+      "vibrato_cents": 0.0
+    },
+    {
+      "start_seconds": 0.72,
+      "end_seconds": 1.34,
+      "midi": 41,
+      "frequency_hz": 87.3071,
+      "vibrato_cents": 0.0
+    },
+    {
+      "start_seconds": 1.44,
+      "end_seconds": 2.06,
+      "midi": 42,
+      "frequency_hz": 92.4986,
+      "vibrato_cents": 0.0
+    },
+    {
+      "start_seconds": 2.16,
+      "end_seconds": 2.78,
+      "midi": 43,
+      "frequency_hz": 97.9989,
+      "vibrato_cents": 0.0
+    },
+    {
+      "start_seconds": 2.88,
+      "end_seconds": 3.5,
+      "midi": 44,
+      "frequency_hz": 103.8262,
+      "vibrato_cents": 0.0
+    },
+    {
+      "start_seconds": 3.6,
+      "end_seconds": 4.22,
+      "midi": 40,
+      "frequency_hz": 82.4069,
+      "vibrato_cents": 16.0
+    },
+    {
+      "start_seconds": 4.32,
+      "end_seconds": 4.94,
+      "midi": 41,
+      "frequency_hz": 87.3071,
+      "vibrato_cents": 16.0
+    },
+    {
+      "start_seconds": 5.04,
+      "end_seconds": 5.66,
+      "midi": 42,
+      "frequency_hz": 92.4986,
+      "vibrato_cents": 16.0
+    },
+    {
+      "start_seconds": 5.76,
+      "end_seconds": 6.38,
+      "midi": 43,
+      "frequency_hz": 97.9989,
+      "vibrato_cents": 16.0
+    },
+    {
+      "start_seconds": 6.48,
+      "end_seconds": 7.1,
+      "midi": 44,
+      "frequency_hz": 103.8262,
+      "vibrato_cents": 16.0
+    },
+    {
+      "start_seconds": 7.2,
+      "end_seconds": 7.82,
+      "midi": 45,
+      "frequency_hz": 110.0,
+      "vibrato_cents": 16.0
+    },
+    {
+      "start_seconds": 7.92,
+      "end_seconds": 8.54,
+      "midi": 46,
+      "frequency_hz": 116.5409,
+      "vibrato_cents": 16.0
+    },
+    {
+      "start_seconds": 8.64,
+      "end_seconds": 9.26,
+      "midi": 47,
+      "frequency_hz": 123.4708,
+      "vibrato_cents": 16.0
+    },
+    {
+      "start_seconds": 9.36,
+      "end_seconds": 9.98,
+      "midi": 48,
+      "frequency_hz": 130.8128,
+      "vibrato_cents": 16.0
+    },
+    {
+      "start_seconds": 10.08,
+      "end_seconds": 10.7,
+      "midi": 49,
+      "frequency_hz": 138.5913,
+      "vibrato_cents": 16.0
+    },
+    {
+      "start_seconds": 10.8,
+      "end_seconds": 11.42,
+      "midi": 50,
+      "frequency_hz": 146.8324,
+      "vibrato_cents": 16.0
+    },
+    {
+      "start_seconds": 11.52,
+      "end_seconds": 12.14,
+      "midi": 51,
+      "frequency_hz": 155.5635,
+      "vibrato_cents": 16.0
+    },
+    {
+      "start_seconds": 12.24,
+      "end_seconds": 12.86,
+      "midi": 52,
+      "frequency_hz": 164.8138,
+      "vibrato_cents": 16.0
+    },
+    {
+      "start_seconds": 12.96,
+      "end_seconds": 13.58,
+      "midi": 53,
+      "frequency_hz": 174.6141,
+      "vibrato_cents": 16.0
+    },
+    {
+      "start_seconds": 13.68,
+      "end_seconds": 14.3,
+      "midi": 54,
+      "frequency_hz": 184.9972,
+      "vibrato_cents": 16.0
+    },
+    {
+      "start_seconds": 14.4,
+      "end_seconds": 15.02,
+      "midi": 55,
+      "frequency_hz": 195.9977,
+      "vibrato_cents": 16.0
+    },
+    {
+      "start_seconds": 15.12,
+      "end_seconds": 15.74,
+      "midi": 56,
+      "frequency_hz": 207.6523,
+      "vibrato_cents": 16.0
+    },
+    {
+      "start_seconds": 15.84,
+      "end_seconds": 16.46,
+      "midi": 57,
+      "frequency_hz": 220.0,
+      "vibrato_cents": 16.0
+    },
+    {
+      "start_seconds": 16.56,
+      "end_seconds": 17.18,
+      "midi": 58,
+      "frequency_hz": 233.0819,
+      "vibrato_cents": 16.0
+    },
+    {
+      "start_seconds": 17.28,
+      "end_seconds": 17.9,
+      "midi": 59,
+      "frequency_hz": 246.9417,
+      "vibrato_cents": 16.0
+    },
+    {
+      "start_seconds": 18.0,
+      "end_seconds": 18.62,
+      "midi": 60,
+      "frequency_hz": 261.6256,
+      "vibrato_cents": 16.0
+    },
+    {
+      "start_seconds": 18.72,
+      "end_seconds": 19.34,
+      "midi": 61,
+      "frequency_hz": 277.1826,
+      "vibrato_cents": 16.0
+    },
+    {
+      "start_seconds": 19.44,
+      "end_seconds": 20.06,
+      "midi": 62,
+      "frequency_hz": 293.6648,
+      "vibrato_cents": 16.0
+    },
+    {
+      "start_seconds": 20.16,
+      "end_seconds": 20.78,
+      "midi": 63,
+      "frequency_hz": 311.127,
+      "vibrato_cents": 16.0
+    },
+    {
+      "start_seconds": 20.88,
+      "end_seconds": 21.5,
+      "midi": 64,
+      "frequency_hz": 329.6276,
+      "vibrato_cents": 16.0
+    },
+    {
+      "start_seconds": 21.6,
+      "end_seconds": 22.22,
+      "midi": 65,
+      "frequency_hz": 349.2282,
+      "vibrato_cents": 16.0
+    },
+    {
+      "start_seconds": 22.32,
+      "end_seconds": 22.94,
+      "midi": 66,
+      "frequency_hz": 369.9944,
+      "vibrato_cents": 16.0
+    },
+    {
+      "start_seconds": 23.04,
+      "end_seconds": 23.66,
+      "midi": 67,
+      "frequency_hz": 391.9954,
+      "vibrato_cents": 16.0
+    },
+    {
+      "start_seconds": 23.76,
+      "end_seconds": 24.38,
+      "midi": 68,
+      "frequency_hz": 415.3047,
+      "vibrato_cents": 16.0
+    },
+    {
+      "start_seconds": 24.48,
+      "end_seconds": 25.1,
+      "midi": 69,
+      "frequency_hz": 440.0,
+      "vibrato_cents": 16.0
+    },
+    {
+      "start_seconds": 25.2,
+      "end_seconds": 25.82,
+      "midi": 70,
+      "frequency_hz": 466.1638,
+      "vibrato_cents": 16.0
+    },
+    {
+      "start_seconds": 25.92,
+      "end_seconds": 26.54,
+      "midi": 71,
+      "frequency_hz": 493.8833,
+      "vibrato_cents": 16.0
+    },
+    {
+      "start_seconds": 26.64,
+      "end_seconds": 27.26,
+      "midi": 72,
+      "frequency_hz": 523.2511,
+      "vibrato_cents": 16.0
+    },
+    {
+      "start_seconds": 27.36,
+      "end_seconds": 27.98,
+      "midi": 73,
+      "frequency_hz": 554.3653,
+      "vibrato_cents": 16.0
+    },
+    {
+      "start_seconds": 28.08,
+      "end_seconds": 28.7,
+      "midi": 74,
+      "frequency_hz": 587.3295,
+      "vibrato_cents": 16.0
+    },
+    {
+      "start_seconds": 28.8,
+      "end_seconds": 29.42,
+      "midi": 75,
+      "frequency_hz": 622.254,
+      "vibrato_cents": 16.0
+    },
+    {
+      "start_seconds": 29.52,
+      "end_seconds": 30.14,
+      "midi": 76,
+      "frequency_hz": 659.2551,
+      "vibrato_cents": 16.0
+    },
+    {
+      "start_seconds": 30.24,
+      "end_seconds": 30.86,
+      "midi": 77,
+      "frequency_hz": 698.4565,
+      "vibrato_cents": 16.0
+    },
+    {
+      "start_seconds": 30.96,
+      "end_seconds": 31.58,
+      "midi": 78,
+      "frequency_hz": 739.9888,
+      "vibrato_cents": 16.0
+    },
+    {
+      "start_seconds": 31.68,
+      "end_seconds": 32.3,
+      "midi": 79,
+      "frequency_hz": 783.9909,
+      "vibrato_cents": 16.0
+    },
+    {
+      "start_seconds": 32.4,
+      "end_seconds": 33.02,
+      "midi": 80,
+      "frequency_hz": 830.6094,
+      "vibrato_cents": 16.0
+    },
+    {
+      "start_seconds": 33.12,
+      "end_seconds": 33.74,
+      "midi": 81,
+      "frequency_hz": 880.0,
+      "vibrato_cents": 16.0
+    },
+    {
+      "start_seconds": 33.84,
+      "end_seconds": 34.46,
+      "midi": 82,
+      "frequency_hz": 932.3275,
+      "vibrato_cents": 16.0
+    },
+    {
+      "start_seconds": 34.56,
+      "end_seconds": 35.18,
+      "midi": 83,
+      "frequency_hz": 987.7666,
+      "vibrato_cents": 16.0
+    },
+    {
+      "start_seconds": 35.28,
+      "end_seconds": 35.9,
+      "midi": 84,
+      "frequency_hz": 1046.5023,
+      "vibrato_cents": 16.0
+    },
+    {
+      "start_seconds": 36.0,
+      "end_seconds": 36.62,
+      "midi": 85,
+      "frequency_hz": 1108.7305,
+      "vibrato_cents": 16.0
+    },
+    {
+      "start_seconds": 36.72,
+      "end_seconds": 37.34,
+      "midi": 86,
+      "frequency_hz": 1174.6591,
+      "vibrato_cents": 16.0
+    },
+    {
+      "start_seconds": 37.44,
+      "end_seconds": 38.06,
+      "midi": 87,
+      "frequency_hz": 1244.5079,
+      "vibrato_cents": 16.0
+    },
+    {
+      "start_seconds": 38.16,
+      "end_seconds": 38.78,
+      "midi": 88,
+      "frequency_hz": 1318.5102,
+      "vibrato_cents": 16.0
+    },
+    {
+      "start_seconds": 38.88,
+      "end_seconds": 42.88,
+      "type": "logarithmic_glide",
+      "start_frequency_hz": 82.4069,
+      "end_frequency_hz": 1318.5102
+    }
+  ]
+}
