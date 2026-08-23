@@ -136,29 +136,193 @@ enum iPadMakam: String, CaseIterable, Codable, Identifiable {
 }
 
 enum iPadKarar: String, CaseIterable, Codable, Identifiable {
-    case rast = "Rast", dugah = "Dügâh", segah = "Segâh", cargah = "Çargâh"
-    case neva = "Neva", huseyni = "Hüseynî", acem = "Acem"
+    // Do/Re/Mi/Fa/Sol/La/Si solfège — matches the macOS viewer's own "Karar"
+    // picker and note-label vocabulary exactly (frequency_viewer.py's
+    // `#tonic` select and `SCALE_LABELS`). Turkish perde names (Rast, Dügâh,
+    // …) were decided against for displayed note names/karar selection.
+    case doNote = "Do", re = "Re", mi = "Mi", fa = "Fa", sol = "Sol", la = "La", si = "Si"
     var id: String { rawValue }
     var frequency: Double {
         switch self {
-        case .rast: return 293.665
-        case .dugah: return 329.628
-        case .segah: return 349.228
-        case .cargah: return 391.995
-        case .neva: return 440
-        case .huseyni: return 493.883
-        case .acem: return 523.251
+        case .doNote: return 523.251
+        case .re: return 293.665
+        case .mi: return 329.628
+        case .fa: return 349.228
+        case .sol: return 391.995
+        case .la: return 440
+        case .si: return 493.883
         }
     }
+
+    /// Falls back to `.re` for any raw value this app no longer recognizes —
+    /// e.g. a study saved before the Rast/Dügâh → Do/Re rename — instead of
+    /// throwing. `[iPadStudy]` decodes as a single array in
+    /// `iPadStudyLibraryStore.load()`, so one study with a stale "Rast"
+    /// karar would otherwise fail the whole library's decode and silently
+    /// empty the list.
+    init(from decoder: Decoder) throws {
+        let raw = try decoder.singleValueContainer().decode(String.self)
+        self = iPadKarar(rawValue: raw) ?? .re
+    }
+}
+
+/// Which note vocabulary the graph's guide lines/labels use. `.makam` shows
+/// the single-octave makam scale built from the selected karar (see
+/// `iPadMusicContext.guideNotes()`); `.turkish` shows the full ±1-octave
+/// 53-koma Sol Klarnet perde reference table, independent of karar — mirrors
+/// macOS's separate "Türk Müziği · Sol Klarnet" scale-mode option
+/// (frequency_viewer.py's `turkishNotes()`).
+enum iPadScaleDisplay: String, CaseIterable, Codable, Identifiable {
+    case makam = "Makam", turkish = "Türk Müziği (Sol Klarnet)"
+    var id: String { rawValue }
 }
 
 struct iPadMusicContext: Codable, Equatable {
     var makam: iPadMakam = .nihavend
-    var karar: iPadKarar = .rast
+    var karar: iPadKarar = .re
     var followsCurve = true
+    var scaleDisplay: iPadScaleDisplay = .makam
 
-    func guideFrequencies() -> [Double] {
-        makam.guideCommas.map { karar.frequency * pow(2, Double($0) / 53) }
+    func guideFrequencies(commas overrideCommas: [Int]? = nil) -> [Double] {
+        (overrideCommas ?? makam.guideCommas).map { karar.frequency * pow(2, Double($0) / 53) }
+    }
+
+    /// Ascending-frequency solfège ring, matching how `iPadKarar`'s own tuned
+    /// frequencies actually order (Re is lowest, Do highest) — NOT
+    /// alphabetical/declaration order. Mirrors the macOS viewer's
+    /// `makamLabel`/`makamNotes` naming (see frequency_viewer.py) exactly,
+    /// using the same Do/Re/Mi/Fa/Sol/La/Si vocabulary.
+    private static let perdeCycle: [iPadKarar] = [.re, .mi, .fa, .sol, .la, .si, .doNote]
+
+    /// A perde's natural 53-koma distance from Re, derived from its own
+    /// tuned frequency rather than a hardcoded table — stays correct if the
+    /// karar frequencies are ever retuned.
+    private static func naturalKoma(for perde: iPadKarar) -> Int {
+        Int((53 * log2(perde.frequency / iPadKarar.re.frequency)).rounded())
+    }
+
+    /// Guide lines paired with mac-style solfège labels: base note name +
+    /// octave number, plus a ♯N/♭N koma-deviation suffix when the makam's
+    /// comma position departs from that note's natural 53-koma position
+    /// (same idea as macOS's `makamLabel`). No Hz is included — the mobile
+    /// graph shows names only.
+    ///
+    /// Spans octaves -3…+3 around the karar, same range as macOS's
+    /// `makamNotes()` (`for(let octave=-3;octave<=3;octave++)` in
+    /// frequency_viewer.py) — the caller (StudyViewer.html/LiveViewer.html)
+    /// already clips to whatever's currently visible, so this just needs to
+    /// cover any vertical range/zoom/follow position the graph can reach,
+    /// not just the one octave straight above the karar.
+    func guideNotes(commas overrideCommas: [Int]? = nil) -> [(name: String, hz: Double)] {
+        if scaleDisplay == .turkish { return iPadTurkishPitchReference.notes }
+        let cycle = Self.perdeCycle
+        guard let rootIndex = cycle.firstIndex(of: karar) else { return [] }
+        let rootKoma = Self.naturalKoma(for: karar)
+        // 8 entries [0,…,53]; drop the trailing octave-repeat so each of the
+        // 7 within-octave degrees is only listed once, then re-added at every
+        // octave shift below.
+        let degreeCommas = Array((overrideCommas ?? makam.guideCommas).dropLast())
+        var notes: [(name: String, hz: Double)] = []
+        notes.reserveCapacity(degreeCommas.count * 7)
+        for octaveShift in -3...3 {
+            for degree in degreeCommas.indices {
+                let comma = degreeCommas[degree] + 53 * octaveShift
+                let hz = karar.frequency * pow(2, Double(comma) / 53)
+                let base = cycle[(rootIndex + degree) % 7]
+                let naturalStep = (((Self.naturalKoma(for: base) - rootKoma) % 53 + 53) % 53) + 53 * octaveShift
+                let adjustment = comma - naturalStep
+                let suffix = adjustment == 0 ? "" : " \(adjustment > 0 ? "♯" : "♭")\(abs(adjustment))"
+                let midi = Int((69 + 12 * log2(hz / 440)).rounded())
+                let octave = midi / 12 - 1
+                notes.append(("\(base.rawValue)\(octave)\(suffix)", hz))
+            }
+        }
+        return notes
+    }
+}
+
+/// Persisted, user-editable overrides for the 7 comma-interval steps of each
+/// tunable makam — mirrors macOS's makam "Ayarlar" dialog (`makamIntervals`/
+/// `localStorage` in frequency_viewer.py's settings dialog), stored here via
+/// UserDefaults instead. Majör/Minör keep their fixed diatonic pattern, same
+/// as macOS (they're absent from `MAKAM_DEFAULT_INTERVALS` there too).
+@Observable
+final class iPadMakamIntervalsStore {
+    static let key = "klarivision-ipad-makam-koma-intervals-v1"
+    static let editableModes: [iPadMakam] = [.nihavend, .kurdi, .ussak, .hicaz, .hicazkar, .kurdilihicazkar]
+
+    private(set) var overrides: [iPadMakam: [Int]] = [:]
+    private let defaults: UserDefaults
+
+    init(defaults: UserDefaults = .standard) {
+        self.defaults = defaults
+        load()
+    }
+
+    /// The 7 comma deltas a makam ships with, derived from its own
+    /// cumulative `guideCommas` (which is 8 entries: a leading 0 for the
+    /// tonic itself, then 7 step positions ending at 53) — the editor's
+    /// starting point and the "Teoriye Dön" reset target.
+    static func defaultIntervals(for makam: iPadMakam) -> [Int] {
+        var previous = 0
+        return makam.guideCommas.dropFirst().map { value -> Int in
+            let delta = value - previous
+            previous = value
+            return delta
+        }
+    }
+
+    static func isValid(_ intervals: [Int]) -> Bool {
+        intervals.count == 7 && intervals.allSatisfy { $0 >= 1 && $0 <= 13 } && intervals.reduce(0, +) == 53
+    }
+
+    func intervals(for makam: iPadMakam) -> [Int] { overrides[makam] ?? Self.defaultIntervals(for: makam) }
+
+    /// Cumulative comma positions (8 entries — leading 0, then 7 steps
+    /// ending at 53) ready for `iPadMusicContext.guideNotes(commas:)`/
+    /// `guideFrequencies(commas:)`.
+    func commas(for makam: iPadMakam) -> [Int] {
+        guard Self.editableModes.contains(makam) else { return makam.guideCommas }
+        var running = 0
+        var result = [0]
+        for delta in intervals(for: makam) {
+            running += delta
+            result.append(running)
+        }
+        return result
+    }
+
+    /// Updates the in-memory draft immediately (so the Stepper always
+    /// reflects the tap, even mid-edit while the 7-value total isn't 53 yet
+    /// — same "live but only persist when valid" contract as the existing
+    /// 53-koma section's `iPadAppState.komaIntervals`) and only writes
+    /// through to UserDefaults once the total is valid again.
+    @discardableResult
+    func setIntervals(_ intervals: [Int], for makam: iPadMakam) -> Bool {
+        guard Self.editableModes.contains(makam), intervals.count == 7 else { return false }
+        overrides[makam] = intervals
+        let valid = Self.isValid(intervals)
+        if valid { persist() }
+        return valid
+    }
+
+    func reset(_ makam: iPadMakam) {
+        overrides[makam] = nil
+        persist()
+    }
+
+    private func persist() {
+        let encoded = overrides.reduce(into: [String: [Int]]()) { $0[$1.key.rawValue] = $1.value }
+        defaults.set(encoded, forKey: Self.key)
+    }
+
+    private func load() {
+        guard let raw = defaults.dictionary(forKey: Self.key) else { return }
+        for (rawKey, rawValue) in raw {
+            guard let makam = iPadMakam(rawValue: rawKey), Self.editableModes.contains(makam),
+                  let intervals = rawValue as? [Int], Self.isValid(intervals) else { continue }
+            overrides[makam] = intervals
+        }
     }
 }
 
@@ -181,11 +345,15 @@ final class iPadAppState {
     var graphPitchColor: String { didSet { defaults.set(graphPitchColor, forKey: Self.graphPitchColorKey) } }
     var graphGuideColor: String { didSet { defaults.set(graphGuideColor, forKey: Self.graphGuideColorKey) } }
     var komaIntervals: [Int] { didSet { if Self.validKomaIntervals(komaIntervals) { defaults.set(komaIntervals, forKey: Self.komaIntervalsKey) } } }
+    /// Shared, single instance — Study and Live graphs both read this via
+    /// `configure(...)` so an edit in Settings updates both immediately.
+    let makamIntervals: iPadMakamIntervalsStore
 
     private let defaults: UserDefaults
 
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
+        makamIntervals = iPadMakamIntervalsStore(defaults: defaults)
         studyEngine = Self.engine(defaults.string(forKey: Self.studyEngineKey))
         liveEngine = Self.engine(defaults.string(forKey: Self.liveEngineKey))
         theme = iPadTheme(rawValue: defaults.string(forKey: Self.themeKey) ?? "") ?? .focus

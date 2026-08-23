@@ -1,7 +1,8 @@
 <!--
   KlariVision canlı grafik yüzeyi.
-  Swift appendFrames/setContext/setStyle ile veri yollar; sayfa yalnız canvas
-  çizimi ve viewport takibini yapar. Ağ erişimi ve pitch hesabı yoktur.
+  Swift appendFrames/setContext/setStyle/setRunning ile veri yollar; sayfa
+  yalnız canvas çizimi, akış saati ve jestleri yönetir. Ağ erişimi ve pitch
+  hesabı yoktur.
 -->
 <!doctype html>
 <html lang="tr">
@@ -9,26 +10,78 @@
 <style>
   :root { background: #0d1725 }
   html, body { margin: 0; width: 100%; height: 100%; min-height: 100dvh; overflow: hidden; background: #0d1725 }
-  canvas { display: block; width: 100%; height: 100%; padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom); box-sizing: border-box }
+  /* Grafiğin bütün jestleri bu sayfanın kendi touch handler'larıyla işlenir;
+     tarayıcı tek parmak sürüklemeyi kaydırma, iki parmağı sayfa zoom'u diye
+     sahiplenmemeli. (WebView'in kendi scrollView/pinch'i de kapalı — bu, işin
+     sayfa tarafı.) */
+  canvas { display: block; width: 100%; height: 100%; padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom); box-sizing: border-box; touch-action: none }
 </style>
 <canvas></canvas>
 <script>
 (() => {
   const canvas = document.querySelector('canvas');
   const drawing = canvas.getContext('2d');
+  // Vertical position is cents (log-frequency), not raw Hz — same as the
+  // macOS viewer and the Study graph (StudyViewer.html) — so equal
+  // note/koma intervals are equal pixel distances instead of compressing at
+  // the top of the range.
+  const cents = frequency => 1200 * Math.log2(frequency / 440);
+  const median = values => {
+    const sorted = [...values].sort((x, y) => x - y), middle = Math.floor(sorted.length / 2);
+    return sorted.length % 2 ? sorted[middle] : (sorted[middle - 1] + sorted[middle]) / 2;
+  };
   let frames = [];
   let context = { guides: [], makam: '', karar: '', pitchColor: '#67d5ff', guideColor: '#b7d8ff' };
-  let framePending = false;
-  let frameFallback = 0;
   let lastWidth = 0;
   let lastHeight = 0;
+  let needsDraw = true;
+
+  // --- Akış saati -------------------------------------------------------
+  // The window is driven by a clock, never by "the newest voiced sample", so
+  // the graph keeps flowing through silence — same contract as the macOS live
+  // graph (LiveWebPitchGraph.document in LiveVisuals.swift), which advances
+  // `now` with performance.now() between Swift updates. It only freezes while
+  // capture is stopped, which Swift announces through setRunning().
+  let running = false;
+  let streamNow = 0;
+  let streamReceived = performance.now();
+  let lastAppendedTime = -Infinity;
+  const historySeconds = 65;
+  const current = () => streamNow + (running ? (performance.now() - streamReceived) / 1000 : 0);
+
+  // --- Görünür pencere --------------------------------------------------
+  // Visible time-window length (seconds) and vertical pitch-range multiplier.
+  // Both are mutable so the pinch handler below (which classifies each pinch
+  // by the angle between the two touches) can drive either axis
+  // independently — a horizontal pinch changes only windowSeconds, a
+  // vertical one only verticalZoom, and a diagonal one changes both together.
+  const minWindowSeconds = 2, maxWindowSeconds = 60;
+  let windowSeconds = 12;
+  const minVerticalZoom = 0.25, maxVerticalZoom = 4;
+  let verticalZoom = 1;
+  // One-finger vertical pan, kept as a cents offset in data space. Pan and
+  // zoom are ALWAYS expressed by recomputing the lo/hi cents range, never by
+  // a canvas transform (`ctx.translate`/`ctx.scale`) — that is what keeps the
+  // perde labels at the same left-gutter position and the same font size, and
+  // the guide/pitch strokes at the same pixel width, at every zoom level.
+  let verticalOffset = 0;
+  const verticalSpan = 2400;
+  let verticalCenter = null;
+  let following = false;
+  // Last drawn vertical viewport, so the touch handler can turn finger pixels
+  // into cents without recomputing the range.
+  let viewport = null;
+  // Keep the active pitch away from the viewport edge. This mirrors the native
+  // macOS follow contract while leaving the full-range view untouched when off.
+  const followedCenter = (currentCenter, pitch) => {
+    const edge = verticalSpan * .45, restingEdge = verticalSpan * .35;
+    if (pitch > currentCenter + edge) return pitch - restingEdge;
+    if (pitch < currentCenter - edge) return pitch + restingEdge;
+    return currentCenter;
+  };
 
   function draw() {
-    framePending = false;
-    if (frameFallback) {
-      clearTimeout(frameFallback);
-      frameFallback = 0;
-    }
+    needsDraw = false;
 
     const bounds = canvas.getBoundingClientRect();
     const scale = Math.max(1, devicePixelRatio || 1);
@@ -45,95 +98,266 @@
 
     drawing.setTransform(scale, 0, 0, scale, 0, 0);
     drawing.clearRect(0, 0, width, height);
-    const voiced = frames.filter(point => point.v && point.f);
-    const allFrequencies = [...voiced.map(point => point.f), ...context.guides];
-    const low = allFrequencies.length ? Math.max(30, Math.min(...allFrequencies)) : 100;
-    const high = allFrequencies.length ? Math.max(low + 1, ...allFrequencies) : 800;
 
-    drawing.strokeStyle = 'rgba(180,215,245,.18)';
-    for (let index = 1; index < 5; index++) {
-      drawing.beginPath();
-      drawing.moveTo(0, height * index / 5);
-      drawing.lineTo(width, height * index / 5);
-      drawing.stroke();
+    const now = current();
+    const windowStart = now - windowSeconds;
+    const timeX = time => (time - windowStart) / windowSeconds * width;
+
+    // Vertical range comes from what is actually on screen plus the guides.
+    // min/max are folded in a loop instead of Math.min(...array): the live
+    // buffer holds ~6000 points and spreading it 60 times a second is both
+    // slow and an argument-count risk.
+    let low = Infinity, high = -Infinity, guideLow = Infinity, guideHigh = -Infinity;
+    const visible = [];
+    for (const point of frames) {
+      if (!point.v || !(point.f > 0) || point.t < windowStart - .05 || point.t > now + .05) continue;
+      visible.push(point);
+      const value = cents(point.f);
+      if (value < low) low = value;
+      if (value > high) high = value;
     }
-
-    drawing.strokeStyle = context.guideColor;
-    drawing.globalAlpha = .6;
     for (const guide of context.guides) {
-      const y = height - (guide - low) / (high - low) * height;
+      const value = cents(guide.hz);
+      if (value < guideLow) guideLow = value;
+      if (value > guideHigh) guideHigh = value;
+    }
+    // The 30 Hz floor only guards against a wild low estimate in the *signal*;
+    // a real perde line is never cut off by it, or the bottom-most note lines
+    // could not be reached by pan and zoom-out.
+    let lo = Math.min(low <= high ? Math.max(cents(30), low) : Infinity, guideLow);
+    let hi = Math.max(low <= high ? high : -Infinity, guideHigh);
+    if (!(lo <= hi)) { lo = cents(100); hi = cents(800); }
+    hi = Math.max(lo + 1, hi);
+    // Everything the view is allowed to reach: the perde lines plus whatever
+    // is actually being played (low/high already folded both in). Zoom-out
+    // stops with the outermost perde lines on the top and bottom edges, and
+    // pan stops when one of them reaches its edge — there is never an empty
+    // band past the last note line, at any zoom level.
+    const boundLo = lo, boundHi = hi, boundSpan = boundHi - boundLo;
+    const clampRange = (center, span) =>
+      !(boundSpan > 0) ? center
+        : span >= boundSpan ? (boundLo + boundHi) / 2
+          : Math.max(boundLo + span / 2, Math.min(boundHi - span / 2, center));
+
+    // "Follow the curve" keeps its own center, and keeps it through silence:
+    // once seeded it is never dropped, so a window that has run empty (the
+    // last voiced frame scrolled out of it) neither zooms out to the full
+    // perde axis nor drifts — the view freezes vertically until the next note
+    // arrives. Before anything has been played the center starts in the middle
+    // of the perde lines (around the karar) rather than on the whole axis, so
+    // the first note does not make it jump either.
+    if (following) {
+      if (verticalCenter === null && visible.length) verticalCenter = median(visible.map(point => cents(point.f)));
+      else if (verticalCenter === null && context.guides.length) verticalCenter = median(context.guides.map(guide => cents(guide.hz)));
+      if (verticalCenter !== null) {
+        const nearby = visible.filter(point => Math.abs(point.t - now) <= .5).map(point => cents(point.f));
+        if (nearby.length) verticalCenter = followedCenter(verticalCenter, median(nearby));
+        lo = verticalCenter - verticalSpan / 2;
+        hi = verticalCenter + verticalSpan / 2;
+      }
+    }
+    // Zoom scales the range, then the span is capped at the bound so the view
+    // can never open wider than the outermost perde lines. The effective zoom
+    // is written back: without it a pinch that keeps pulling past the limit
+    // would grow a number that the next pinch-in has to spend itself undoing
+    // before anything moves on screen.
+    { let center = (lo + hi) / 2, span = (hi - lo) / verticalZoom;
+      if (boundSpan > 0 && span > boundSpan) { verticalZoom = (hi - lo) / boundSpan; span = boundSpan; }
+      if (following && verticalCenter !== null) center = verticalCenter = clampRange(verticalCenter, span);
+      else { verticalOffset = clampRange(center + verticalOffset, span) - center; center += verticalOffset; }
+      lo = center - span / 2; hi = center + span / 2; }
+    viewport = { h: height, lo, hi, boundLo, boundHi };
+    const pitchY = frequency => height - (cents(frequency) - lo) / (hi - lo) * height;
+
+    // Horizontal guide lines are real note (perde) positions, not a generic
+    // grid — each is labeled with its mac-style perde name (see
+    // iPadMusicContext.guideNotes() in AppState.swift). No Hz shown on
+    // mobile, name only. Font size, label position and stroke width are
+    // constants: zoom and pan only move the line, never rescale its drawing.
+    drawing.font = '11px -apple-system';
+    drawing.textAlign = 'left';
+    drawing.textBaseline = 'alphabetic';
+    drawing.lineWidth = 1;
+    for (const guide of context.guides) {
+      const y = pitchY(guide.hz);
+      if (y < 0 || y > height) continue;
+      drawing.strokeStyle = context.guideColor;
+      drawing.globalAlpha = .6;
       drawing.beginPath();
       drawing.moveTo(0, y);
       drawing.lineTo(width, y);
       drawing.stroke();
+      drawing.globalAlpha = 1;
+      drawing.fillStyle = context.guideColor;
+      drawing.fillText(guide.name, 8, y - 3);
     }
 
-    drawing.globalAlpha = 1;
     drawing.fillStyle = context.guideColor;
     drawing.font = '12px -apple-system';
     drawing.fillText(`${context.makam || 'Makam'} · ${context.karar || 'Karar'}`, 12, 20);
 
-    if (voiced.length) {
-      const start = voiced[Math.max(0, voiced.length - 360)].t;
-      const end = voiced[voiced.length - 1].t || start + 1;
-      drawing.strokeStyle = context.pitchColor;
-      drawing.lineWidth = 2;
-      drawing.lineCap = 'round';
-      drawing.lineJoin = 'round';
+    // Pitch path, with the macOS live graph's break rules (LiveVisuals.swift):
+    // the segment is only continued when time actually moved FORWARD, moved
+    // less than one dropped frame's worth, and the pitch did not jump by more
+    // than ~an octave. Without them a silence gap, an octave slip or a
+    // rewound/duplicated timestamp gets connected straight through and the
+    // line is drawn back over itself.
+    drawing.strokeStyle = context.pitchColor;
+    drawing.lineWidth = 1.8;
+    drawing.lineCap = 'round';
+    drawing.lineJoin = 'round';
+    drawing.beginPath();
+    let previous = null;
+    let segments = 0;
+    for (const point of visible) {
+      const x = timeX(point.t), y = pitchY(point.f);
+      const continues = previous
+        && point.t - previous.t > 0
+        && point.t - previous.t < .040
+        && Math.abs(cents(point.f) - cents(previous.f)) < 520;
+      if (continues) { drawing.lineTo(x, y); segments++; }
+      else drawing.moveTo(x, y);
+      previous = point;
+    }
+    drawing.stroke();
+    if (previous && !segments) {
+      drawing.fillStyle = context.pitchColor;
       drawing.beginPath();
-      let open = false;
-      let lastX = 0;
-      let lastY = 0;
-      for (const point of voiced) {
-        const x = (point.t - start) / Math.max(.1, end - start) * width;
-        const y = height - (point.f - low) / (high - low) * height;
-        if (open) drawing.lineTo(x, y);
-        else {
-          drawing.moveTo(x, y);
-          open = true;
-        }
-        lastX = x;
-        lastY = y;
-      }
-      drawing.stroke();
-      if (voiced.length === 1) {
-        drawing.fillStyle = context.pitchColor;
-        drawing.beginPath();
-        drawing.arc(lastX, lastY, 2.5, 0, Math.PI * 2);
-        drawing.fill();
-      }
+      drawing.arc(timeX(previous.t), pitchY(previous.f), 2.5, 0, Math.PI * 2);
+      drawing.fill();
     }
   }
 
-  function schedule() {
-    if (framePending) return;
-    framePending = true;
-    requestAnimationFrame(draw);
-    frameFallback = setTimeout(() => {
-      if (framePending) draw();
-    }, 100);
+  function tick() {
+    if (running || needsDraw) draw();
+    requestAnimationFrame(tick);
   }
+
+  // --- Jestler ----------------------------------------------------------
+  // Read straight from raw touches on the canvas — deliberately not routed
+  // through a native UIPinchGestureRecognizer/Swift bridge, for the same
+  // reason StudyViewer.html does it in-page: each bridged tick would be a
+  // separate evaluateJavaScript round trip and could land a frame behind the
+  // live touch. Here it is synchronous with this file's own draw loop, which
+  // mirrors how the macOS viewer's wheel-driven zoom has always worked.
+  // Live has no seeking, so one finger only pans the pitch axis; the
+  // horizontal component is ignored and the graph stays pinned to "now".
+  let pinch = null, drag = null;
+  const pinchAxis = (t0, t1) => {
+    const dx = Math.abs(t1.clientX - t0.clientX), dy = Math.abs(t1.clientY - t0.clientY);
+    if (dx < 1 && dy < 1) return null;
+    const angle = Math.atan2(dy, dx) * 180 / Math.PI;
+    return angle <= 22.5 ? 'time' : angle >= 67.5 ? 'vertical' : 'both';
+  };
+  const seedDrag = touch => { drag = { x: touch.clientX, y: touch.clientY, lastY: touch.clientY, moved: false }; };
+  // With "follow the curve" on, a pan pushes the follow center itself: nothing
+  // jumps, the toggle stays on, and followedCenter() pulls the view back by
+  // itself once the played pitch leaves the window again. Both the center and
+  // the manual offset are re-clamped against the perde-line bounds by draw(),
+  // which writes the clamped value back — so a drag only has to accumulate
+  // here, and holding a finger against the limit cannot build up slack that a
+  // drag the other way would have to undo first.
+  const panVertically = deltaCents => {
+    if (following && verticalCenter !== null) verticalCenter += deltaCents;
+    else verticalOffset += deltaCents;
+  };
+  canvas.addEventListener('touchstart', event => {
+    if (event.touches.length === 1) { pinch = null; seedDrag(event.touches[0]); return; }
+    if (event.touches.length !== 2) return;
+    drag = null;
+    const [t0, t1] = event.touches;
+    pinch = { axis: pinchAxis(t0, t1), dist: Math.hypot(t1.clientX - t0.clientX, t1.clientY - t0.clientY) };
+  }, { passive: true });
+  canvas.addEventListener('touchmove', event => {
+    if (event.touches.length === 1) {
+      const touch = event.touches[0];
+      if (!drag) { seedDrag(touch); return; } // finger left over from a pinch: re-seed instead of jumping
+      if (!drag.moved && Math.hypot(touch.clientX - drag.x, touch.clientY - drag.y) < 4) return; // macOS's 4px dead zone
+      event.preventDefault(); drag.moved = true;
+      if (viewport && viewport.h > 0) panVertically((touch.clientY - drag.lastY) / viewport.h * (viewport.hi - viewport.lo));
+      drag.lastY = touch.clientY;
+      needsDraw = true; return;
+    }
+    if (!pinch || event.touches.length !== 2) return;
+    event.preventDefault();
+    const [t0, t1] = event.touches, dist = Math.hypot(t1.clientX - t0.clientX, t1.clientY - t0.clientY);
+    const factor = dist / pinch.dist; pinch.dist = dist;
+    if (pinch.axis === 'time' || pinch.axis === 'both') windowSeconds = Math.min(maxWindowSeconds, Math.max(minWindowSeconds, windowSeconds / factor));
+    if (pinch.axis === 'vertical' || pinch.axis === 'both') verticalZoom = Math.min(maxVerticalZoom, Math.max(minVerticalZoom, verticalZoom * factor));
+    needsDraw = true;
+  }, { passive: false });
+  const endTouch = event => {
+    if (event.touches.length < 2) pinch = null;
+    if (event.touches.length === 1) seedDrag(event.touches[0]);
+    else if (!event.touches.length) drag = null;
+  };
+  canvas.addEventListener('touchend', endTouch);
+  canvas.addEventListener('touchcancel', endTouch);
+
+  const clearStream = () => {
+    frames = [];
+    lastAppendedTime = -Infinity;
+    streamNow = 0;
+    streamReceived = performance.now();
+    verticalCenter = null;
+    verticalOffset = 0;
+    drag = null;
+    pinch = null;
+    needsDraw = true;
+  };
 
   window.kvLive = {
     append: values => {
-      frames.push(...values);
-      if (frames.length > 2400) frames = frames.slice(-2400);
-      schedule();
+      if (!values || !values.length) return;
+      // The capture timeline restarts at zero whenever a new session starts
+      // (iPadLiveCoreProcessor is rebuilt, so its sample counter is), and the
+      // core's finish() flush can repeat frames it already emitted. Dropping
+      // the rewind's stale history and any non-advancing frame is the same
+      // guard the macOS coordinator applies before it posts points to its
+      // page — without it the new take is drawn straight over the old one.
+      if (values[0].t < lastAppendedTime - 0.1) clearStream();
+      for (const value of values) {
+        if (!(value.t > lastAppendedTime)) continue;
+        frames.push(value);
+        lastAppendedTime = value.t;
+      }
+      if (lastAppendedTime > -Infinity) {
+        streamNow = Math.max(current(), lastAppendedTime);
+        streamReceived = performance.now();
+      }
+      const cutoff = streamNow - historySeconds;
+      if (frames.length && frames[0].t < cutoff) frames = frames.filter(point => point.t >= cutoff);
+      needsDraw = true;
     },
     context: value => {
       context = { ...context, ...value };
-      schedule();
+      if ('follow' in value) {
+        const next = !!value.follow;
+        if (next !== following) {
+          following = next;
+          if (following) verticalOffset = 0;
+        }
+      }
+      needsDraw = true;
     },
-    reset: () => {
-      frames = [];
-      schedule();
-    }
+    // Freezes/resumes the clock so a stopped session does not keep scrolling
+    // an empty window, and a resumed one does not jump by the idle time.
+    setRunning: value => {
+      const next = !!value;
+      if (next === running) return;
+      if (next) streamReceived = performance.now();
+      else streamNow = current();
+      running = next;
+      needsDraw = true;
+    },
+    reset: () => { clearStream(); }
   };
 
-  new ResizeObserver(schedule).observe(canvas);
-  addEventListener('resize', schedule);
-  if (window.visualViewport) visualViewport.addEventListener('resize', schedule);
-  draw();
+  const invalidate = () => { needsDraw = true; };
+  new ResizeObserver(invalidate).observe(canvas);
+  addEventListener('resize', invalidate);
+  if (window.visualViewport) visualViewport.addEventListener('resize', invalidate);
+  requestAnimationFrame(tick);
 })();
 </script>
 </html>

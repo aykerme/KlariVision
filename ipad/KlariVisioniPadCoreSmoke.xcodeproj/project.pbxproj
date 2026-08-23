@@ -1,143 +1,664 @@
 // !$*UTF8*$!
 {
 	archiveVersion = 1;
-	classes = {};
-	objectVersion = 77;
+	classes = {
+	};
+	objectVersion = 71;
 	objects = {
 
 /* Begin PBXBuildFile section */
-		C00000000000000000000011 /* analysis_engine.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C00000000000000000000031 /* analysis_engine.cpp */; };
-		C00000000000000000000012 /* analysis_engine_c.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C00000000000000000000032 /* analysis_engine_c.cpp */; };
-		C00000000000000000000013 /* mpm.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C00000000000000000000033 /* mpm.cpp */; };
-		C00000000000000000000014 /* pitch_engine_v2.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C00000000000000000000034 /* pitch_engine_v2.cpp */; };
-		C00000000000000000000015 /* fixed_lag_tracker.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C00000000000000000000035 /* fixed_lag_tracker.cpp */; };
-		C00000000000000000000016 /* pitch_engine_v2_session.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C00000000000000000000036 /* pitch_engine_v2_session.cpp */; };
-		C00000000000000000000017 /* swipe_prime.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C00000000000000000000037 /* swipe_prime.cpp */; };
-		C00000000000000000000018 /* vpm_like.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C00000000000000000000038 /* vpm_like.cpp */; };
-		C00000000000000000000019 /* CoreSmokeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C00000000000000000000040 /* CoreSmokeTests.swift */; };
+		C00000000000000000000011 /* ../core/src/analysis_engine.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C00000000000000000000031 /* ../core/src/analysis_engine.cpp */; };
+		C00000000000000000000012 /* ../core/src/analysis_engine_c.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C00000000000000000000032 /* ../core/src/analysis_engine_c.cpp */; };
+		C00000000000000000000013 /* ../core/src/mpm.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C00000000000000000000033 /* ../core/src/mpm.cpp */; };
+		C00000000000000000000014 /* ../core/src/pitch_engine_v2.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C00000000000000000000034 /* ../core/src/pitch_engine_v2.cpp */; };
+		C00000000000000000000015 /* ../core/src/fixed_lag_tracker.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C00000000000000000000035 /* ../core/src/fixed_lag_tracker.cpp */; };
+		C00000000000000000000016 /* ../core/src/pitch_engine_v2_session.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C00000000000000000000036 /* ../core/src/pitch_engine_v2_session.cpp */; };
+		C00000000000000000000017 /* ../core/src/swipe_prime.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C00000000000000000000037 /* ../core/src/swipe_prime.cpp */; };
+		C00000000000000000000018 /* ../core/src/vpm_like.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C00000000000000000000038 /* ../core/src/vpm_like.cpp */; };
+		C00000000000000000000019 /* KlariVisioniPadCoreSmoke/Tests/KlariVisionCoreSmokeTests/CoreSmokeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C00000000000000000000040 /* KlariVisioniPadCoreSmoke/Tests/KlariVisionCoreSmokeTests/CoreSmokeTests.swift */; };
 		C0000000000000000000001A /* libKlariVisionCore.a in Frameworks */ = {isa = PBXBuildFile; fileRef = C00000000000000000000021 /* libKlariVisionCore.a */; };
 		C0000000000000000000001B /* XCTest.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C00000000000000000000041 /* XCTest.framework */; };
-		D00000000000000000000011 /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00000000000000000000031 /* AppState.swift */; };
-		D00000000000000000000012 /* KlariVisioniPadApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00000000000000000000032 /* KlariVisioniPadApp.swift */; };
+		D00000000000000000000011 /* KlariVisioniPadCoreSmoke/KlariVisioniPad/AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00000000000000000000031 /* KlariVisioniPadCoreSmoke/KlariVisioniPad/AppState.swift */; };
+		D00000000000000000000012 /* KlariVisioniPadCoreSmoke/KlariVisioniPad/KlariVisioniPadApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00000000000000000000032 /* KlariVisioniPadCoreSmoke/KlariVisioniPad/KlariVisioniPadApp.swift */; };
 		D00000000000000000000013 /* libKlariVisionCore.a in Frameworks */ = {isa = PBXBuildFile; fileRef = C00000000000000000000021 /* libKlariVisionCore.a */; };
-		D00000000000000000000014 /* AppStateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00000000000000000000034 /* AppStateTests.swift */; };
+		D00000000000000000000014 /* KlariVisioniPadCoreSmoke/Tests/KlariVisioniPadTests/AppStateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00000000000000000000034 /* KlariVisioniPadCoreSmoke/Tests/KlariVisioniPadTests/AppStateTests.swift */; };
 		D00000000000000000000015 /* XCTest.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C00000000000000000000041 /* XCTest.framework */; };
-		D00000000000000000000016 /* KlariVisioniPad.app in Frameworks */ = {isa = PBXBuildFile; fileRef = D00000000000000000000021 /* KlariVisioniPad.app */; };
-		D00000000000000000000017 /* StudyModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00000000000000000000035 /* StudyModels.swift */; };
-		D00000000000000000000018 /* StudyState.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00000000000000000000036 /* StudyState.swift */; };
-		D00000000000000000000019 /* StudyWebView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00000000000000000000037 /* StudyWebView.swift */; };
-		D0000000000000000000001A /* StudyViewer.html in Resources */ = {isa = PBXBuildFile; fileRef = D00000000000000000000038 /* StudyViewer.html */; };
-		D0000000000000000000001B /* LiveModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00000000000000000000039 /* LiveModels.swift */; };
-		D0000000000000000000001C /* LiveAnalyzer.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0000000000000000000003A /* LiveAnalyzer.swift */; };
-		D0000000000000000000001D /* LiveWebView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0000000000000000000003B /* LiveWebView.swift */; };
-		D0000000000000000000001E /* LiveViewer.html in Resources */ = {isa = PBXBuildFile; fileRef = D0000000000000000000003C /* LiveViewer.html */; };
-		D0000000000000000000001F /* PitchABIAdapter.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0000000000000000000003D /* PitchABIAdapter.swift */; };
-		D00000000000000000000040 /* iPadCompactStudyWorkspace.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0000000000000000000003E /* iPadCompactStudyWorkspace.swift */; };
-		D00000000000000000000042 /* iPadCompactLiveWorkspace.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0000000000000000000003F /* iPadCompactLiveWorkspace.swift */; };
+		D00000000000000000000016 /* KlariVision.app in Frameworks */ = {isa = PBXBuildFile; fileRef = D00000000000000000000021 /* KlariVision.app */; };
+		D00000000000000000000017 /* KlariVisioniPadCoreSmoke/KlariVisioniPad/StudyModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00000000000000000000035 /* KlariVisioniPadCoreSmoke/KlariVisioniPad/StudyModels.swift */; };
+		D00000000000000000000018 /* KlariVisioniPadCoreSmoke/KlariVisioniPad/StudyState.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00000000000000000000036 /* KlariVisioniPadCoreSmoke/KlariVisioniPad/StudyState.swift */; };
+		D00000000000000000000019 /* KlariVisioniPadCoreSmoke/KlariVisioniPad/StudyWebView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00000000000000000000037 /* KlariVisioniPadCoreSmoke/KlariVisioniPad/StudyWebView.swift */; };
+		D0000000000000000000001A /* KlariVisioniPadCoreSmoke/KlariVisioniPad/Resources/StudyViewer.html in Resources */ = {isa = PBXBuildFile; fileRef = D00000000000000000000038 /* KlariVisioniPadCoreSmoke/KlariVisioniPad/Resources/StudyViewer.html */; };
+		D0000000000000000000001B /* KlariVisioniPadCoreSmoke/KlariVisioniPad/LiveModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00000000000000000000039 /* KlariVisioniPadCoreSmoke/KlariVisioniPad/LiveModels.swift */; };
+		D0000000000000000000001C /* KlariVisioniPadCoreSmoke/KlariVisioniPad/LiveAnalyzer.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0000000000000000000003A /* KlariVisioniPadCoreSmoke/KlariVisioniPad/LiveAnalyzer.swift */; };
+		D0000000000000000000001D /* KlariVisioniPadCoreSmoke/KlariVisioniPad/LiveWebView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0000000000000000000003B /* KlariVisioniPadCoreSmoke/KlariVisioniPad/LiveWebView.swift */; };
+		D0000000000000000000001E /* KlariVisioniPadCoreSmoke/KlariVisioniPad/Resources/LiveViewer.html in Resources */ = {isa = PBXBuildFile; fileRef = D0000000000000000000003C /* KlariVisioniPadCoreSmoke/KlariVisioniPad/Resources/LiveViewer.html */; };
+		D0000000000000000000001F /* KlariVisioniPadCoreSmoke/KlariVisioniPad/PitchABIAdapter.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0000000000000000000003D /* KlariVisioniPadCoreSmoke/KlariVisioniPad/PitchABIAdapter.swift */; };
+		D00000000000000000000040 /* KlariVisioniPadCoreSmoke/KlariVisioniPad/iPadCompactStudyWorkspace.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0000000000000000000003E /* KlariVisioniPadCoreSmoke/KlariVisioniPad/iPadCompactStudyWorkspace.swift */; };
+		D00000000000000000000042 /* KlariVisioniPadCoreSmoke/KlariVisioniPad/iPadCompactLiveWorkspace.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0000000000000000000003F /* KlariVisioniPadCoreSmoke/KlariVisioniPad/iPadCompactLiveWorkspace.swift */; };
+		D00000000000000000000043 /* KlariVisioniPadCoreSmoke/KlariVisioniPad/TurkishPitchReference.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00000000000000000000044 /* KlariVisioniPadCoreSmoke/KlariVisioniPad/TurkishPitchReference.swift */; };
+		D00000000000000000000045 /* KlariVisioniPadCoreSmoke/KlariVisioniPad/WorkspaceControls.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00000000000000000000046 /* KlariVisioniPadCoreSmoke/KlariVisioniPad/WorkspaceControls.swift */; };
 /* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		C000000000000000000000A2 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = C00000000000000000000001 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = C00000000000000000000071;
+			remoteInfo = KlariVisionCore;
+		};
+		D000000000000000000000A3 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = C00000000000000000000001 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = C00000000000000000000071;
+			remoteInfo = KlariVisionCore;
+		};
+		D000000000000000000000A4 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = C00000000000000000000001 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = D00000000000000000000071;
+			remoteInfo = KlariVisioniPad;
+		};
+/* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
 		C00000000000000000000021 /* libKlariVisionCore.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libKlariVisionCore.a; sourceTree = BUILT_PRODUCTS_DIR; };
 		C00000000000000000000022 /* KlariVisionCoreSmokeTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = KlariVisionCoreSmokeTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		C00000000000000000000031 /* analysis_engine.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ../core/src/analysis_engine.cpp; sourceTree = SOURCE_ROOT; };
-		C00000000000000000000032 /* analysis_engine_c.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ../core/src/analysis_engine_c.cpp; sourceTree = SOURCE_ROOT; };
-		C00000000000000000000033 /* mpm.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ../core/src/mpm.cpp; sourceTree = SOURCE_ROOT; };
-		C00000000000000000000034 /* pitch_engine_v2.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ../core/src/pitch_engine_v2.cpp; sourceTree = SOURCE_ROOT; };
-		C00000000000000000000035 /* fixed_lag_tracker.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ../core/src/fixed_lag_tracker.cpp; sourceTree = SOURCE_ROOT; };
-		C00000000000000000000036 /* pitch_engine_v2_session.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ../core/src/pitch_engine_v2_session.cpp; sourceTree = SOURCE_ROOT; };
-		C00000000000000000000037 /* swipe_prime.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ../core/src/swipe_prime.cpp; sourceTree = SOURCE_ROOT; };
-		C00000000000000000000038 /* vpm_like.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ../core/src/vpm_like.cpp; sourceTree = SOURCE_ROOT; };
-		C00000000000000000000039 /* KlariVisionCoreBridge.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = KlariVisioniPadCoreSmoke/Sources/KlariVisionCoreSmoke/KlariVisionCoreBridge.h; sourceTree = SOURCE_ROOT; };
-		C00000000000000000000040 /* CoreSmokeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KlariVisioniPadCoreSmoke/Tests/KlariVisionCoreSmokeTests/CoreSmokeTests.swift; sourceTree = SOURCE_ROOT; };
+		C00000000000000000000031 /* ../core/src/analysis_engine.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ../core/src/analysis_engine.cpp; sourceTree = SOURCE_ROOT; };
+		C00000000000000000000032 /* ../core/src/analysis_engine_c.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ../core/src/analysis_engine_c.cpp; sourceTree = SOURCE_ROOT; };
+		C00000000000000000000033 /* ../core/src/mpm.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ../core/src/mpm.cpp; sourceTree = SOURCE_ROOT; };
+		C00000000000000000000034 /* ../core/src/pitch_engine_v2.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ../core/src/pitch_engine_v2.cpp; sourceTree = SOURCE_ROOT; };
+		C00000000000000000000035 /* ../core/src/fixed_lag_tracker.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ../core/src/fixed_lag_tracker.cpp; sourceTree = SOURCE_ROOT; };
+		C00000000000000000000036 /* ../core/src/pitch_engine_v2_session.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ../core/src/pitch_engine_v2_session.cpp; sourceTree = SOURCE_ROOT; };
+		C00000000000000000000037 /* ../core/src/swipe_prime.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ../core/src/swipe_prime.cpp; sourceTree = SOURCE_ROOT; };
+		C00000000000000000000038 /* ../core/src/vpm_like.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ../core/src/vpm_like.cpp; sourceTree = SOURCE_ROOT; };
+		C00000000000000000000039 /* KlariVisioniPadCoreSmoke/Sources/KlariVisionCoreSmoke/KlariVisionCoreBridge.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = KlariVisioniPadCoreSmoke/Sources/KlariVisionCoreSmoke/KlariVisionCoreBridge.h; sourceTree = SOURCE_ROOT; };
+		C00000000000000000000040 /* KlariVisioniPadCoreSmoke/Tests/KlariVisionCoreSmokeTests/CoreSmokeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KlariVisioniPadCoreSmoke/Tests/KlariVisionCoreSmokeTests/CoreSmokeTests.swift; sourceTree = SOURCE_ROOT; };
 		C00000000000000000000041 /* XCTest.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = XCTest.framework; path = System/Library/Frameworks/XCTest.framework; sourceTree = SDKROOT; };
-		D00000000000000000000021 /* KlariVisioniPad.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = KlariVisioniPad.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		D00000000000000000000021 /* KlariVision.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = KlariVision.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		D00000000000000000000022 /* KlariVisioniPadTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = KlariVisioniPadTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		D00000000000000000000031 /* AppState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KlariVisioniPadCoreSmoke/KlariVisioniPad/AppState.swift; sourceTree = SOURCE_ROOT; };
-		D00000000000000000000032 /* KlariVisioniPadApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KlariVisioniPadCoreSmoke/KlariVisioniPad/KlariVisioniPadApp.swift; sourceTree = SOURCE_ROOT; };
-		D00000000000000000000033 /* KlariVisioniPadBridge.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = KlariVisioniPadCoreSmoke/KlariVisioniPad/KlariVisioniPadBridge.h; sourceTree = SOURCE_ROOT; };
-		D00000000000000000000034 /* AppStateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KlariVisioniPadCoreSmoke/Tests/KlariVisioniPadTests/AppStateTests.swift; sourceTree = SOURCE_ROOT; };
-		D00000000000000000000035 /* StudyModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KlariVisioniPadCoreSmoke/KlariVisioniPad/StudyModels.swift; sourceTree = SOURCE_ROOT; };
-		D00000000000000000000036 /* StudyState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KlariVisioniPadCoreSmoke/KlariVisioniPad/StudyState.swift; sourceTree = SOURCE_ROOT; };
-		D00000000000000000000037 /* StudyWebView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KlariVisioniPadCoreSmoke/KlariVisioniPad/StudyWebView.swift; sourceTree = SOURCE_ROOT; };
-		D00000000000000000000038 /* StudyViewer.html */ = {isa = PBXFileReference; lastKnownFileType = text.html; path = KlariVisioniPadCoreSmoke/KlariVisioniPad/Resources/StudyViewer.html; sourceTree = SOURCE_ROOT; };
-		D00000000000000000000039 /* LiveModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KlariVisioniPadCoreSmoke/KlariVisioniPad/LiveModels.swift; sourceTree = SOURCE_ROOT; };
-		D0000000000000000000003A /* LiveAnalyzer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KlariVisioniPadCoreSmoke/KlariVisioniPad/LiveAnalyzer.swift; sourceTree = SOURCE_ROOT; };
-		D0000000000000000000003B /* LiveWebView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KlariVisioniPadCoreSmoke/KlariVisioniPad/LiveWebView.swift; sourceTree = SOURCE_ROOT; };
-		D0000000000000000000003C /* LiveViewer.html */ = {isa = PBXFileReference; lastKnownFileType = text.html; path = KlariVisioniPadCoreSmoke/KlariVisioniPad/Resources/LiveViewer.html; sourceTree = SOURCE_ROOT; };
-		D0000000000000000000003D /* PitchABIAdapter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KlariVisioniPadCoreSmoke/KlariVisioniPad/PitchABIAdapter.swift; sourceTree = SOURCE_ROOT; };
-		D0000000000000000000003E /* iPadCompactStudyWorkspace.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KlariVisioniPadCoreSmoke/KlariVisioniPad/iPadCompactStudyWorkspace.swift; sourceTree = SOURCE_ROOT; };
-		D0000000000000000000003F /* iPadCompactLiveWorkspace.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KlariVisioniPadCoreSmoke/KlariVisioniPad/iPadCompactLiveWorkspace.swift; sourceTree = SOURCE_ROOT; };
+		D00000000000000000000031 /* KlariVisioniPadCoreSmoke/KlariVisioniPad/AppState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KlariVisioniPadCoreSmoke/KlariVisioniPad/AppState.swift; sourceTree = SOURCE_ROOT; };
+		D00000000000000000000032 /* KlariVisioniPadCoreSmoke/KlariVisioniPad/KlariVisioniPadApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KlariVisioniPadCoreSmoke/KlariVisioniPad/KlariVisioniPadApp.swift; sourceTree = SOURCE_ROOT; };
+		D00000000000000000000033 /* KlariVisioniPadCoreSmoke/KlariVisioniPad/KlariVisioniPadBridge.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = KlariVisioniPadCoreSmoke/KlariVisioniPad/KlariVisioniPadBridge.h; sourceTree = SOURCE_ROOT; };
+		D00000000000000000000034 /* KlariVisioniPadCoreSmoke/Tests/KlariVisioniPadTests/AppStateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KlariVisioniPadCoreSmoke/Tests/KlariVisioniPadTests/AppStateTests.swift; sourceTree = SOURCE_ROOT; };
+		D00000000000000000000035 /* KlariVisioniPadCoreSmoke/KlariVisioniPad/StudyModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KlariVisioniPadCoreSmoke/KlariVisioniPad/StudyModels.swift; sourceTree = SOURCE_ROOT; };
+		D00000000000000000000036 /* KlariVisioniPadCoreSmoke/KlariVisioniPad/StudyState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KlariVisioniPadCoreSmoke/KlariVisioniPad/StudyState.swift; sourceTree = SOURCE_ROOT; };
+		D00000000000000000000037 /* KlariVisioniPadCoreSmoke/KlariVisioniPad/StudyWebView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KlariVisioniPadCoreSmoke/KlariVisioniPad/StudyWebView.swift; sourceTree = SOURCE_ROOT; };
+		D00000000000000000000038 /* KlariVisioniPadCoreSmoke/KlariVisioniPad/Resources/StudyViewer.html */ = {isa = PBXFileReference; lastKnownFileType = text.html; path = KlariVisioniPadCoreSmoke/KlariVisioniPad/Resources/StudyViewer.html; sourceTree = SOURCE_ROOT; };
+		D00000000000000000000039 /* KlariVisioniPadCoreSmoke/KlariVisioniPad/LiveModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KlariVisioniPadCoreSmoke/KlariVisioniPad/LiveModels.swift; sourceTree = SOURCE_ROOT; };
+		D0000000000000000000003A /* KlariVisioniPadCoreSmoke/KlariVisioniPad/LiveAnalyzer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KlariVisioniPadCoreSmoke/KlariVisioniPad/LiveAnalyzer.swift; sourceTree = SOURCE_ROOT; };
+		D0000000000000000000003B /* KlariVisioniPadCoreSmoke/KlariVisioniPad/LiveWebView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KlariVisioniPadCoreSmoke/KlariVisioniPad/LiveWebView.swift; sourceTree = SOURCE_ROOT; };
+		D0000000000000000000003C /* KlariVisioniPadCoreSmoke/KlariVisioniPad/Resources/LiveViewer.html */ = {isa = PBXFileReference; lastKnownFileType = text.html; path = KlariVisioniPadCoreSmoke/KlariVisioniPad/Resources/LiveViewer.html; sourceTree = SOURCE_ROOT; };
+		D0000000000000000000003D /* KlariVisioniPadCoreSmoke/KlariVisioniPad/PitchABIAdapter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KlariVisioniPadCoreSmoke/KlariVisioniPad/PitchABIAdapter.swift; sourceTree = SOURCE_ROOT; };
+		D0000000000000000000003E /* KlariVisioniPadCoreSmoke/KlariVisioniPad/iPadCompactStudyWorkspace.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KlariVisioniPadCoreSmoke/KlariVisioniPad/iPadCompactStudyWorkspace.swift; sourceTree = SOURCE_ROOT; };
+		D0000000000000000000003F /* KlariVisioniPadCoreSmoke/KlariVisioniPad/iPadCompactLiveWorkspace.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KlariVisioniPadCoreSmoke/KlariVisioniPad/iPadCompactLiveWorkspace.swift; sourceTree = SOURCE_ROOT; };
+		D00000000000000000000044 /* KlariVisioniPadCoreSmoke/KlariVisioniPad/TurkishPitchReference.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KlariVisioniPadCoreSmoke/KlariVisioniPad/TurkishPitchReference.swift; sourceTree = SOURCE_ROOT; };
+		D00000000000000000000046 /* KlariVisioniPadCoreSmoke/KlariVisioniPad/WorkspaceControls.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KlariVisioniPadCoreSmoke/KlariVisioniPad/WorkspaceControls.swift; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
-		C00000000000000000000051 /* Frameworks */ = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
-		C00000000000000000000052 /* Frameworks */ = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (C0000000000000000000001A /* libKlariVisionCore.a in Frameworks */, C0000000000000000000001B /* XCTest.framework in Frameworks */); runOnlyForDeploymentPostprocessing = 0; };
-		D00000000000000000000051 /* Frameworks */ = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (D00000000000000000000013 /* libKlariVisionCore.a in Frameworks */); runOnlyForDeploymentPostprocessing = 0; };
-		D00000000000000000000052 /* Frameworks */ = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (D00000000000000000000015 /* XCTest.framework in Frameworks */, D00000000000000000000016 /* KlariVisioniPad.app in Frameworks */); runOnlyForDeploymentPostprocessing = 0; };
+		C00000000000000000000051 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		C00000000000000000000052 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				C0000000000000000000001A /* libKlariVisionCore.a in Frameworks */,
+				C0000000000000000000001B /* XCTest.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		D00000000000000000000051 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D00000000000000000000013 /* libKlariVisionCore.a in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		D00000000000000000000052 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D00000000000000000000015 /* XCTest.framework in Frameworks */,
+				D00000000000000000000016 /* KlariVision.app in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
-		C00000000000000000000061 = {isa = PBXGroup; children = (C00000000000000000000062 /* Core Sources */, C00000000000000000000063 /* Smoke Tests */, D00000000000000000000061 /* iPad App */, D00000000000000000000062 /* iPad Tests */, C00000000000000000000064 /* Products */, C00000000000000000000041 /* XCTest.framework */); sourceTree = "<group>"; };
-		C00000000000000000000062 /* Core Sources */ = {isa = PBXGroup; children = (C00000000000000000000039 /* KlariVisionCoreBridge.h */, C00000000000000000000031 /* analysis_engine.cpp */, C00000000000000000000032 /* analysis_engine_c.cpp */, C00000000000000000000033 /* mpm.cpp */, C00000000000000000000034 /* pitch_engine_v2.cpp */, C00000000000000000000035 /* fixed_lag_tracker.cpp */, C00000000000000000000036 /* pitch_engine_v2_session.cpp */, C00000000000000000000037 /* swipe_prime.cpp */, C00000000000000000000038 /* vpm_like.cpp */); name = "KlariVision Core"; sourceTree = "<group>"; };
-		C00000000000000000000063 /* Smoke Tests */ = {isa = PBXGroup; children = (C00000000000000000000040 /* CoreSmokeTests.swift */); name = "KlariVisionCoreSmokeTests"; sourceTree = "<group>"; };
-		C00000000000000000000064 /* Products */ = {isa = PBXGroup; children = (C00000000000000000000021 /* libKlariVisionCore.a */, C00000000000000000000022 /* KlariVisionCoreSmokeTests.xctest */, D00000000000000000000021 /* KlariVisioniPad.app */, D00000000000000000000022 /* KlariVisioniPadTests.xctest */); name = Products; sourceTree = "<group>"; };
-		D00000000000000000000061 /* iPad App */ = {isa = PBXGroup; children = (D00000000000000000000031 /* AppState.swift */, D00000000000000000000032 /* KlariVisioniPadApp.swift */, D00000000000000000000033 /* KlariVisioniPadBridge.h */, D00000000000000000000035 /* StudyModels.swift */, D00000000000000000000036 /* StudyState.swift */, D00000000000000000000037 /* StudyWebView.swift */, D00000000000000000000038 /* StudyViewer.html */, D00000000000000000000039 /* LiveModels.swift */, D0000000000000000000003A /* LiveAnalyzer.swift */, D0000000000000000000003B /* LiveWebView.swift */, D0000000000000000000003C /* LiveViewer.html */, D0000000000000000000003D /* PitchABIAdapter.swift */, D0000000000000000000003E /* iPadCompactStudyWorkspace.swift */, D0000000000000000000003F /* iPadCompactLiveWorkspace.swift */); name = KlariVisioniPad; sourceTree = "<group>"; };
-		D00000000000000000000062 /* iPad Tests */ = {isa = PBXGroup; children = (D00000000000000000000034 /* AppStateTests.swift */); name = KlariVisioniPadTests; sourceTree = "<group>"; };
+		C00000000000000000000061 = {
+			isa = PBXGroup;
+			children = (
+				C00000000000000000000062 /* KlariVision Core */,
+				C00000000000000000000063 /* KlariVisionCoreSmokeTests */,
+				D00000000000000000000061 /* KlariVisioniPad */,
+				D00000000000000000000062 /* KlariVisioniPadTests */,
+				C00000000000000000000064 /* Products */,
+				C00000000000000000000041 /* XCTest.framework */,
+			);
+			sourceTree = "<group>";
+		};
+		C00000000000000000000062 /* KlariVision Core */ = {
+			isa = PBXGroup;
+			children = (
+				C00000000000000000000039 /* KlariVisioniPadCoreSmoke/Sources/KlariVisionCoreSmoke/KlariVisionCoreBridge.h */,
+				C00000000000000000000031 /* ../core/src/analysis_engine.cpp */,
+				C00000000000000000000032 /* ../core/src/analysis_engine_c.cpp */,
+				C00000000000000000000033 /* ../core/src/mpm.cpp */,
+				C00000000000000000000034 /* ../core/src/pitch_engine_v2.cpp */,
+				C00000000000000000000035 /* ../core/src/fixed_lag_tracker.cpp */,
+				C00000000000000000000036 /* ../core/src/pitch_engine_v2_session.cpp */,
+				C00000000000000000000037 /* ../core/src/swipe_prime.cpp */,
+				C00000000000000000000038 /* ../core/src/vpm_like.cpp */,
+			);
+			name = "KlariVision Core";
+			sourceTree = "<group>";
+		};
+		C00000000000000000000063 /* KlariVisionCoreSmokeTests */ = {
+			isa = PBXGroup;
+			children = (
+				C00000000000000000000040 /* KlariVisioniPadCoreSmoke/Tests/KlariVisionCoreSmokeTests/CoreSmokeTests.swift */,
+			);
+			name = KlariVisionCoreSmokeTests;
+			sourceTree = "<group>";
+		};
+		C00000000000000000000064 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				C00000000000000000000021 /* libKlariVisionCore.a */,
+				C00000000000000000000022 /* KlariVisionCoreSmokeTests.xctest */,
+				D00000000000000000000021 /* KlariVision.app */,
+				D00000000000000000000022 /* KlariVisioniPadTests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		D00000000000000000000061 /* KlariVisioniPad */ = {
+			isa = PBXGroup;
+			children = (
+				D00000000000000000000031 /* KlariVisioniPadCoreSmoke/KlariVisioniPad/AppState.swift */,
+				D00000000000000000000032 /* KlariVisioniPadCoreSmoke/KlariVisioniPad/KlariVisioniPadApp.swift */,
+				D00000000000000000000033 /* KlariVisioniPadCoreSmoke/KlariVisioniPad/KlariVisioniPadBridge.h */,
+				D00000000000000000000035 /* KlariVisioniPadCoreSmoke/KlariVisioniPad/StudyModels.swift */,
+				D00000000000000000000036 /* KlariVisioniPadCoreSmoke/KlariVisioniPad/StudyState.swift */,
+				D00000000000000000000037 /* KlariVisioniPadCoreSmoke/KlariVisioniPad/StudyWebView.swift */,
+				D00000000000000000000038 /* KlariVisioniPadCoreSmoke/KlariVisioniPad/Resources/StudyViewer.html */,
+				D00000000000000000000039 /* KlariVisioniPadCoreSmoke/KlariVisioniPad/LiveModels.swift */,
+				D0000000000000000000003A /* KlariVisioniPadCoreSmoke/KlariVisioniPad/LiveAnalyzer.swift */,
+				D0000000000000000000003B /* KlariVisioniPadCoreSmoke/KlariVisioniPad/LiveWebView.swift */,
+				D0000000000000000000003C /* KlariVisioniPadCoreSmoke/KlariVisioniPad/Resources/LiveViewer.html */,
+				D0000000000000000000003D /* KlariVisioniPadCoreSmoke/KlariVisioniPad/PitchABIAdapter.swift */,
+				D0000000000000000000003E /* KlariVisioniPadCoreSmoke/KlariVisioniPad/iPadCompactStudyWorkspace.swift */,
+				D0000000000000000000003F /* KlariVisioniPadCoreSmoke/KlariVisioniPad/iPadCompactLiveWorkspace.swift */,
+				D00000000000000000000044 /* KlariVisioniPadCoreSmoke/KlariVisioniPad/TurkishPitchReference.swift */,
+				D00000000000000000000046 /* KlariVisioniPadCoreSmoke/KlariVisioniPad/WorkspaceControls.swift */,
+			);
+			name = KlariVisioniPad;
+			sourceTree = "<group>";
+		};
+		D00000000000000000000062 /* KlariVisioniPadTests */ = {
+			isa = PBXGroup;
+			children = (
+				D00000000000000000000034 /* KlariVisioniPadCoreSmoke/Tests/KlariVisioniPadTests/AppStateTests.swift */,
+			);
+			name = KlariVisioniPadTests;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		C00000000000000000000071 /* KlariVisionCore */ = {isa = PBXNativeTarget; buildConfigurationList = C00000000000000000000091 /* Build configuration list for PBXNativeTarget "KlariVisionCore" */; buildPhases = (C00000000000000000000081 /* Sources */, C00000000000000000000051 /* Frameworks */); buildRules = (); dependencies = (); name = KlariVisionCore; productName = KlariVisionCore; productReference = C00000000000000000000021 /* libKlariVisionCore.a */; productType = "com.apple.product-type.library.static"; };
-		C00000000000000000000072 /* KlariVisionCoreSmokeTests */ = {isa = PBXNativeTarget; buildConfigurationList = C00000000000000000000092 /* Build configuration list for PBXNativeTarget "KlariVisionCoreSmokeTests" */; buildPhases = (C00000000000000000000082 /* Sources */, C00000000000000000000052 /* Frameworks */); buildRules = (); dependencies = (C000000000000000000000A1 /* PBXTargetDependency */); name = KlariVisionCoreSmokeTests; productName = KlariVisionCoreSmokeTests; productReference = C00000000000000000000022 /* KlariVisionCoreSmokeTests.xctest */; productType = "com.apple.product-type.bundle.unit-test"; };
-		D00000000000000000000071 /* KlariVisioniPad */ = {isa = PBXNativeTarget; buildConfigurationList = D00000000000000000000091 /* Build configuration list for PBXNativeTarget "KlariVisioniPad" */; buildPhases = (D00000000000000000000081 /* Sources */, D00000000000000000000083 /* Resources */, D00000000000000000000051 /* Frameworks */); buildRules = (); dependencies = (D000000000000000000000A1 /* PBXTargetDependency */); name = KlariVisioniPad; productName = KlariVisioniPad; productReference = D00000000000000000000021 /* KlariVisioniPad.app */; productType = "com.apple.product-type.application"; };
-		D00000000000000000000072 /* KlariVisioniPadTests */ = {isa = PBXNativeTarget; buildConfigurationList = D00000000000000000000092 /* Build configuration list for PBXNativeTarget "KlariVisioniPadTests" */; buildPhases = (D00000000000000000000082 /* Sources */, D00000000000000000000052 /* Frameworks */); buildRules = (); dependencies = (D000000000000000000000A2 /* PBXTargetDependency */); name = KlariVisioniPadTests; productName = KlariVisioniPadTests; productReference = D00000000000000000000022 /* KlariVisioniPadTests.xctest */; productType = "com.apple.product-type.bundle.unit-test"; };
+		C00000000000000000000071 /* KlariVisionCore */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = C00000000000000000000091 /* Build configuration list for PBXNativeTarget "KlariVisionCore" */;
+			buildPhases = (
+				C00000000000000000000081 /* Sources */,
+				C00000000000000000000051 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = KlariVisionCore;
+			productName = KlariVisionCore;
+			productReference = C00000000000000000000021 /* libKlariVisionCore.a */;
+			productType = "com.apple.product-type.library.static";
+		};
+		C00000000000000000000072 /* KlariVisionCoreSmokeTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = C00000000000000000000092 /* Build configuration list for PBXNativeTarget "KlariVisionCoreSmokeTests" */;
+			buildPhases = (
+				C00000000000000000000082 /* Sources */,
+				C00000000000000000000052 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				C000000000000000000000A1 /* PBXTargetDependency */,
+			);
+			name = KlariVisionCoreSmokeTests;
+			productName = KlariVisionCoreSmokeTests;
+			productReference = C00000000000000000000022 /* KlariVisionCoreSmokeTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		D00000000000000000000071 /* KlariVisioniPad */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = D00000000000000000000091 /* Build configuration list for PBXNativeTarget "KlariVisioniPad" */;
+			buildPhases = (
+				D00000000000000000000081 /* Sources */,
+				D00000000000000000000083 /* Resources */,
+				D00000000000000000000051 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				D000000000000000000000A1 /* PBXTargetDependency */,
+			);
+			name = KlariVisioniPad;
+			productName = KlariVisioniPad;
+			productReference = D00000000000000000000021 /* KlariVision.app */;
+			productType = "com.apple.product-type.application";
+		};
+		D00000000000000000000072 /* KlariVisioniPadTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = D00000000000000000000092 /* Build configuration list for PBXNativeTarget "KlariVisioniPadTests" */;
+			buildPhases = (
+				D00000000000000000000082 /* Sources */,
+				D00000000000000000000052 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				D000000000000000000000A2 /* PBXTargetDependency */,
+			);
+			name = KlariVisioniPadTests;
+			productName = KlariVisioniPadTests;
+			productReference = D00000000000000000000022 /* KlariVisioniPadTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
-		C00000000000000000000001 /* Project object */ = {isa = PBXProject; attributes = { BuildIndependentTargetsInParallel = 1; LastSwiftUpdateCheck = 2630; LastUpgradeCheck = 2630; TargetAttributes = { C00000000000000000000072 = { CreatedOnToolsVersion = 26.3; TestTargetID = ""; }; D00000000000000000000071 = { CreatedOnToolsVersion = 26.3; }; D00000000000000000000072 = { CreatedOnToolsVersion = 26.3; TestTargetID = D00000000000000000000071; }; }; }; buildConfigurationList = C00000000000000000000090 /* Build configuration list for PBXProject "KlariVisioniPadCoreSmoke" */; compatibilityVersion = "Xcode 16.0"; developmentRegion = en; hasScannedForEncodings = 0; knownRegions = (en, Base); mainGroup = C00000000000000000000061; productRefGroup = C00000000000000000000064 /* Products */; projectDirPath = ""; projectRoot = ""; targets = (C00000000000000000000071 /* KlariVisionCore */, C00000000000000000000072 /* KlariVisionCoreSmokeTests */, D00000000000000000000071 /* KlariVisioniPad */, D00000000000000000000072 /* KlariVisioniPadTests */); };
+		C00000000000000000000001 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 2630;
+				LastUpgradeCheck = 2630;
+				TargetAttributes = {
+					C00000000000000000000072 = {
+						CreatedOnToolsVersion = 26.3;
+						TestTargetID = "";
+					};
+					D00000000000000000000071 = {
+						CreatedOnToolsVersion = 26.3;
+					};
+					D00000000000000000000072 = {
+						CreatedOnToolsVersion = 26.3;
+						TestTargetID = D00000000000000000000071;
+					};
+				};
+			};
+			buildConfigurationList = C00000000000000000000090 /* Build configuration list for PBXProject "KlariVisioniPadCoreSmoke" */;
+			compatibilityVersion = "Xcode 16.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = C00000000000000000000061;
+			productRefGroup = C00000000000000000000064 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				C00000000000000000000071 /* KlariVisionCore */,
+				C00000000000000000000072 /* KlariVisionCoreSmokeTests */,
+				D00000000000000000000071 /* KlariVisioniPad */,
+				D00000000000000000000072 /* KlariVisioniPadTests */,
+			);
+		};
 /* End PBXProject section */
 
-/* Begin PBXSourcesBuildPhase section */
-		C00000000000000000000081 /* Sources */ = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (C00000000000000000000011 /* analysis_engine.cpp in Sources */, C00000000000000000000012 /* analysis_engine_c.cpp in Sources */, C00000000000000000000013 /* mpm.cpp in Sources */, C00000000000000000000014 /* pitch_engine_v2.cpp in Sources */, C00000000000000000000015 /* fixed_lag_tracker.cpp in Sources */, C00000000000000000000016 /* pitch_engine_v2_session.cpp in Sources */, C00000000000000000000017 /* swipe_prime.cpp in Sources */, C00000000000000000000018 /* vpm_like.cpp in Sources */); runOnlyForDeploymentPostprocessing = 0; };
-		C00000000000000000000082 /* Sources */ = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (C00000000000000000000019 /* CoreSmokeTests.swift in Sources */); runOnlyForDeploymentPostprocessing = 0; };
-		D00000000000000000000081 /* Sources */ = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (D00000000000000000000011 /* AppState.swift in Sources */, D00000000000000000000012 /* KlariVisioniPadApp.swift in Sources */, D00000000000000000000017 /* StudyModels.swift in Sources */, D00000000000000000000018 /* StudyState.swift in Sources */, D00000000000000000000019 /* StudyWebView.swift in Sources */, D0000000000000000000001B /* LiveModels.swift in Sources */, D0000000000000000000001C /* LiveAnalyzer.swift in Sources */, D0000000000000000000001D /* LiveWebView.swift in Sources */, D0000000000000000000001F /* PitchABIAdapter.swift in Sources */, D00000000000000000000040 /* iPadCompactStudyWorkspace.swift in Sources */, D00000000000000000000042 /* iPadCompactLiveWorkspace.swift in Sources */); runOnlyForDeploymentPostprocessing = 0; };
-		D00000000000000000000082 /* Sources */ = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (D00000000000000000000014 /* AppStateTests.swift in Sources */); runOnlyForDeploymentPostprocessing = 0; };
-/* End PBXSourcesBuildPhase section */
-
 /* Begin PBXResourcesBuildPhase section */
-		D00000000000000000000083 /* Resources */ = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (D0000000000000000000001A /* StudyViewer.html in Resources */, D0000000000000000000001E /* LiveViewer.html in Resources */); runOnlyForDeploymentPostprocessing = 0; };
+		D00000000000000000000083 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D0000000000000000000001A /* KlariVisioniPadCoreSmoke/KlariVisioniPad/Resources/StudyViewer.html in Resources */,
+				D0000000000000000000001E /* KlariVisioniPadCoreSmoke/KlariVisioniPad/Resources/LiveViewer.html in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXResourcesBuildPhase section */
 
+/* Begin PBXSourcesBuildPhase section */
+		C00000000000000000000081 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				C00000000000000000000011 /* ../core/src/analysis_engine.cpp in Sources */,
+				C00000000000000000000012 /* ../core/src/analysis_engine_c.cpp in Sources */,
+				C00000000000000000000013 /* ../core/src/mpm.cpp in Sources */,
+				C00000000000000000000014 /* ../core/src/pitch_engine_v2.cpp in Sources */,
+				C00000000000000000000015 /* ../core/src/fixed_lag_tracker.cpp in Sources */,
+				C00000000000000000000016 /* ../core/src/pitch_engine_v2_session.cpp in Sources */,
+				C00000000000000000000017 /* ../core/src/swipe_prime.cpp in Sources */,
+				C00000000000000000000018 /* ../core/src/vpm_like.cpp in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		C00000000000000000000082 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				C00000000000000000000019 /* KlariVisioniPadCoreSmoke/Tests/KlariVisionCoreSmokeTests/CoreSmokeTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		D00000000000000000000081 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D00000000000000000000011 /* KlariVisioniPadCoreSmoke/KlariVisioniPad/AppState.swift in Sources */,
+				D00000000000000000000012 /* KlariVisioniPadCoreSmoke/KlariVisioniPad/KlariVisioniPadApp.swift in Sources */,
+				D00000000000000000000017 /* KlariVisioniPadCoreSmoke/KlariVisioniPad/StudyModels.swift in Sources */,
+				D00000000000000000000018 /* KlariVisioniPadCoreSmoke/KlariVisioniPad/StudyState.swift in Sources */,
+				D00000000000000000000019 /* KlariVisioniPadCoreSmoke/KlariVisioniPad/StudyWebView.swift in Sources */,
+				D0000000000000000000001B /* KlariVisioniPadCoreSmoke/KlariVisioniPad/LiveModels.swift in Sources */,
+				D0000000000000000000001C /* KlariVisioniPadCoreSmoke/KlariVisioniPad/LiveAnalyzer.swift in Sources */,
+				D0000000000000000000001D /* KlariVisioniPadCoreSmoke/KlariVisioniPad/LiveWebView.swift in Sources */,
+				D0000000000000000000001F /* KlariVisioniPadCoreSmoke/KlariVisioniPad/PitchABIAdapter.swift in Sources */,
+				D00000000000000000000040 /* KlariVisioniPadCoreSmoke/KlariVisioniPad/iPadCompactStudyWorkspace.swift in Sources */,
+				D00000000000000000000042 /* KlariVisioniPadCoreSmoke/KlariVisioniPad/iPadCompactLiveWorkspace.swift in Sources */,
+				D00000000000000000000043 /* KlariVisioniPadCoreSmoke/KlariVisioniPad/TurkishPitchReference.swift in Sources */,
+				D00000000000000000000045 /* KlariVisioniPadCoreSmoke/KlariVisioniPad/WorkspaceControls.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		D00000000000000000000082 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D00000000000000000000014 /* KlariVisioniPadCoreSmoke/Tests/KlariVisioniPadTests/AppStateTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
 /* Begin PBXTargetDependency section */
-		C000000000000000000000A1 /* PBXTargetDependency */ = {isa = PBXTargetDependency; target = C00000000000000000000071 /* KlariVisionCore */; targetProxy = C000000000000000000000A2 /* PBXContainerItemProxy */; };
-		D000000000000000000000A1 /* PBXTargetDependency */ = {isa = PBXTargetDependency; target = C00000000000000000000071 /* KlariVisionCore */; targetProxy = D000000000000000000000A3 /* PBXContainerItemProxy */; };
-		D000000000000000000000A2 /* PBXTargetDependency */ = {isa = PBXTargetDependency; target = D00000000000000000000071 /* KlariVisioniPad */; targetProxy = D000000000000000000000A4 /* PBXContainerItemProxy */; };
+		C000000000000000000000A1 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = C00000000000000000000071 /* KlariVisionCore */;
+			targetProxy = C000000000000000000000A2 /* PBXContainerItemProxy */;
+		};
+		D000000000000000000000A1 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = C00000000000000000000071 /* KlariVisionCore */;
+			targetProxy = D000000000000000000000A3 /* PBXContainerItemProxy */;
+		};
+		D000000000000000000000A2 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = D00000000000000000000071 /* KlariVisioniPad */;
+			targetProxy = D000000000000000000000A4 /* PBXContainerItemProxy */;
+		};
 /* End PBXTargetDependency section */
 
-/* Begin PBXContainerItemProxy section */
-		C000000000000000000000A2 /* PBXContainerItemProxy */ = {isa = PBXContainerItemProxy; containerPortal = C00000000000000000000001 /* Project object */; proxyType = 1; remoteGlobalIDString = C00000000000000000000071; remoteInfo = KlariVisionCore; };
-		D000000000000000000000A3 /* PBXContainerItemProxy */ = {isa = PBXContainerItemProxy; containerPortal = C00000000000000000000001 /* Project object */; proxyType = 1; remoteGlobalIDString = C00000000000000000000071; remoteInfo = KlariVisionCore; };
-		D000000000000000000000A4 /* PBXContainerItemProxy */ = {isa = PBXContainerItemProxy; containerPortal = C00000000000000000000001 /* Project object */; proxyType = 1; remoteGlobalIDString = D00000000000000000000071; remoteInfo = KlariVisioniPad; };
-/* End PBXContainerItemProxy section */
-
 /* Begin XCBuildConfiguration section */
-		C000000000000000000000B1 /* Debug */ = {isa = XCBuildConfiguration; buildSettings = { ALWAYS_SEARCH_USER_PATHS = NO; CLANG_CXX_LANGUAGE_STANDARD = "c++20"; HEADER_SEARCH_PATHS = "$(SRCROOT)/../core/include"; IPHONEOS_DEPLOYMENT_TARGET = 17.0; SDKROOT = iphoneos; SWIFT_VERSION = 6.0; }; name = Debug; };
-		C000000000000000000000B2 /* Release */ = {isa = XCBuildConfiguration; buildSettings = { ALWAYS_SEARCH_USER_PATHS = NO; CLANG_CXX_LANGUAGE_STANDARD = "c++20"; HEADER_SEARCH_PATHS = "$(SRCROOT)/../core/include"; IPHONEOS_DEPLOYMENT_TARGET = 17.0; SDKROOT = iphoneos; SWIFT_VERSION = 6.0; }; name = Release; };
-		C000000000000000000000B3 /* Debug */ = {isa = XCBuildConfiguration; buildSettings = { CLANG_CXX_LANGUAGE_STANDARD = "c++20"; HEADER_SEARCH_PATHS = "$(SRCROOT)/../core/include"; IPHONEOS_DEPLOYMENT_TARGET = 17.0; MACH_O_TYPE = staticlib; PRODUCT_NAME = KlariVisionCore; SDKROOT = iphoneos; SKIP_INSTALL = YES; SUPPORTS_MACCATALYST = YES; }; name = Debug; };
-		C000000000000000000000B4 /* Release */ = {isa = XCBuildConfiguration; buildSettings = { CLANG_CXX_LANGUAGE_STANDARD = "c++20"; HEADER_SEARCH_PATHS = "$(SRCROOT)/../core/include"; IPHONEOS_DEPLOYMENT_TARGET = 17.0; MACH_O_TYPE = staticlib; PRODUCT_NAME = KlariVisionCore; SDKROOT = iphoneos; SKIP_INSTALL = YES; SUPPORTS_MACCATALYST = YES; }; name = Release; };
-		C000000000000000000000B5 /* Debug */ = {isa = XCBuildConfiguration; buildSettings = { ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES; BUNDLE_LOADER = ""; CLANG_CXX_LANGUAGE_STANDARD = "c++20"; CODE_SIGNING_ALLOWED = NO; GENERATE_INFOPLIST_FILE = YES; HEADER_SEARCH_PATHS = "$(SRCROOT)/../core/include"; IPHONEOS_DEPLOYMENT_TARGET = 17.0; OTHER_LDFLAGS = "-lc++ -framework Accelerate"; PRODUCT_BUNDLE_IDENTIFIER = com.aykerme.KlariVisionCoreSmokeTests; PRODUCT_NAME = KlariVisionCoreSmokeTests; SDKROOT = iphoneos; SWIFT_OBJC_BRIDGING_HEADER = KlariVisioniPadCoreSmoke/Sources/KlariVisionCoreSmoke/KlariVisionCoreBridge.h; SWIFT_VERSION = 5.0; TEST_HOST = ""; }; name = Debug; };
-		C000000000000000000000B6 /* Release */ = {isa = XCBuildConfiguration; buildSettings = { ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES; BUNDLE_LOADER = ""; CLANG_CXX_LANGUAGE_STANDARD = "c++20"; CODE_SIGNING_ALLOWED = NO; GENERATE_INFOPLIST_FILE = YES; HEADER_SEARCH_PATHS = "$(SRCROOT)/../core/include"; IPHONEOS_DEPLOYMENT_TARGET = 17.0; OTHER_LDFLAGS = "-lc++ -framework Accelerate"; PRODUCT_BUNDLE_IDENTIFIER = com.aykerme.KlariVisionCoreSmokeTests; PRODUCT_NAME = KlariVisionCoreSmokeTests; SDKROOT = iphoneos; SWIFT_OBJC_BRIDGING_HEADER = KlariVisioniPadCoreSmoke/Sources/KlariVisionCoreSmoke/KlariVisionCoreBridge.h; SWIFT_VERSION = 5.0; TEST_HOST = ""; }; name = Release; };
-		D000000000000000000000B1 /* Debug */ = {isa = XCBuildConfiguration; buildSettings = { CODE_SIGNING_ALLOWED = NO; ENABLE_TESTABILITY = YES; GENERATE_INFOPLIST_FILE = YES; HEADER_SEARCH_PATHS = "$(SRCROOT)/../core/include"; INFOPLIST_KEY_NSMicrophoneUsageDescription = "KlariVision, canlı pitch analizi ve yerel WAV kaydı için mikrofonu kullanır."; INFOPLIST_KEY_UILaunchScreen_Generation = YES; INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"; INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"; IPHONEOS_DEPLOYMENT_TARGET = 17.0; OTHER_LDFLAGS = "-lc++ -framework Accelerate"; PRODUCT_BUNDLE_IDENTIFIER = com.aykerme.KlariVisioniPad; PRODUCT_MODULE_NAME = KlariVisioniPad; PRODUCT_NAME = KlariVision; SDKROOT = iphoneos; SUPPORTED_PLATFORMS = "iphoneos iphonesimulator"; SUPPORTS_MACCATALYST = YES; SWIFT_OBJC_BRIDGING_HEADER = KlariVisioniPadCoreSmoke/KlariVisioniPad/KlariVisioniPadBridge.h; SWIFT_OPTIMIZATION_LEVEL = "-Onone"; SWIFT_VERSION = 6.0; TARGETED_DEVICE_FAMILY = "1,2"; }; name = Debug; };
-		D000000000000000000000B2 /* Release */ = {isa = XCBuildConfiguration; buildSettings = { CODE_SIGNING_ALLOWED = NO; GENERATE_INFOPLIST_FILE = YES; HEADER_SEARCH_PATHS = "$(SRCROOT)/../core/include"; INFOPLIST_KEY_NSMicrophoneUsageDescription = "KlariVision, canlı pitch analizi ve yerel WAV kaydı için mikrofonu kullanır."; INFOPLIST_KEY_UILaunchScreen_Generation = YES; INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"; INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"; IPHONEOS_DEPLOYMENT_TARGET = 17.0; OTHER_LDFLAGS = "-lc++ -framework Accelerate"; PRODUCT_BUNDLE_IDENTIFIER = com.aykerme.KlariVisioniPad; PRODUCT_MODULE_NAME = KlariVisioniPad; PRODUCT_NAME = KlariVision; SDKROOT = iphoneos; SUPPORTED_PLATFORMS = "iphoneos iphonesimulator"; SUPPORTS_MACCATALYST = YES; SWIFT_OBJC_BRIDGING_HEADER = KlariVisioniPadCoreSmoke/KlariVisioniPad/KlariVisioniPadBridge.h; SWIFT_VERSION = 6.0; TARGETED_DEVICE_FAMILY = "1,2"; }; name = Release; };
-		D000000000000000000000B3 /* Debug */ = {isa = XCBuildConfiguration; buildSettings = { BUNDLE_LOADER = "$(TEST_HOST)"; CODE_SIGNING_ALLOWED = NO; GENERATE_INFOPLIST_FILE = YES; IPHONEOS_DEPLOYMENT_TARGET = 17.0; PRODUCT_BUNDLE_IDENTIFIER = com.aykerme.KlariVisioniPadTests; PRODUCT_NAME = KlariVisioniPadTests; SDKROOT = iphoneos; SWIFT_VERSION = 6.0; TEST_HOST = "$(BUILT_PRODUCTS_DIR)/KlariVision.app/KlariVision"; }; name = Debug; };
-		D000000000000000000000B4 /* Release */ = {isa = XCBuildConfiguration; buildSettings = { BUNDLE_LOADER = "$(TEST_HOST)"; CODE_SIGNING_ALLOWED = NO; GENERATE_INFOPLIST_FILE = YES; IPHONEOS_DEPLOYMENT_TARGET = 17.0; PRODUCT_BUNDLE_IDENTIFIER = com.aykerme.KlariVisioniPadTests; PRODUCT_NAME = KlariVisioniPadTests; SDKROOT = iphoneos; SWIFT_VERSION = 6.0; TEST_HOST = "$(BUILT_PRODUCTS_DIR)/KlariVision.app/KlariVision"; }; name = Release; };
+		C000000000000000000000B1 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_CXX_LANGUAGE_STANDARD = "c++20";
+				HEADER_SEARCH_PATHS = "$(SRCROOT)/../core/include";
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Debug;
+		};
+		C000000000000000000000B2 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_CXX_LANGUAGE_STANDARD = "c++20";
+				HEADER_SEARCH_PATHS = "$(SRCROOT)/../core/include";
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Release;
+		};
+		C000000000000000000000B3 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_CXX_LANGUAGE_STANDARD = "c++20";
+				HEADER_SEARCH_PATHS = "$(SRCROOT)/../core/include";
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MACH_O_TYPE = staticlib;
+				PRODUCT_NAME = KlariVisionCore;
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SUPPORTS_MACCATALYST = YES;
+			};
+			name = Debug;
+		};
+		C000000000000000000000B4 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_CXX_LANGUAGE_STANDARD = "c++20";
+				HEADER_SEARCH_PATHS = "$(SRCROOT)/../core/include";
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MACH_O_TYPE = staticlib;
+				PRODUCT_NAME = KlariVisionCore;
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SUPPORTS_MACCATALYST = YES;
+			};
+			name = Release;
+		};
+		C000000000000000000000B5 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
+				BUNDLE_LOADER = "";
+				CLANG_CXX_LANGUAGE_STANDARD = "c++20";
+				CODE_SIGNING_ALLOWED = NO;
+				GENERATE_INFOPLIST_FILE = YES;
+				HEADER_SEARCH_PATHS = "$(SRCROOT)/../core/include";
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				OTHER_LDFLAGS = (
+					"-lc++",
+					"-framework",
+					Accelerate,
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.aykerme.KlariVisionCoreSmokeTests;
+				PRODUCT_NAME = KlariVisionCoreSmokeTests;
+				SDKROOT = iphoneos;
+				SWIFT_OBJC_BRIDGING_HEADER = KlariVisioniPadCoreSmoke/Sources/KlariVisionCoreSmoke/KlariVisionCoreBridge.h;
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "";
+			};
+			name = Debug;
+		};
+		C000000000000000000000B6 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
+				BUNDLE_LOADER = "";
+				CLANG_CXX_LANGUAGE_STANDARD = "c++20";
+				CODE_SIGNING_ALLOWED = NO;
+				GENERATE_INFOPLIST_FILE = YES;
+				HEADER_SEARCH_PATHS = "$(SRCROOT)/../core/include";
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				OTHER_LDFLAGS = (
+					"-lc++",
+					"-framework",
+					Accelerate,
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.aykerme.KlariVisionCoreSmokeTests;
+				PRODUCT_NAME = KlariVisionCoreSmokeTests;
+				SDKROOT = iphoneos;
+				SWIFT_OBJC_BRIDGING_HEADER = KlariVisioniPadCoreSmoke/Sources/KlariVisionCoreSmoke/KlariVisionCoreBridge.h;
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "";
+			};
+			name = Release;
+		};
+		D000000000000000000000B1 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGNING_ALLOWED = YES;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = 9J2BC3Q77C;
+				ENABLE_TESTABILITY = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				HEADER_SEARCH_PATHS = "$(SRCROOT)/../core/include";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "KlariVision, canlı pitch analizi ve yerel WAV kaydı için mikrofonu kullanır.";
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				OTHER_LDFLAGS = (
+					"-lc++",
+					"-framework",
+					Accelerate,
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.aykerme.KlariVisioniPad;
+				PRODUCT_MODULE_NAME = KlariVisioniPad;
+				PRODUCT_NAME = KlariVision;
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				SDKROOT = iphoneos;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = YES;
+				SWIFT_OBJC_BRIDGING_HEADER = KlariVisioniPadCoreSmoke/KlariVisioniPad/KlariVisioniPadBridge.h;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		D000000000000000000000B2 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGNING_ALLOWED = YES;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = 9J2BC3Q77C;
+				GENERATE_INFOPLIST_FILE = YES;
+				HEADER_SEARCH_PATHS = "$(SRCROOT)/../core/include";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "KlariVision, canlı pitch analizi ve yerel WAV kaydı için mikrofonu kullanır.";
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				OTHER_LDFLAGS = (
+					"-lc++",
+					"-framework",
+					Accelerate,
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.aykerme.KlariVisioniPad;
+				PRODUCT_MODULE_NAME = KlariVisioniPad;
+				PRODUCT_NAME = KlariVision;
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				SDKROOT = iphoneos;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = YES;
+				SWIFT_OBJC_BRIDGING_HEADER = KlariVisioniPadCoreSmoke/KlariVisioniPad/KlariVisioniPadBridge.h;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		D000000000000000000000B3 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGNING_ALLOWED = NO;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.aykerme.KlariVisioniPadTests;
+				PRODUCT_NAME = KlariVisioniPadTests;
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 6.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/KlariVision.app/KlariVision";
+			};
+			name = Debug;
+		};
+		D000000000000000000000B4 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGNING_ALLOWED = NO;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.aykerme.KlariVisioniPadTests;
+				PRODUCT_NAME = KlariVisioniPadTests;
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 6.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/KlariVision.app/KlariVision";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		C00000000000000000000090 /* Build configuration list for PBXProject "KlariVisioniPadCoreSmoke" */ = {isa = XCConfigurationList; buildConfigurations = (C000000000000000000000B1 /* Debug */, C000000000000000000000B2 /* Release */); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
-		C00000000000000000000091 /* Build configuration list for PBXNativeTarget "KlariVisionCore" */ = {isa = XCConfigurationList; buildConfigurations = (C000000000000000000000B3 /* Debug */, C000000000000000000000B4 /* Release */); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
-		C00000000000000000000092 /* Build configuration list for PBXNativeTarget "KlariVisionCoreSmokeTests" */ = {isa = XCConfigurationList; buildConfigurations = (C000000000000000000000B5 /* Debug */, C000000000000000000000B6 /* Release */); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
-		D00000000000000000000091 /* Build configuration list for PBXNativeTarget "KlariVisioniPad" */ = {isa = XCConfigurationList; buildConfigurations = (D000000000000000000000B1 /* Debug */, D000000000000000000000B2 /* Release */); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
-		D00000000000000000000092 /* Build configuration list for PBXNativeTarget "KlariVisioniPadTests" */ = {isa = XCConfigurationList; buildConfigurations = (D000000000000000000000B3 /* Debug */, D000000000000000000000B4 /* Release */); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
+		C00000000000000000000090 /* Build configuration list for PBXProject "KlariVisioniPadCoreSmoke" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				C000000000000000000000B1 /* Debug */,
+				C000000000000000000000B2 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		C00000000000000000000091 /* Build configuration list for PBXNativeTarget "KlariVisionCore" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				C000000000000000000000B3 /* Debug */,
+				C000000000000000000000B4 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		C00000000000000000000092 /* Build configuration list for PBXNativeTarget "KlariVisionCoreSmokeTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				C000000000000000000000B5 /* Debug */,
+				C000000000000000000000B6 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		D00000000000000000000091 /* Build configuration list for PBXNativeTarget "KlariVisioniPad" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				D000000000000000000000B1 /* Debug */,
+				D000000000000000000000B2 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		D00000000000000000000092 /* Build configuration list for PBXNativeTarget "KlariVisioniPadTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				D000000000000000000000B3 /* Debug */,
+				D000000000000000000000B4 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 /* End XCConfigurationList section */
 	};
 	rootObject = C00000000000000000000001 /* Project object */;

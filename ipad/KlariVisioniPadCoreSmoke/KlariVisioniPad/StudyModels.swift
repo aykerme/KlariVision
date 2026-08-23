@@ -17,6 +17,14 @@ struct iPadStudy: Identifiable, Equatable, Codable {
     let engine: iPadPitchEngine
     var context: iPadMusicContext
     let analyzedAt: Date
+
+    /// Whether the source file has a video track to show, as opposed to
+    /// audio-only. Drives the native graph/video fullscreen toggle button in
+    /// the compact study workspace.
+    var isVideoSource: Bool {
+        guard let type = UTType(filenameExtension: sourceURL.pathExtension) else { return false }
+        return type.conforms(to: .movie)
+    }
 }
 
 struct iPadStudyLibraryStore {
@@ -207,12 +215,30 @@ enum iPadStudyPlaybackRate {
     static func label(for rate: Double) -> String {
         String(format: "%.2f×", rate).replacingOccurrences(of: ".", with: ",")
     }
+
+    /// Index of the nearest table entry, clamped to the ends.  The ± control
+    /// steps over indices rather than raw doubles so the 0,05× grid can never
+    /// drift through repeated floating-point addition.
+    static func index(for rate: Double) -> Int {
+        guard let first = values.first, let last = values.last else { return 0 }
+        if rate <= first { return 0 }
+        if rate >= last { return values.count - 1 }
+        return values.indices.min { abs(values[$0] - rate) < abs(values[$1] - rate) } ?? 0
+    }
+
+    static func rate(at index: Int) -> Double {
+        values[min(max(index, 0), values.count - 1)]
+    }
 }
 
 enum iPadStudyCommand: Equatable {
     case load(URL, [iPadPitchFrame])
-    case context(iPadMusicContext, pitchColor: String, guideColor: String)
+    case context(iPadMusicContext, pitchColor: String, guideColor: String, komaOverride: [Int])
     case playPause, pause, seek(Double), rate(Double), markA, markB, loop, follow
+    /// Which side (graph or video) fills the stage. Driven by the native
+    /// floating toggle button so it stays tappable regardless of the
+    /// WebView's own pinch-zoom state (see `iPadStudyWebView`).
+    case setVideoFullscreen(Bool)
 }
 
 struct iPadStudyCommandQueue {

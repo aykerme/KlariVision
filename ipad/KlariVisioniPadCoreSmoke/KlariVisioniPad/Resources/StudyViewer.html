@@ -10,24 +10,44 @@
   :root { color-scheme: light dark; background:#111827; color:#f4f7fb; font-family:-apple-system,system-ui,sans-serif; --marker-a:#49e3a1; --marker-b:#ffc35c; --marker-label:#101827; }
   @media (prefers-color-scheme: light) { :root { --marker-a:#087f5b; --marker-b:#a55a00; --marker-label:#ffffff; } }
   html,body,#stage { margin:0; width:100%; height:100%; height:100dvh; min-height:0; overflow:hidden; background:#111827; }
-  #stage { display:grid; grid-template-rows:minmax(0,1fr) auto; padding-top:env(safe-area-inset-top); padding-bottom:env(safe-area-inset-bottom); box-sizing:border-box; }
-  #curve { width:100%; height:100%; min-height:0; display:block; background:linear-gradient(160deg,#172437,#0e1420); }
-  #mediaSlot { width:100%; min-height:0; background:#000; overflow:hidden; }
-  audio, video { display:block; width:100%; max-height:32dvh; min-height:44px; background:#000; }
+  #stage { position:relative; padding-top:env(safe-area-inset-top); padding-bottom:env(safe-area-inset-bottom); box-sizing:border-box; }
+  #curve, #mediaSlot { position:absolute; inset:0; width:100%; height:100%; min-height:0; box-sizing:border-box; }
+  /* Every graph gesture is handled by this page's own touch handlers, so the
+     browser must not claim the one-finger drag for scrolling or a long-press
+     callout. (The WebView's scrollView is disabled in graph mode too — this
+     covers the in-page side.) */
+  #curve { display:block; background:linear-gradient(160deg,#172437,#0e1420); touch-action:none; }
+  #mediaSlot { background:#000; overflow:hidden; display:flex; align-items:center; justify-content:center; }
+  audio, video { display:block; width:100%; height:100%; background:#000; }
   video { object-fit:contain; }
   #empty { display:grid; place-items:center; height:100%; color:#9eb2cc; font-size:16px; }
-  @media (orientation:landscape) {
-    #stage { grid-template-rows:minmax(0,1fr) auto; }
-    audio, video { max-height:24dvh; }
-  }
-  @media (prefers-reduced-motion:reduce) { * { scroll-behavior:auto !important; } }
+  /* Exactly one of graph/video fills the stage at a time — no mini corner
+     preview of the inactive side. An in-page preview box was tried and
+     dropped: WKWebView scales all page content together during pinch-zoom
+     (no visual-viewport pinning like mobile Safari's chrome), so a page-content
+     box built to "stay in the corner" would zoom/pan out of place exactly like
+     the old in-page toggle button did. The native SwiftUI button (in
+     iPadCompactStudyWorkspace.swift, entirely outside the WebView) is the only
+     UI for switching, and its icon indicates which side tapping reveals. */
+  #stage.mode-graph #mediaSlot.has-video { display:none; }
+  #stage.mode-video #curve { display:none; }
+  /* Audio-only recordings: no video to toggle to, graph always fills the stage. */
+  #mediaSlot:not(.has-video) { display:none; }
 </style>
-<body><div id="stage"><canvas id="curve"></canvas><div id="mediaSlot"><div id="empty">Yerel çalışma hazırlanıyor…</div></div></div>
+<!--
+  The graph/video fullscreen toggle is a NATIVE SwiftUI button
+  (iPadCompactStudyWorkspace.swift), not an in-page control — see the CSS
+  comment above for why. It sends a `setVideoFullscreen` command that
+  `setMode()` below applies; this page only renders the two full-stage panes.
+-->
+<body><div id="stage" class="mode-graph"><canvas id="curve"></canvas><div id="mediaSlot"><div id="empty">Yerel çalışma hazırlanıyor…</div></div></div>
 <script>
 (() => {
   const bridge = window.webkit?.messageHandlers?.studyPlayback;
   const canvas = document.getElementById('curve'), ctx = canvas.getContext('2d');
   const slot = document.getElementById('mediaSlot');
+  const stage = document.getElementById('stage');
+  const setMode = mode => { stage.classList.toggle('mode-video', mode === 'video'); stage.classList.toggle('mode-graph', mode !== 'video'); resize(); };
   var media = null, frames = [], a = null, b = null, looping = false, following = false, verticalCenter = null;
   let context = {guides:[], makam:'', karar:'', pitchColor:'#67d5ff', guideColor:'#b7d8ff'};
   const verticalSpan = 2400;
@@ -41,28 +61,110 @@
     if(pitch<current-edge)return pitch+restingEdge;
     return current;
   };
+  // Extent of everything drawable (voiced frames + perde lines). Folded in a
+  // loop instead of Math.min(...array): a long recording holds tens of
+  // thousands of points and spreading them on every animation frame is both
+  // slow and an argument-count risk. Cached until the frames or the guides
+  // change (install() / the `context` command).
+  let extentCache = null;
+  const measure = () => {
+    if(extentCache) return extentCache;
+    let low=Infinity, high=-Infinity, guideLow=Infinity, guideHigh=-Infinity, voiced=0;
+    for(const x of frames){ if(!x.v||!(x.f>0))continue; const value=cents(x.f); if(value<low)low=value; if(value>high)high=value; voiced++; }
+    for(const g of context.guides){ const value=cents(g.hz); if(value<guideLow)guideLow=value; if(value>guideHigh)guideHigh=value; }
+    // Seeding the follow center needs every value, not just the extremes, but
+    // only on the first frame after a load — so it stays a lazy call.
+    const all=()=>{ const values=[]; for(const x of frames)if(x.v&&x.f>0)values.push(cents(x.f)); for(const g of context.guides)values.push(cents(g.hz)); return values; };
+    extentCache={low,high,guideLow,guideHigh,voiced,all};
+    return extentCache;
+  };
   const send = () => bridge?.postMessage({time:Number(media?.currentTime)||0,duration:Number(media?.duration)||0,isPlaying:media ? !media.paused : false,rate:Number(media?.playbackRate)||1,loopA:a,loopB:b,loopEnabled:looping,followsCurve:following});
   const resize = () => { const r=canvas.getBoundingClientRect(), scale=devicePixelRatio||1; canvas.width=r.width*scale; canvas.height=r.height*scale; ctx.setTransform(scale,0,0,scale,0,0); draw(); };
+  // Visible time-window length (seconds) and vertical pitch-range multiplier.
+  // Both are mutable so the pinch handler below (which classifies each pinch
+  // by the angle between the two touches) can drive either axis
+  // independently — a horizontal pinch changes only windowSeconds, a
+  // vertical one only verticalZoom, and a diagonal one changes both together.
+  const minWindowSeconds = 2, maxWindowSeconds = 60;
+  let windowSeconds = 12;
+  const minVerticalZoom = 0.25, maxVerticalZoom = 4;
+  let verticalZoom = 1;
+  // One-finger vertical pan, kept as a cents offset in data space. Pan and
+  // zoom are ALWAYS expressed by recomputing the lo/hi cents range, never by
+  // a canvas transform (`ctx.translate`/`ctx.scale`) — that is what keeps the
+  // perde labels at the same left-gutter position and the same font size at
+  // every zoom level and pan position.
+  let verticalOffset = 0;
+  // Last drawn vertical viewport, so the touch handler can turn finger pixels
+  // into cents without recomputing the range.
+  let viewport = null;
   const draw = () => {
     const r=canvas.getBoundingClientRect(), w=r.width, h=r.height, d=Math.max(0.001,Number(media?.duration)||1);
-    const visibleDuration=following?Math.min(12,d):d, currentTime=Number(media?.currentTime)||0;
-    const windowStart=following?Math.min(Math.max(-visibleDuration/2,currentTime-visibleDuration/2),Math.max(-visibleDuration/2,d-visibleDuration/2)):0;
+    // Time window always stays centered on playback, mirroring the macOS study
+    // graph's default 12s window (clamped so both ends keep half-a-window of
+    // padding). This is independent of the vertical "follow the curve" toggle.
+    const visibleDuration=Math.min(windowSeconds,d), currentTime=Number(media?.currentTime)||0;
+    const windowStart=Math.min(Math.max(-visibleDuration/2,currentTime-visibleDuration/2),Math.max(-visibleDuration/2,d-visibleDuration/2));
     const windowEnd=windowStart+visibleDuration, timeX=time=>(time-windowStart)/visibleDuration*w;
-    ctx.clearRect(0,0,w,h); ctx.strokeStyle='rgba(174,208,245,.16)'; ctx.lineWidth=1;
-    for(let i=1;i<5;i++){ctx.beginPath();ctx.moveTo(0,h*i/5);ctx.lineTo(w,h*i/5);ctx.stroke();}
+    ctx.clearRect(0,0,w,h);
     if(a!==null&&b!==null&&looping){const left=Math.max(a,windowStart),right=Math.min(b,windowEnd);if(right>left){ctx.fillStyle='rgba(62,184,199,.18)';ctx.fillRect(timeX(left),0,timeX(right)-timeX(left),h);}}
-    const voiced=frames.filter(x=>x.v&&x.f>0), all=[...voiced.map(x=>x.f),...context.guides];
-    let lo=all.length?Math.max(40,Math.min(...all)):100, hi=all.length?Math.max(lo+1,Math.max(...all)):800;
-    if(following&&all.length){
-      const allCents=all.map(cents);
-      if(verticalCenter===null)verticalCenter=median(allCents);
-      const time=Number(media?.currentTime)||0, nearby=voiced.filter(x=>Math.abs(x.t-time)<=.25).map(x=>cents(x.f));
-      if(nearby.length)verticalCenter=followedCenter(verticalCenter,median(nearby));
-      lo=verticalCenter-verticalSpan/2;hi=verticalCenter+verticalSpan/2;
+    // Vertical position is always cents (log-frequency), never raw Hz — same
+    // as the macOS viewer (`frequency_viewer.py`'s `y=hz=>...cents(hz)...`
+    // has no linear-Hz fallback either). Equal note/koma intervals must be
+    // equal pixel distances regardless of the "follow the curve" toggle,
+    // which only decides how the *center* of the view is chosen, not the
+    // axis it's measured on.
+    const extent=measure();
+    // The 40 Hz floor only guards against a wild low estimate in the *signal*;
+    // a real perde line is never cut off by it, or the bottom-most note lines
+    // could not be reached by pan and zoom-out.
+    let lo=Math.min(extent.low<=extent.high?Math.max(cents(40),extent.low):Infinity,extent.guideLow);
+    let hi=Math.max(extent.low<=extent.high?extent.high:-Infinity,extent.guideHigh);
+    if(!(lo<=hi)){lo=cents(100);hi=cents(800);}
+    hi=Math.max(lo+1,hi);
+    // Everything the view is allowed to reach: the perde lines plus whatever
+    // was recorded. Zoom-out stops with the outermost perde lines on the top
+    // and bottom edges, and pan stops when one of them reaches its edge —
+    // there is never an empty band past the last note line, at any zoom level.
+    // Same contract as the live graph (LiveViewer.html).
+    const boundLo=lo, boundHi=hi, boundSpan=boundHi-boundLo;
+    const clampRange=(center,span)=>
+      !(boundSpan>0)?center
+        :span>=boundSpan?(boundLo+boundHi)/2
+          :Math.max(boundLo+span/2,Math.min(boundHi-span/2,center));
+    if(following){
+      if(verticalCenter===null){const values=extent.all();if(values.length)verticalCenter=median(values);}
+      if(verticalCenter!==null){
+        const nearby=[];
+        for(const x of frames)if(x.v&&x.f>0&&Math.abs(x.t-currentTime)<=.25)nearby.push(cents(x.f));
+        if(nearby.length)verticalCenter=followedCenter(verticalCenter,median(nearby));
+        lo=verticalCenter-verticalSpan/2;hi=verticalCenter+verticalSpan/2;
+      }
     }
-    const verticalValue = frequency => following ? cents(frequency) : frequency;
-    ctx.strokeStyle=context.guideColor;ctx.globalAlpha=.55;for(const g of context.guides){const y=h-(verticalValue(g)-lo)/(hi-lo)*h;if(y<0||y>h)continue;ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(w,y);ctx.stroke();}ctx.globalAlpha=1;ctx.fillStyle=context.guideColor;ctx.font='12px -apple-system';ctx.fillText(`${context.makam||'Makam'} · ${context.karar||'Karar'}`,12,18);
-    if(voiced.length){
+    // Zoom scales the range, then the span is capped at the bound so the view
+    // can never open wider than the outermost perde lines. The effective zoom
+    // is written back: without it a pinch that keeps pulling past the limit
+    // would grow a number that the next pinch-in has to spend itself undoing
+    // before anything moves on screen.
+    { let center=(lo+hi)/2, span=(hi-lo)/verticalZoom;
+      if(boundSpan>0&&span>boundSpan){verticalZoom=(hi-lo)/boundSpan;span=boundSpan;}
+      if(following&&verticalCenter!==null)center=verticalCenter=clampRange(verticalCenter,span);
+      else{verticalOffset=clampRange(center+verticalOffset,span)-center;center+=verticalOffset;}
+      lo=center-span/2;hi=center+span/2; }
+    viewport={h,lo,hi,boundLo,boundHi};
+    const verticalValue = cents;
+    // Horizontal guide lines are real note (perde) positions, not a generic
+    // grid — each is labeled with its mac-style perde name (see
+    // iPadMusicContext.guideNotes() in AppState.swift). No Hz shown on
+    // mobile, name only.
+    ctx.font='11px -apple-system';ctx.textBaseline='alphabetic';
+    for(const g of context.guides){
+      const y=h-(verticalValue(g.hz)-lo)/(hi-lo)*h;if(y<0||y>h)continue;
+      ctx.strokeStyle=context.guideColor;ctx.globalAlpha=.55;ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(w,y);ctx.stroke();ctx.globalAlpha=1;
+      ctx.fillStyle=context.guideColor;ctx.textAlign='left';ctx.fillText(g.name,8,y-3);
+    }
+    ctx.fillStyle=context.guideColor;ctx.font='12px -apple-system';ctx.textAlign='left';ctx.fillText(`${context.makam||'Makam'} · ${context.karar||'Karar'}`,12,18);
+    if(extent.voiced){
       ctx.strokeStyle=context.pitchColor;ctx.lineWidth=1.8;ctx.lineJoin='round';ctx.beginPath();let open=false;
       for(const x of frames){if(!x.v||!x.f||x.t<windowStart||x.t>windowEnd){open=false;continue;}const px=timeX(x.t), py=h-(verticalValue(x.f)-lo)/(hi-lo)*h;if(py<0||py>h){open=false;continue;}if(!open){ctx.moveTo(px,py);open=true}else ctx.lineTo(px,py)}ctx.stroke();}
     const cssColor = name => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
@@ -77,8 +179,91 @@
     if(media){ctx.strokeStyle='#ffffff';ctx.lineWidth=1;const x=timeX(currentTime);ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,h);ctx.stroke();}
   };
   const tick = () => { if(media && looping && a!==null && b!==null && media.currentTime>=b){media.currentTime=a;media.play();} draw(); requestAnimationFrame(tick); };
-  const install = (url, data) => { if(media){media.pause();media.remove();} frames=data||[];verticalCenter=null; media=document.createElement(/\.(mp4|mov|m4v)$/i.test(url)?'video':'audio');media.controls=true;media.preload='metadata';media.src=url;slot.replaceChildren(media);['loadedmetadata','play','pause','ratechange','seeked','timeupdate','ended'].forEach(e=>media.addEventListener(e,send));media.addEventListener('loadedmetadata',()=>{resize();send();}); };
-  window.kvStudy={receive(p){switch(p.type){case'load':install(p.url,p.frames);break;case'context':Object.assign(context,p);break;case'playPause':media?.paused?media.play():media?.pause();break;case'pause':media?.pause();break;case'seek':if(media)media.currentTime=Math.max(0,Math.min(p.time,media.duration||p.time));break;case'rate':if(media)media.playbackRate=p.rate;break;case'markA':a=media?.currentTime||0;break;case'markB':b=media?.currentTime||0;break;case'loop':looping=!looping;break;case'follow':following=!following;break;}send();draw();}};
+  // Two-finger pinch zoom, read straight from raw touches on the canvas —
+  // deliberately not routed through a native UIPinchGestureRecognizer/Swift
+  // bridge. That was tried first: even with the WebView's own pan disabled,
+  // the playhead still drifted during zoom, because each pinch tick was a
+  // separate `evaluateJavaScript` round trip and could land a frame behind
+  // the live touch. Handling it here keeps it synchronous with this file's
+  // own requestAnimationFrame draw loop — no cross-process lag possible —
+  // which mirrors how the macOS viewer's wheel-driven zoom (`frequency_viewer.py`)
+  // has always worked: entirely in JS, no native gesture recognizer involved.
+  // The angle between the two touches decides the axis, same policy as
+  // before: near-horizontal pinches zoom time, near-vertical ones zoom pitch
+  // range, and anything more diagonal zooms both together.
+  let pinch = null, drag = null;
+  const pinchAxis = (t0, t1) => {
+    const dx=Math.abs(t1.clientX-t0.clientX), dy=Math.abs(t1.clientY-t0.clientY);
+    if(dx<1&&dy<1) return null;
+    const angle=Math.atan2(dy,dx)*180/Math.PI;
+    return angle<=22.5?'time':angle>=67.5?'vertical':'both';
+  };
+  // One finger drags the graph: the vertical component pans the pitch axis and
+  // the horizontal one scrubs time. Scrubbing moves `media.currentTime`, never
+  // the time window itself, so the white playhead stays dead center while the
+  // curve slides under it — the same contract as the macOS viewer's pointer
+  // drag (`frequency_viewer.py`), and the reason the SwiftUI position slider
+  // is gone from both layouts.
+  const seedDrag = t => { drag={x:t.clientX,y:t.clientY,lastY:t.clientY,time:Number(media?.currentTime)||0,moved:false}; };
+  // With "follow the curve" on, a pan pushes the follow center itself: nothing
+  // jumps, the toggle stays on, and followedCenter() pulls the view back by
+  // itself once the sung pitch leaves the window again.
+  // Both the center and the manual offset are re-clamped against the
+  // perde-line bounds by draw(), which writes the clamped value back — so a
+  // drag only has to accumulate here, and holding a finger against the limit
+  // cannot build up slack that a drag the other way would have to undo first.
+  const panVertically = deltaCents => {
+    if(following&&verticalCenter!==null) verticalCenter+=deltaCents;
+    else verticalOffset+=deltaCents;
+  };
+  canvas.addEventListener('touchstart',e=>{
+    if(e.touches.length===1){ pinch=null; seedDrag(e.touches[0]); return; }
+    if(e.touches.length!==2) return;
+    drag=null;
+    const [t0,t1]=e.touches;
+    pinch={axis:pinchAxis(t0,t1),dist:Math.hypot(t1.clientX-t0.clientX,t1.clientY-t0.clientY)};
+  },{passive:true});
+  canvas.addEventListener('touchmove',e=>{
+    if(e.touches.length===1){
+      const t=e.touches[0];
+      if(!drag){ seedDrag(t); return; } // finger left over from a pinch: re-seed instead of jumping
+      if(!drag.moved&&Math.hypot(t.clientX-drag.x,t.clientY-drag.y)<4) return; // macOS's 4px dead zone
+      e.preventDefault(); drag.moved=true;
+      if(viewport&&viewport.h>0) panVertically((t.clientY-drag.lastY)/viewport.h*(viewport.hi-viewport.lo));
+      drag.lastY=t.clientY;
+      if(media&&Number.isFinite(media.duration)&&media.duration>0){
+        const w=canvas.getBoundingClientRect().width||1, d=media.duration;
+        media.currentTime=Math.max(0,Math.min(d,drag.time-(t.clientX-drag.x)/w*Math.min(windowSeconds,d)));
+      }
+      draw(); return;
+    }
+    if(!pinch||e.touches.length!==2) return;
+    e.preventDefault();
+    const [t0,t1]=e.touches, dist=Math.hypot(t1.clientX-t0.clientX,t1.clientY-t0.clientY);
+    const factor=dist/pinch.dist; pinch.dist=dist;
+    if(pinch.axis==='time'||pinch.axis==='both')windowSeconds=Math.min(maxWindowSeconds,Math.max(minWindowSeconds,windowSeconds/factor));
+    if(pinch.axis==='vertical'||pinch.axis==='both')verticalZoom=Math.min(maxVerticalZoom,Math.max(minVerticalZoom,verticalZoom*factor));
+    draw();
+  },{passive:false});
+  const endTouch=e=>{ if(e.touches.length<2) pinch=null; if(e.touches.length===1) seedDrag(e.touches[0]); else if(!e.touches.length) drag=null; };
+  canvas.addEventListener('touchend',endTouch);
+  canvas.addEventListener('touchcancel',endTouch);
+  const install = (url, data) => {
+    if(media){media.pause();media.remove();}
+    frames=data||[];extentCache=null;verticalCenter=null;verticalOffset=0;drag=null;pinch=null;
+    const isVideo=/\.(mp4|mov|m4v)$/i.test(url);
+    media=document.createElement(isVideo?'video':'audio');
+    // Playback is driven by the SwiftUI floating controls via the bridge and by
+    // this page's own one-finger horizontal drag on the graph, so the native
+    // scrubber/controls stay off to avoid competing control surfaces on screen.
+    media.controls=false;media.preload='metadata';media.src=url;media.playsInline=true;
+    slot.replaceChildren(media);
+    slot.classList.toggle('has-video',isVideo);
+    setMode('graph');
+    ['loadedmetadata','play','pause','ratechange','seeked','timeupdate','ended'].forEach(e=>media.addEventListener(e,send));
+    media.addEventListener('loadedmetadata',()=>{resize();send();});
+  };
+  window.kvStudy={receive(p){switch(p.type){case'load':install(p.url,p.frames);break;case'context':Object.assign(context,p);extentCache=null;break;case'playPause':media?.paused?media.play():media?.pause();break;case'pause':media?.pause();break;case'seek':if(media)media.currentTime=Math.max(0,Math.min(p.time,media.duration||p.time));break;case'rate':if(media)media.playbackRate=p.rate;break;case'markA':a=media?.currentTime||0;break;case'markB':b=media?.currentTime||0;break;case'loop':looping=!looping;break;case'follow':following=!following;if(following)verticalOffset=0;break;case'setMode':setMode(p.mode);break;}send();draw();}};
   addEventListener('resize',resize); resize(); requestAnimationFrame(tick);
 })();
 </script></body></html>

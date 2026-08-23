@@ -76,8 +76,8 @@ final class iPadStudyWebViewStore: NSObject, ObservableObject, WKNavigationDeleg
         switch command {
         case let .load(url, frames):
             payload = ["type": "load", "url": url.absoluteString, "frames": frames.map { ["t": $0.time, "f": $0.frequency, "c": $0.confidence, "v": $0.voiced] }]
-        case let .context(context, pitchColor, guideColor):
-            payload = ["type": "context", "makam": context.makam.rawValue, "karar": context.karar.rawValue, "guides": context.guideFrequencies(), "pitchColor": pitchColor, "guideColor": guideColor]
+        case let .context(context, pitchColor, guideColor, komaOverride):
+            payload = ["type": "context", "makam": context.makam.rawValue, "karar": context.karar.rawValue, "guides": context.guideNotes(commas: komaOverride).map { ["name": $0.name, "hz": $0.hz] }, "pitchColor": pitchColor, "guideColor": guideColor]
         case .playPause: payload = ["type": "playPause"]
         case .pause: payload = ["type": "pause"]
         case let .seek(time): payload = ["type": "seek", "time": time]
@@ -86,6 +86,7 @@ final class iPadStudyWebViewStore: NSObject, ObservableObject, WKNavigationDeleg
         case .markB: payload = ["type": "markB"]
         case .loop: payload = ["type": "loop"]
         case .follow: payload = ["type": "follow"]
+        case let .setVideoFullscreen(isVideo): payload = ["type": "setMode", "mode": isVideo ? "video" : "graph"]
         }
         guard let data = try? JSONSerialization.data(withJSONObject: payload),
               let json = String(data: data, encoding: .utf8)
@@ -103,9 +104,43 @@ final class iPadStudyWebViewStore: NSObject, ObservableObject, WKNavigationDeleg
 
 struct iPadStudyWebView: UIViewRepresentable {
     @ObservedObject var store: iPadStudyWebViewStore
+    /// Whether the graph (not the video) currently fills the stage. Pinch
+    /// handling for the graph is entirely in-page JS (see the `touchstart`/
+    /// `touchmove` handlers in StudyViewer.html — the same synchronous,
+    /// no-native-gesture approach the macOS viewer already uses for its
+    /// wheel-driven zoom), so all this does is keep the WebView's own
+    /// pinch-zoom/pan out of the way while the graph is showing; the video
+    /// pane keeps the WebView's stock behavior unchanged.
+    var isGraphMode: Bool = true
 
-    func makeUIView(context: Context) -> WKWebView { store.webView }
-    func updateUIView(_ uiView: WKWebView, context: Context) {}
+    func makeUIView(context: Context) -> WKWebView {
+        let webView = store.webView
+        applyMode(to: webView)
+        return webView
+    }
+
+    func updateUIView(_ uiView: WKWebView, context: Context) {
+        applyMode(to: uiView)
+    }
+
+    private func applyMode(to webView: WKWebView) {
+        // An earlier attempt drove graph zoom through a native
+        // UIPinchGestureRecognizer added alongside WKWebView's own. Even with
+        // panning disabled, the playhead still drifted during zoom — the
+        // Swift → JS command round trip (evaluateJavaScript, one per pinch
+        // tick) could land a tick or more behind the live touch, so the
+        // window briefly redrew against a stale zoom level. The graph now
+        // reads raw touches straight from JS (synchronous with its own
+        // requestAnimationFrame draw loop), so there's no cross-process
+        // handoff left to lag — matching how the macOS viewer's wheel-driven
+        // zoom has always worked. This just has to keep WKWebView's own
+        // pinch-zoom/pan (which scales the whole page, axis-blind) from
+        // fighting that JS handling while the graph is showing.
+        webView.scrollView.pinchGestureRecognizer?.isEnabled = !isGraphMode
+        webView.scrollView.isScrollEnabled = !isGraphMode
+        webView.scrollView.bouncesZoom = !isGraphMode
+    }
+
     static func dismantleUIView(_ uiView: WKWebView, coordinator: ()) { }
 }
 
@@ -127,6 +162,10 @@ enum iPadStudyViewerResource {
         }
         store.loadViewer(destination, allowingReadAccessTo: root)
         store.enqueue(.load(study.sourceURL, study.frames))
-        store.enqueue(.context(study.context, pitchColor: "#67d5ff", guideColor: "#b7d8ff"))
+        // Default, un-overridden intervals — the caller (`iPadStudyState`)
+        // immediately follows this with its own context command carrying the
+        // real makam-interval overrides, so this one is just a same-frame
+        // placeholder until that lands.
+        store.enqueue(.context(study.context, pitchColor: "#67d5ff", guideColor: "#b7d8ff", komaOverride: study.context.makam.guideCommas))
     }
 }

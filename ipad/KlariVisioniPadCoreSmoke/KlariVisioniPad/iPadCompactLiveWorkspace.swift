@@ -10,6 +10,7 @@ struct iPadCompactLiveWorkspace: View {
     @Bindable var study: iPadStudyState
     let close: () -> Void
     let addToStudies: (URL) -> Void
+    @State private var isPresentingSettings = false
 
     private var frequency: String {
         guard let value = live.latestFrame?.frequency, value > 0 else { return "— Hz" }
@@ -20,24 +21,24 @@ struct iPadCompactLiveWorkspace: View {
 
     var body: some View {
         NavigationStack {
-            VStack(spacing: 12) {
-                VStack(spacing: 2) {
-                    Text(iPadTuner.label(for: live.latestFrame?.frequency)).font(.title.bold()).monospacedDigit()
-                    Text(frequency).foregroundStyle(.secondary).monospacedDigit()
-                        .accessibilityLabel("Frekans")
-                        .accessibilityValue(frequency)
-                }
-                .accessibilityElement(children: .combine)
-                .accessibilityLabel("Tüner")
+            // Same shape as the listening workspace: the graph owns the whole
+            // surface (it can extend past the bottom safe area) and the
+            // controls float on top instead of claiming a fixed strip. The top
+            // safe area is left alone so the tuner badge sits below the
+            // navigation bar rather than under its title.
+            ZStack(alignment: .bottom) {
                 iPadLiveWebView(store: live.graph)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .clipShape(RoundedRectangle(cornerRadius: 14))
-                    .padding(.horizontal, 8)
+                    .ignoresSafeArea(edges: .bottom)
+                controls
+                    .padding(.horizontal, 12)
+                    .padding(.bottom, 8)
+                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+                    .padding(.horizontal, 12)
+                    .padding(.bottom, 8)
             }
-            .padding(.top, 10)
+            .overlay(alignment: .top) { tunerBadge }
             .navigationTitle("Çalma")
             .navigationBarTitleDisplayMode(.inline)
-            .safeAreaInset(edge: .bottom) { controls }
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button("Kapat") { Task { await live.stopForNavigation(); close() } }
@@ -45,6 +46,24 @@ struct iPadCompactLiveWorkspace: View {
                 }
             }
         }
+    }
+
+    /// Native, not HTML: the graph page is pinch/pan-driven and WKWebView owns
+    /// no chrome of its own, so the readout lives outside the WebView where no
+    /// gesture can move it.
+    private var tunerBadge: some View {
+        VStack(spacing: 0) {
+            Text(iPadTuner.label(for: live.latestFrame?.frequency)).font(.title3.bold()).monospacedDigit()
+            Text(frequency).font(.caption).foregroundStyle(.secondary).monospacedDigit()
+                .accessibilityLabel("Frekans")
+                .accessibilityValue(frequency)
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 6)
+        .background(.ultraThinMaterial, in: Capsule())
+        .padding(.top, 8)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Tüner")
     }
 
     @ViewBuilder private var controls: some View {
@@ -60,8 +79,10 @@ struct iPadCompactLiveWorkspace: View {
                 VStack(spacing: 8) { buttons }
             }
         }
-        .padding(.horizontal, 12).padding(.top, 8).padding(.bottom, 6)
-        .background(.regularMaterial)
+        .padding(.horizontal, 12).padding(.vertical, 8)
+        .sheet(isPresented: $isPresentingSettings) {
+            iPadLiveSettingsSheet(live: live, intervals: state.makamIntervals)
+        }
     }
 
     @ViewBuilder private func recordingResult(_ url: URL) -> some View {
@@ -81,20 +102,12 @@ struct iPadCompactLiveWorkspace: View {
         Toggle(isOn: $live.followsCurve) { Label("Takip", systemImage: "scope") }
             .toggleStyle(.button).frame(minHeight: 44)
             .accessibilityLabel("Eğriyi takip et")
-        Menu {
-            Picker("Makam", selection: $live.makam) { ForEach(iPadMakam.allCases) { Text($0.rawValue).tag($0) } }
-            Picker("Karar", selection: $live.karar) { ForEach(iPadKarar.allCases) { Text($0.rawValue).tag($0) } }
-        } label: { Label("Makam / Karar", systemImage: "music.note.list") }
-            .frame(minHeight: 44)
-            .accessibilityLabel("Makam ve karar")
+        iPadWorkspaceSettingsButton(label: "Makam ve karar") { isPresentingSettings = true }
             .accessibilityValue("\(live.makam.rawValue), \(live.karar.rawValue)")
-        Button(live.recording == .active ? "Kaydı Bitir" : "WAV Kaydı") { live.toggleRecording() }
-            .buttonStyle(.bordered).frame(minHeight: 44)
-            .disabled(!isRunning && live.recording != .active)
-            .accessibilityLabel(live.recording == .active ? "WAV kaydını bitir" : "WAV kaydı başlat")
+        iPadRecordButton(recording: live.recording, isEnabled: isRunning || live.recording == .active) { live.toggleRecording() }
         if isRunning || live.phase == .requestingPermission {
-            Button("Durdur", role: .destructive) { Task { await live.stopForNavigation(); close() } }
-                .buttonStyle(.borderedProminent).frame(minHeight: 44)
+            Button("Durdur") { Task { await live.stopForNavigation(); close() } }
+                .buttonStyle(.borderedProminent).tint(.gray).frame(minHeight: 44)
         } else {
             Button("Yeniden Başlat") { Task { await live.start(engine: state.liveEngine, signalGateDbFS: state.liveSignalGateDbFS) } }
                 .buttonStyle(.borderedProminent).frame(minHeight: 44)

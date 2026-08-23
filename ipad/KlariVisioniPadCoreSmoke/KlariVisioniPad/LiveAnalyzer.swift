@@ -249,12 +249,14 @@ actor iPadLiveWorker {
 final class iPadLiveState {
     static let makamKey = "klarivision-ipad-live-makam-v1"
     static let kararKey = "klarivision-ipad-live-karar-v1"
+    static let scaleDisplayKey = "klarivision-ipad-live-scale-display-v1"
     private var lifecycle = iPadLiveLifecycle()
     var phase: iPadLivePhase { lifecycle.phase }
     var recording: iPadRecordingPhase = .idle
     var latestFrame: iPadPitchFrame?
     var makam: iPadMakam { didSet { defaults.set(makam.rawValue, forKey: Self.makamKey); publishContext() } }
     var karar: iPadKarar { didSet { defaults.set(karar.rawValue, forKey: Self.kararKey); publishContext() } }
+    var scaleDisplay: iPadScaleDisplay { didSet { defaults.set(scaleDisplay.rawValue, forKey: Self.scaleDisplayKey); publishContext() } }
     var followsCurve = true { didSet { publishContext() } }
     let graph = iPadLiveWebViewStore()
     private let analyzer = iPadLiveAnalyzer()
@@ -263,7 +265,8 @@ final class iPadLiveState {
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
         makam = iPadMakam(rawValue: defaults.string(forKey: Self.makamKey) ?? "") ?? .nihavend
-        karar = iPadKarar(rawValue: defaults.string(forKey: Self.kararKey) ?? "") ?? .rast
+        karar = iPadKarar(rawValue: defaults.string(forKey: Self.kararKey) ?? "") ?? .re
+        scaleDisplay = iPadScaleDisplay(rawValue: defaults.string(forKey: Self.scaleDisplayKey) ?? "") ?? .makam
         analyzer.onFrames = { [weak self] frames in
             guard let self else { return }
             self.latestFrame = frames.last(where: \.voiced) ?? self.latestFrame
@@ -275,28 +278,44 @@ final class iPadLiveState {
             // session after recording must not replace it with `.idle`, or the
             // root cannot safely send that URL to the study importer.
             if case .completed = recording { self.recording = recording }
+            self.graph.setRunning(false)
             self.lifecycle.stopped(reason: reason)
         }
         analyzer.onRecording = { [weak self] recording in self?.recording = recording }
     }
 
-    var musicContext: iPadMusicContext { iPadMusicContext(makam: makam, karar: karar, followsCurve: followsCurve) }
+    var musicContext: iPadMusicContext { iPadMusicContext(makam: makam, karar: karar, followsCurve: followsCurve, scaleDisplay: scaleDisplay) }
 
-    func configure(graphPitchColor: String, guideColor: String) {
-        graph.setStyle(pitchColor: graphPitchColor, guideColor: guideColor)
+    func configure(graphPitchColor: String, guideColor: String, makamIntervals: iPadMakamIntervalsStore? = nil) {
+        graph.setStyle(pitchColor: graphPitchColor, guideColor: guideColor, makamIntervals: makamIntervals)
         publishContext()
     }
 
     func start(engine: iPadPitchEngine, signalGateDbFS: Double = -42) async {
         lifecycle.requestStart()
-        do { try graph.load(); try await analyzer.start(engine: engine, minimumRMS: iPadAppState.rms(forDbFS: signalGateDbFS)); publishContext(); lifecycle.started() }
-        catch let cancellation as iPadLiveStartCancelled { lifecycle.stopped(reason: cancellation.reason) }
-        catch let error as LocalizedError { lifecycle.failed(error.errorDescription ?? "Mikrofon başlatılamadı.") }
-        catch { lifecycle.failed("Mikrofon başlatılamadı.") }
+        do {
+            try graph.load()
+            // A new session rebuilds iPadLiveCoreProcessor, so its sample
+            // counter — and with it every frame timestamp — restarts at zero.
+            // Clearing the graph here keeps the new take from being drawn over
+            // the previous one's timeline; the page guards against the same
+            // rewind on its own, this just makes the restart instant.
+            graph.reset()
+            try await analyzer.start(engine: engine, minimumRMS: iPadAppState.rms(forDbFS: signalGateDbFS))
+            publishContext()
+            graph.setRunning(true)
+            lifecycle.started()
+        }
+        catch let cancellation as iPadLiveStartCancelled { graph.setRunning(false); lifecycle.stopped(reason: cancellation.reason) }
+        catch let error as LocalizedError { graph.setRunning(false); lifecycle.failed(error.errorDescription ?? "Mikrofon başlatılamadı.") }
+        catch { graph.setRunning(false); lifecycle.failed("Mikrofon başlatılamadı.") }
     }
 
-    func stop() { Task { await analyzer.stop(reason: nil) } }
-    func stopForNavigation() async { await analyzer.stop(reason: nil) }
+    // `analyzer.stop` short-circuits when nothing is capturing, so freezing the
+    // graph clock here too keeps it from scrolling on after an already-idle
+    // session is stopped again.
+    func stop() { graph.setRunning(false); Task { await analyzer.stop(reason: nil) } }
+    func stopForNavigation() async { graph.setRunning(false); await analyzer.stop(reason: nil) }
     func toggleRecording() { Task { recording = await analyzer.toggleRecording() } }
     var completedRecordingURL: URL? {
         guard case let .completed(url) = recording else { return nil }

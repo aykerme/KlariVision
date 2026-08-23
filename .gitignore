@@ -30,6 +30,8 @@ macos/KlariVision/.build/
 macos/KlariVision/.swiftpm/
 macos/KlariVision/KlariVision.xcodeproj/xcuserdata/
 macos/KlariVision/KlariVision.xcodeproj/project.xcworkspace/xcuserdata/
+ipad/KlariVisioniPadCoreSmoke.xcodeproj/xcuserdata/
+ipad/KlariVisioniPadCoreSmoke.xcodeproj/project.xcworkspace/xcuserdata/
 
 # Operating-system files
 .DS_Store

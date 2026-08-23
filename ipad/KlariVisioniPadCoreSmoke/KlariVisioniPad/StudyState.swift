@@ -70,6 +70,16 @@ final class iPadStudyState {
     var loopB: Double?
     var looping = false
     var followsCurve = false
+    /// Whether the current study's source has a video track to toggle to.
+    /// Drives whether the compact workspace shows a fullscreen toggle at all.
+    var hasVideo = false
+    /// true = video fills the stage, graph is the floating corner button;
+    /// false = the reverse (default). Native-owned so the toggle button stays
+    /// tappable regardless of the WebView's own pinch-zoom state.
+    var isVideoFullscreen = false
+    /// Whether the graph (rather than video) currently fills the WebView
+    /// stage — drives `iPadStudyWebView`'s pinch handling (see its doc comment).
+    var isGraphMode: Bool { !(hasVideo && isVideoFullscreen) }
     private(set) var studies: [iPadStudy] = []
     let webView = iPadStudyWebViewStore()
     private let idleTimer: any iPadIdleTimerPolicy
@@ -83,6 +93,7 @@ final class iPadStudyState {
     private var retryableCompletedRecording: URL?
     private var pitchColor = "#67d5ff"
     private var guideColor = "#b7d8ff"
+    private var makamIntervals = iPadMakamIntervalsStore()
 
     init(
         libraryStore: iPadStudyLibraryStore? = nil,
@@ -146,7 +157,9 @@ final class iPadStudyState {
             currentStudy = study
             self.duration = study.duration
             playbackTime = 0
-            webView.enqueue(.context(study.context, pitchColor: pitchColor, guideColor: guideColor))
+            hasVideo = study.isVideoSource
+            isVideoFullscreen = false
+            webView.enqueue(contextCommand(for: study.context))
             phase = .ready
             if isCompletedRecording { completedRecordingImports.finish(recordedSource, succeeded: true) }
             if isCompletedRecording { retryableCompletedRecording = nil }
@@ -165,10 +178,33 @@ final class iPadStudyState {
 
     func command(_ command: iPadStudyCommand) { webView.enqueue(command) }
 
-    func configure(graphPitchColor: String, guideColor: String) {
+    /// `rate` and `followsCurve` are normally echo-driven (`applySnapshot`),
+    /// which lags a WebView round trip.  The settings sheet's ± control can
+    /// fire faster than that, so these two intents update locally first and
+    /// let the next snapshot confirm.
+    func setRate(_ value: Double) {
+        let next = iPadStudyPlaybackRate.rate(at: iPadStudyPlaybackRate.index(for: value))
+        rate = next
+        command(.rate(next))
+    }
+
+    func toggleFollow() {
+        followsCurve.toggle()
+        command(.follow)
+    }
+
+    /// Flips which side (graph or video) fills the stage and tells the JS
+    /// side to match. Called from the native floating toggle button.
+    func toggleVideoFullscreen() {
+        isVideoFullscreen.toggle()
+        command(.setVideoFullscreen(isVideoFullscreen))
+    }
+
+    func configure(graphPitchColor: String, guideColor: String, makamIntervals: iPadMakamIntervalsStore? = nil) {
         pitchColor = graphPitchColor
         self.guideColor = guideColor
-        if let currentStudy { webView.enqueue(.context(currentStudy.context, pitchColor: pitchColor, guideColor: guideColor)) }
+        if let makamIntervals { self.makamIntervals = makamIntervals }
+        if let currentStudy { webView.enqueue(contextCommand(for: currentStudy.context)) }
     }
 
     func open(_ study: iPadStudy) {
@@ -176,21 +212,28 @@ final class iPadStudyState {
         currentStudy = study
         duration = study.duration
         playbackTime = 0
+        hasVideo = study.isVideoSource
+        isVideoFullscreen = false
         do {
             try viewerLoader(webView, study)
-            webView.enqueue(.context(study.context, pitchColor: pitchColor, guideColor: guideColor))
+            webView.enqueue(contextCommand(for: study.context))
             phase = .ready
         } catch { phase = .failed("Kaydedilmiş çalışma açılamadı.") }
     }
 
-    func updateContext(makam: iPadMakam? = nil, karar: iPadKarar? = nil) {
+    func updateContext(makam: iPadMakam? = nil, karar: iPadKarar? = nil, scaleDisplay: iPadScaleDisplay? = nil) {
         guard var study = currentStudy else { return }
         if let makam { study.context.makam = makam }
         if let karar { study.context.karar = karar }
+        if let scaleDisplay { study.context.scaleDisplay = scaleDisplay }
         currentStudy = study
         if let index = studies.firstIndex(where: { $0.id == study.id }) { studies[index] = study }
         try? libraryStore?.save(studies)
-        webView.enqueue(.context(study.context, pitchColor: pitchColor, guideColor: guideColor))
+        webView.enqueue(contextCommand(for: study.context))
+    }
+
+    private func contextCommand(for context: iPadMusicContext) -> iPadStudyCommand {
+        .context(context, pitchColor: pitchColor, guideColor: guideColor, komaOverride: makamIntervals.commas(for: context.makam))
     }
 
     func updateTitle(_ title: String) {
@@ -224,6 +267,8 @@ final class iPadStudyState {
         phase = .idle
         playbackTime = 0
         duration = 0
+        hasVideo = false
+        isVideoFullscreen = false
         setPlaying(false)
     }
 

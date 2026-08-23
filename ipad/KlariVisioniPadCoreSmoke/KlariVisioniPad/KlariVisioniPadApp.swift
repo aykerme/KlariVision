@@ -42,9 +42,19 @@ struct iPadRootView: View {
             // stop here could win the race and leave compact UI in `.idle`
             // instead of the explicitly restartable `.interrupted` state.
         }
-        .onAppear { live.configure(graphPitchColor: state.graphPitchColor, guideColor: state.graphGuideColor); study.configure(graphPitchColor: state.graphPitchColor, guideColor: state.graphGuideColor) }
-        .onChange(of: state.graphPitchColor) { _, _ in live.configure(graphPitchColor: state.graphPitchColor, guideColor: state.graphGuideColor); study.configure(graphPitchColor: state.graphPitchColor, guideColor: state.graphGuideColor) }
-        .onChange(of: state.graphGuideColor) { _, _ in live.configure(graphPitchColor: state.graphPitchColor, guideColor: state.graphGuideColor); study.configure(graphPitchColor: state.graphPitchColor, guideColor: state.graphGuideColor) }
+        .onAppear { configureGraphs() }
+        .onChange(of: state.graphPitchColor) { _, _ in configureGraphs() }
+        .onChange(of: state.graphGuideColor) { _, _ in configureGraphs() }
+        // An edit in Settings' "Makam aralıkları" editor must relabel any
+        // already-open graph immediately, not just future ones. Re-running
+        // `configure` re-sends context on both sides (same shared store, so
+        // this is just forcing the push, not changing what's referenced).
+        .onChange(of: state.makamIntervals.overrides) { _, _ in configureGraphs() }
+    }
+
+    private func configureGraphs() {
+        live.configure(graphPitchColor: state.graphPitchColor, guideColor: state.graphGuideColor, makamIntervals: state.makamIntervals)
+        study.configure(graphPitchColor: state.graphPitchColor, guideColor: state.graphGuideColor, makamIntervals: state.makamIntervals)
     }
 
     @ViewBuilder private var regularBody: some View {
@@ -75,7 +85,7 @@ struct iPadRootView: View {
         } detail: {
             switch state.selection {
             case .home: iPadHomeView(state: state, study: study, live: live, addRecordedStudy: addCompletedRecordingToStudies)
-            case .library: iPadLibraryView(study: study, retryCompletedRecording: retryCompletedRecording)
+            case .library: iPadLibraryView(study: study, intervals: state.makamIntervals, retryCompletedRecording: retryCompletedRecording)
             case .settings: iPadSettingsView(state: state)
             }
         }
@@ -85,7 +95,7 @@ struct iPadRootView: View {
     @ViewBuilder private var compactBody: some View {
         switch compactNavigation.route {
         case .listening:
-            iPadCompactStudyWorkspace(study: study, close: { compactNavigation.closeWorkspace() }, retryCompletedRecording: retryCompletedRecording)
+            iPadCompactStudyWorkspace(study: study, intervals: state.makamIntervals, close: { compactNavigation.closeWorkspace() }, retryCompletedRecording: retryCompletedRecording)
                 .toolbar(.hidden, for: .tabBar)
         case .live:
             iPadCompactLiveWorkspace(state: state, live: live, study: study, close: { compactNavigation.closeWorkspace() }, addToStudies: addCompletedRecordingToStudies)
@@ -102,7 +112,7 @@ struct iPadRootView: View {
                 iPadCompactLibraryView(study: study) { compactNavigation.openListening() }
                     .tabItem { Label(iPadSection.library.title, systemImage: iPadSection.library.symbol) }
                     .tag(iPadSection.library)
-                iPadSettingsView(state: state)
+                NavigationStack { iPadSettingsView(state: state) }
                     .tabItem { Label(iPadSection.settings.title, systemImage: iPadSection.settings.symbol) }
                     .tag(iPadSection.settings)
             }
@@ -143,7 +153,7 @@ private struct iPadHomeView: View {
                 }
 
                 if live.phase == .running || live.phase == .requestingPermission {
-                    iPadLiveWorkspace(live: live, study: study, addToStudies: addRecordedStudy)
+                    iPadLiveWorkspace(live: live, study: study, intervals: state.makamIntervals, addToStudies: addRecordedStudy)
                 } else {
                     ViewThatFits(in: .horizontal) {
                         HStack(spacing: 20) { modeCards }
@@ -262,7 +272,9 @@ private struct iPadLiveRestartCard: View {
 private struct iPadLiveWorkspace: View {
     @Bindable var live: iPadLiveState
     @Bindable var study: iPadStudyState
+    let intervals: iPadMakamIntervalsStore
     let addToStudies: (URL) -> Void
+    @State private var isPresentingSettings = false
 
     private var frequency: String {
         guard let value = live.latestFrame?.frequency, value > 0 else { return "— Hz" }
@@ -277,8 +289,8 @@ private struct iPadLiveWorkspace: View {
                     Text(frequency).foregroundStyle(.secondary).monospacedDigit()
                 }
                 Spacer()
-                Picker("Makam", selection: $live.makam) { ForEach(iPadMakam.allCases) { Text($0.rawValue).tag($0) } }.pickerStyle(.menu)
-                Picker("Karar", selection: $live.karar) { ForEach(iPadKarar.allCases) { Text($0.rawValue).tag($0) } }.pickerStyle(.menu)
+                iPadWorkspaceSettingsButton(label: "Makam ve karar") { isPresentingSettings = true }
+                    .accessibilityValue("\(live.makam.rawValue), \(live.karar.rawValue)")
             }
             iPadLiveWebView(store: live.graph)
                 .frame(minHeight: 280)
@@ -286,10 +298,9 @@ private struct iPadLiveWorkspace: View {
             HStack {
                 Toggle("Eğriyi takip et", isOn: $live.followsCurve)
                 Spacer()
-                Button(live.recording == .active ? "Kaydı Bitir" : "WAV Kaydı") { live.toggleRecording() }
-                    .buttonStyle(.bordered)
-                Button("Durdur", role: .destructive) { live.stop() }
-                    .buttonStyle(.borderedProminent)
+                iPadRecordButton(recording: live.recording, isEnabled: live.phase == .running || live.recording == .active) { live.toggleRecording() }
+                Button("Durdur") { live.stop() }
+                    .buttonStyle(.borderedProminent).tint(.gray)
             }
             if case let .failed(message) = live.recording { Text(message).foregroundStyle(.red).font(.footnote) }
             if case let .completed(url) = live.recording {
@@ -303,11 +314,15 @@ private struct iPadLiveWorkspace: View {
                 }
             }
         }
+        .sheet(isPresented: $isPresentingSettings) {
+            iPadLiveSettingsSheet(live: live, intervals: intervals)
+        }
     }
 }
 
 private struct iPadLibraryView: View {
     @Bindable var study: iPadStudyState
+    let intervals: iPadMakamIntervalsStore
     let retryCompletedRecording: () -> Void
 
     var body: some View {
@@ -328,7 +343,7 @@ private struct iPadLibraryView: View {
                     }
                 }
             case .ready:
-                iPadStudyWorkspace(study: study)
+                iPadStudyWorkspace(study: study, intervals: intervals)
             }
         }
         .navigationTitle("Çalışmalar")
@@ -360,6 +375,8 @@ private struct iPadStudyProgressView: View {
 
 private struct iPadStudyWorkspace: View {
     @Bindable var study: iPadStudyState
+    let intervals: iPadMakamIntervalsStore
+    @State private var isPresentingSettings = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -372,11 +389,9 @@ private struct iPadStudyWorkspace: View {
                     Spacer()
                     Button("Kapat", role: .destructive) { study.close() }
                 }
-                HStack {
-                    Picker("Makam", selection: Binding(get: { study.currentStudy?.context.makam ?? .nihavend }, set: { study.updateContext(makam: $0) })) { ForEach(iPadMakam.allCases) { Text($0.rawValue).tag($0) } }
-                    Picker("Karar", selection: Binding(get: { study.currentStudy?.context.karar ?? .rast }, set: { study.updateContext(karar: $0) })) { ForEach(iPadKarar.allCases) { Text($0.rawValue).tag($0) } }
-                }
-                Slider(value: Binding(get: { study.playbackTime }, set: { study.command(.seek($0)) }), in: 0...max(study.duration, 0.01))
+                // No position slider here either — scrubbing is the graph's own
+                // one-finger horizontal drag, so the playhead stays centered.
+                iPadStudyPositionReadout(time: study.playbackTime, duration: study.duration) { study.command(.seek($0)) }
                 HStack(spacing: 12) {
                     Button(study.isPlaying ? "Duraklat" : "Oynat") { study.command(.playPause) }
                     Button("A'yı İşaretle") { study.command(.markA) }
@@ -384,15 +399,17 @@ private struct iPadStudyWorkspace: View {
                     Toggle("Loop", isOn: Binding(get: { study.looping }, set: { _ in study.command(.loop) }))
                     Toggle("Takip", isOn: Binding(get: { study.followsCurve }, set: { _ in study.command(.follow) }))
                     Spacer()
-                    Picker("Hız", selection: Binding(get: { study.rate }, set: { study.command(.rate($0)) })) {
-                        ForEach(iPadStudyPlaybackRate.values, id: \.self) { rate in
-                            Text(iPadStudyPlaybackRate.label(for: rate)).tag(rate)
-                        }
-                    }.pickerStyle(.menu)
+                    Text(iPadStudyPlaybackRate.label(for: study.rate)).monospacedDigit().foregroundStyle(.secondary)
+                    iPadWorkspaceSettingsButton(label: "Çalışma ayarları") { isPresentingSettings = true }
                 }
             }
             .padding()
             .background(.bar)
+        }
+        .sheet(isPresented: $isPresentingSettings) {
+            // "Takip" already has its own switch in this bar, so the sheet
+            // omits it here and only the compact layout shows it.
+            iPadStudySettingsSheet(study: study, intervals: intervals, showsFollowToggle: false)
         }
     }
 }
@@ -426,6 +443,17 @@ private struct iPadSettingsView: View {
                 }
                 if !iPadAppState.validKomaIntervals(state.komaIntervals) { Text("Geçerli düzen 12 pozitif aralıktan ve toplam 53 komadan oluşmalıdır.").foregroundStyle(.red).font(.footnote) }
                 Button("Varsayılan 53-koma düzenine dön") { state.resetKomaIntervals() }
+            }
+            // One editor, two entry points: this list and each workspace's
+            // settings sheet push the same `iPadMakamIntervalsView`.
+            Section("Makam aralıkları") {
+                ForEach(iPadMakamIntervalsStore.editableModes) { makam in
+                    NavigationLink {
+                        iPadMakamIntervalsView(makam: makam, store: state.makamIntervals)
+                    } label: {
+                        LabeledContent(makam.rawValue, value: iPadMakamIntervalsView.summary(for: makam, store: state.makamIntervals))
+                    }
+                }
             }
         }
         .formStyle(.grouped)

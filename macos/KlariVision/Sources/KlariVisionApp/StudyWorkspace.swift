@@ -557,7 +557,6 @@ private struct StudyPitchGraphPanel: View {
     @State private var verticalCenter = 0.0
     @State private var verticalReady = false
     @State private var dragOriginTime: Double?
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     init(
         points: [StudyPitchPoint],
@@ -668,11 +667,13 @@ private struct StudyPitchGraphPanel: View {
         .onAppear { initialiseVerticalCenterIfNeeded() }
         .onChange(of: points) { _, _ in initialiseVerticalCenterIfNeeded(force: true) }
         .onReceive(playback.$time) { _ in
-            if reduceMotion {
-                updateVerticalFollow(at: playback.displayTime())
-            } else {
-                withAnimation(.linear(duration: 0.06)) { updateVerticalFollow(at: playback.displayTime()) }
-            }
+            // Vertical follow-curve smoothing is applied inside PitchGraphNSView
+            // via a CADisplayLink-driven transform (see LiveVisuals.swift), not
+            // via SwiftUI animation: re-issuing `withAnimation` on every ~50ms
+            // playback snapshot used to retrigger/interrupt the previous
+            // animation and force a full layer rebuild on every interpolated
+            // frame, causing visible stutter.
+            updateVerticalFollow(at: playback.displayTime())
         }
         .onReceive(playback.$followsCurve) { follows in
             if follows { updateVerticalFollow(at: playback.displayTime()) }
@@ -1289,11 +1290,29 @@ private struct LocalViewer: NSViewRepresentable {
 
     func updateNSView(_ webView: WKWebView, context: Context) {
         guard webView.url == viewer else {
+            // A fresh page load resets JS-side theme/appearance state, so the
+            // next successful update must re-apply rather than trust the
+            // stale cache from the previous page.
+            context.coordinator.lastAppliedGraphAppearance = nil
+            context.coordinator.lastAppliedTheme = nil
             webView.loadFileURL(viewer, allowingReadAccessTo: readAccessRoot)
             return
         }
-        applyGraphAppearance(to: webView)
-        applyTheme(to: webView)
+        // SwiftUI re-evaluates this representable on every `StudyPlaybackState`
+        // publish (~20Hz during playback), but graph appearance and theme only
+        // ever change on user action. Re-running `evaluateJavaScript` on every
+        // such tick competes on the WKWebView's JS thread with its own
+        // playback `setInterval`/`requestAnimationFrame` loop and visibly
+        // contributes to graph stutter, so only push these when they actually
+        // changed since the last apply.
+        if context.coordinator.lastAppliedGraphAppearance != graphAppearance {
+            applyGraphAppearance(to: webView)
+            context.coordinator.lastAppliedGraphAppearance = graphAppearance
+        }
+        if context.coordinator.lastAppliedTheme != appTheme {
+            applyTheme(to: webView)
+            context.coordinator.lastAppliedTheme = appTheme
+        }
     }
 
     static func dismantleNSView(_ webView: WKWebView, coordinator: Coordinator) {
@@ -1326,6 +1345,8 @@ private struct LocalViewer: NSViewRepresentable {
 
     final class Coordinator: NSObject, WKScriptMessageHandler {
         let playback: StudyPlaybackState
+        var lastAppliedGraphAppearance: GraphAppearance?
+        var lastAppliedTheme: AppTheme?
 
         init(playback: StudyPlaybackState) {
             self.playback = playback

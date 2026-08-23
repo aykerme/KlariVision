@@ -110,7 +110,7 @@ final class AppStateTests: XCTestCase {
     func testMusicContextsOfferAllRequestedChoicesAndPhysicalGuides() throws {
         XCTAssertEqual(iPadMakam.allCases.count, 8)
         XCTAssertEqual(iPadKarar.allCases.count, 7)
-        let context = iPadMusicContext(makam: .hicaz, karar: .neva)
+        let context = iPadMusicContext(makam: .hicaz, karar: .la)
         XCTAssertEqual(try XCTUnwrap(context.guideFrequencies().first), 440, accuracy: 0.001)
         XCTAssertEqual(iPadTuner.label(for: 440), "La4") // physical pitch stays physical; context only labels/guides.
     }
@@ -135,10 +135,10 @@ final class AppStateTests: XCTestCase {
         defer { defaults.removePersistentDomain(forName: name) }
         let live = iPadLiveState(defaults: defaults)
         live.makam = .kurdilihicazkar
-        live.karar = .huseyni
+        live.karar = .si
         let restored = iPadLiveState(defaults: defaults)
         XCTAssertEqual(restored.makam, .kurdilihicazkar)
-        XCTAssertEqual(restored.karar, .huseyni)
+        XCTAssertEqual(restored.karar, .si)
     }
 
     @MainActor func testStudyPlaybackRestoresInjectedIdleTimer() throws {
@@ -156,7 +156,7 @@ final class AppStateTests: XCTestCase {
         let file = directory.appendingPathComponent("Studies-v1.json")
         let store = try iPadStudyLibraryStore(fileURL: file)
         let owned = directory.appendingPathComponent("Imports/owned.wav")
-        let study = iPadStudy(id: UUID(), sourceURL: owned, title: "Yerel çalışma", duration: 2, frames: [], engine: .yinV1, context: iPadMusicContext(makam: .ussak, karar: .dugah), analyzedAt: Date(timeIntervalSince1970: 0))
+        let study = iPadStudy(id: UUID(), sourceURL: owned, title: "Yerel çalışma", duration: 2, frames: [], engine: .yinV1, context: iPadMusicContext(makam: .ussak, karar: .mi), analyzedAt: Date(timeIntervalSince1970: 0))
         try store.save([study])
         XCTAssertEqual(try store.load(), [study])
         XCTAssertEqual(try store.remove(study.id, from: [study]), [])
@@ -304,14 +304,82 @@ final class AppStateTests: XCTestCase {
         XCTAssertEqual(iPadStudyPlaybackRate.label(for: 1.05), "1,05×")
     }
 
+    /// The sheet's ± control fires faster than the WebView's snapshot echo,
+    /// so `setRate` must publish the new rate locally right away.
+    @MainActor func testSetRateSnapsAndPublishesOptimistically() throws {
+        let store = try iPadStudyLibraryStore(fileURL: URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent("rate-\(UUID().uuidString).json"))
+        let state = iPadStudyState(libraryStore: store, idleTimer: TestIdleTimer())
+        state.setRate(1.03)
+        XCTAssertEqual(state.rate, 1.05, accuracy: 0.000_001)
+        state.setRate(9.0)
+        XCTAssertEqual(state.rate, 2.00, accuracy: 0.000_001)
+    }
+
+    @MainActor func testToggleFollowFlipsLocallyForTheValuelessCommand() throws {
+        let store = try iPadStudyLibraryStore(fileURL: URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent("follow-\(UUID().uuidString).json"))
+        let state = iPadStudyState(libraryStore: store, idleTimer: TestIdleTimer())
+        let initial = state.followsCurve
+        state.toggleFollow()
+        XCTAssertEqual(state.followsCurve, !initial)
+    }
+
+    func testStudyPlaybackRateIndexClampsAndSnapsToNearestStep() {
+        XCTAssertEqual(iPadStudyPlaybackRate.index(for: 0.02), 0)
+        XCTAssertEqual(iPadStudyPlaybackRate.index(for: 3.0), iPadStudyPlaybackRate.values.count - 1)
+        XCTAssertEqual(iPadStudyPlaybackRate.rate(at: iPadStudyPlaybackRate.index(for: 1.03)), 1.05, accuracy: 0.000_001)
+        XCTAssertEqual(iPadStudyPlaybackRate.rate(at: iPadStudyPlaybackRate.index(for: 1.0)), 1.0, accuracy: 0.000_001)
+        XCTAssertEqual(iPadStudyPlaybackRate.rate(at: -5), 0.10, accuracy: 0.000_001)
+        XCTAssertEqual(iPadStudyPlaybackRate.rate(at: 999), 2.00, accuracy: 0.000_001)
+        // One ± tap moves exactly one row of the shared macOS rate table.
+        let index = iPadStudyPlaybackRate.index(for: 1.0)
+        XCTAssertEqual(iPadStudyPlaybackRate.rate(at: index + 1), 1.05, accuracy: 0.000_001)
+        XCTAssertEqual(iPadStudyPlaybackRate.rate(at: index - 1), 0.95, accuracy: 0.000_001)
+    }
+
     func testBundledStudyViewerFollowChangesVerticalViewport() throws {
         let resource = try XCTUnwrap(Bundle.main.url(forResource: "StudyViewer", withExtension: "html"))
         let source = try String(contentsOf: resource, encoding: .utf8)
-        XCTAssertTrue(source.contains("if(following&&all.length)"))
+        XCTAssertTrue(source.contains("if(following&&allCents.length)"))
         XCTAssertTrue(source.contains("verticalCenter=followedCenter(verticalCenter,median(nearby))"))
-        XCTAssertTrue(source.contains("following ? cents(frequency) : frequency"))
-        XCTAssertTrue(source.contains("visibleDuration=following?Math.min(12,d):d"))
+        // Vertical position is always cents (log-frequency) — equal note/koma
+        // intervals must be equal pixel distances regardless of the "follow
+        // the curve" toggle, which only chooses the view's center, not its
+        // axis. No linear-Hz fallback, matching the macOS viewer.
+        XCTAssertTrue(source.contains("const verticalValue = cents;"))
+        XCTAssertTrue(source.contains("visibleDuration=Math.min(windowSeconds,d)"))
         XCTAssertTrue(source.contains("timeX=time=>(time-windowStart)/visibleDuration*w"))
+    }
+
+    /// One finger drags the graph: vertically it pans the pitch axis, horizontally
+    /// it scrubs. Both live in the page's own touch handlers — a native gesture
+    /// recognizer would land a `evaluateJavaScript` round trip behind the touch.
+    func testBundledStudyViewerPansVerticallyAndScrubsWithOneFinger() throws {
+        let resource = try XCTUnwrap(Bundle.main.url(forResource: "StudyViewer", withExtension: "html"))
+        let source = try String(contentsOf: resource, encoding: .utf8)
+        XCTAssertTrue(source.contains("if(e.touches.length===1){"))
+        XCTAssertTrue(source.contains("const panVertically = deltaCents =>"))
+        XCTAssertTrue(source.contains("else verticalOffset+=deltaCents;"))
+        // Panning while "follow the curve" is on nudges the follow center, so the
+        // toggle stays on and followedCenter() can still recover the view.
+        XCTAssertTrue(source.contains("if(following&&verticalCenter!==null) verticalCenter=clampCenter(verticalCenter+deltaCents"))
+        // Horizontal drag seeks the media, measured from where the finger landed.
+        XCTAssertTrue(source.contains("media.currentTime=Math.max(0,Math.min(d,drag.time-(t.clientX-drag.x)/w*Math.min(windowSeconds,d)))"))
+        XCTAssertTrue(source.contains("touch-action:none"))
+    }
+
+    /// Two contracts the pan/zoom work must not break: the playhead stays dead
+    /// center (scrubbing moves the media, never the window), and perde labels
+    /// keep their fixed gutter position and font size, which only holds because
+    /// pan/zoom recompute the cents range instead of transforming the canvas.
+    func testBundledStudyViewerKeepsPlayheadCenteredAndLabelsUnscaled() throws {
+        let resource = try XCTUnwrap(Bundle.main.url(forResource: "StudyViewer", withExtension: "html"))
+        let source = try String(contentsOf: resource, encoding: .utf8)
+        XCTAssertTrue(source.contains("windowStart=Math.min(Math.max(-visibleDuration/2,currentTime-visibleDuration/2)"))
+        XCTAssertTrue(source.contains("ctx.fillText(g.name,8,y-3)"))
+        XCTAssertFalse(source.contains("ctx.translate("))
+        // The only transform in the file is resize()'s devicePixelRatio setup.
+        XCTAssertEqual(source.components(separatedBy: "ctx.setTransform(").count - 1, 1)
+        XCTAssertFalse(source.contains("ctx.scale("))
     }
 
     func testLiveGraphPayloadNormalizesNonFiniteFramesWithoutLosingVoicedPitch() throws {
@@ -319,23 +387,89 @@ final class AppStateTests: XCTestCase {
             iPadPitchFrame(time: 0, frequency: .nan, confidence: .infinity, voiced: false),
             iPadPitchFrame(time: 0.01, frequency: 440, confidence: 0.9, voiced: true),
             iPadPitchFrame(time: .nan, frequency: 220, confidence: 0.8, voiced: true),
+            iPadPitchFrame(time: 0.02, frequency: 0, confidence: 0.1, voiced: false),
         ]
         let payload = iPadLiveGraphPayload.make(from: frames)
-        XCTAssertEqual(payload.count, 2)
+        XCTAssertEqual(payload.count, 3)
         XCTAssertEqual(payload[0]["f"] as? Double, 0)
         XCTAssertEqual(payload[0]["c"] as? Double, 0)
         XCTAssertEqual(payload[0]["v"] as? Bool, false)
         XCTAssertEqual(payload[1]["f"] as? Double, 440)
         XCTAssertEqual(payload[1]["v"] as? Bool, true)
+        // Unvoiced frames must reach the page rather than being filtered out
+        // here: they are what tells LiveViewer.html where a silence starts, so
+        // the pitch path can be broken instead of drawn straight across it.
+        XCTAssertEqual(payload[2]["t"] as? Double, 0.02)
+        XCTAssertEqual(payload[2]["v"] as? Bool, false)
         XCTAssertNoThrow(try JSONSerialization.data(withJSONObject: payload))
     }
 
-    func testBundledLiveViewerCannotRemainStuckBehindSuspendedAnimationFrame() throws {
+    /// The graph clock is Swift-driven state: a stopped session must not keep
+    /// scrolling, and toggling it before the page has loaded must be harmless
+    /// (the store replays it on didFinish) and must not swap the WebView.
+    @MainActor
+    func testLiveGraphRunningStateSurvivesBeingSetBeforeThePageLoads() {
+        let store = iPadLiveWebViewStore()
+        let identity = store.webViewIdentity
+        store.setRunning(true)
+        store.setRunning(false)
+        store.reset()
+        XCTAssertEqual(store.webViewIdentity, identity)
+    }
+
+    /// The live graph flows on its own clock, not on the arrival of the next
+    /// voiced frame, so silences scroll like the macOS live graph does. The
+    /// clock only freezes while Swift says capture is stopped.
+    func testBundledLiveViewerScrollsOnItsOwnClockAndFreezesOnlyWhenStopped() throws {
         let resource = try XCTUnwrap(Bundle.main.url(forResource: "LiveViewer", withExtension: "html"))
         let source = try String(contentsOf: resource, encoding: .utf8)
-        XCTAssertTrue(source.contains("frameFallback = setTimeout"))
-        XCTAssertTrue(source.contains("if (framePending) draw()"))
-        XCTAssertTrue(source.contains("clearTimeout(frameFallback)"))
+        XCTAssertTrue(source.contains("const current = () => streamNow + (running ? (performance.now() - streamReceived) / 1000 : 0)"))
+        XCTAssertTrue(source.contains("const windowStart = now - windowSeconds"))
+        XCTAssertTrue(source.contains("setRunning: value =>"))
+        XCTAssertTrue(source.contains("else streamNow = current();"))
+        // No latch can wedge the loop: tick() re-arms unconditionally and
+        // needsDraw is only ever cleared from inside draw().
+        XCTAssertTrue(source.contains("requestAnimationFrame(tick);"))
+        XCTAssertFalse(source.contains("framePending"))
+        // The window must never be derived from the newest voiced sample again.
+        XCTAssertFalse(source.contains("voiced.length - 360"))
+    }
+
+    /// The macOS live graph's break rules (LiveVisuals.swift): a segment is
+    /// only continued when time moved forward, moved less than a dropped
+    /// frame's worth, and the pitch did not jump by about an octave. Without
+    /// them silences, octave slips and rewound timestamps get connected and
+    /// the line is drawn back over itself.
+    func testBundledLiveViewerBreaksPitchPathOnGapsOctaveJumpsAndRewinds() throws {
+        let resource = try XCTUnwrap(Bundle.main.url(forResource: "LiveViewer", withExtension: "html"))
+        let source = try String(contentsOf: resource, encoding: .utf8)
+        XCTAssertTrue(source.contains("&& point.t - previous.t > 0"))
+        XCTAssertTrue(source.contains("&& point.t - previous.t < .040"))
+        XCTAssertTrue(source.contains("&& Math.abs(cents(point.f) - cents(previous.f)) < 520"))
+        // A restarted capture timeline drops the previous take instead of
+        // overlaying it, and repeated frames from finish() are ignored.
+        XCTAssertTrue(source.contains("if (values[0].t < lastAppendedTime - 0.1) clearStream();"))
+        XCTAssertTrue(source.contains("if (!(value.t > lastAppendedTime)) continue;"))
+    }
+
+    /// Same two contracts the study graph has: perde labels keep their fixed
+    /// gutter position and font, and strokes keep their width, which only holds
+    /// because pan/zoom recompute the cents range instead of transforming the
+    /// canvas. Live has no seeking, so one finger only pans the pitch axis.
+    func testBundledLiveViewerZoomsInDataSpaceAndNeverScrubsTime() throws {
+        let resource = try XCTUnwrap(Bundle.main.url(forResource: "LiveViewer", withExtension: "html"))
+        let source = try String(contentsOf: resource, encoding: .utf8)
+        XCTAssertTrue(source.contains("drawing.fillText(guide.name, 8, y - 3)"))
+        XCTAssertTrue(source.contains("const panVertically = deltaCents =>"))
+        XCTAssertTrue(source.contains("pinch.axis === 'time'"))
+        XCTAssertTrue(source.contains("pinch.axis === 'vertical'"))
+        XCTAssertTrue(source.contains("touch-action: none"))
+        XCTAssertFalse(source.contains("drawing.translate("))
+        XCTAssertFalse(source.contains("drawing.scale("))
+        // The only transform in the file is draw()'s devicePixelRatio setup.
+        XCTAssertEqual(source.components(separatedBy: "drawing.setTransform(").count - 1, 1)
+        // One-finger horizontal movement must not seek: the graph is always live.
+        XCTAssertFalse(source.contains("drag.time"))
     }
 
     func testBundledLiveViewerScalesBothCanvasDimensionsForRetinaDisplays() throws {

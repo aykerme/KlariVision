@@ -30,10 +30,14 @@ final class iPadLiveWebViewStore: NSObject, ObservableObject, WKNavigationDelega
     var webViewIdentity: ObjectIdentifier { ObjectIdentifier(webView) }
     private var ready = false
     private var hasLoaded = false
+    /// Whether capture is live. The page's clock only advances while this is
+    /// true, so it is remembered here and re-sent whenever the page reloads.
+    private var isRunning = false
     private var pendingFrames: [iPadPitchFrame] = []
     private var context = iPadMusicContext()
     private var pitchColor = "#67d5ff"
     private var guideColor = "#b7d8ff"
+    private var makamIntervals = iPadMakamIntervalsStore()
 
     override init() {
         webView = WKWebView(frame: .zero, configuration: WKWebViewConfiguration())
@@ -70,16 +74,30 @@ final class iPadLiveWebViewStore: NSObject, ObservableObject, WKNavigationDelega
     }
 
     func setContext(_ context: iPadMusicContext) { self.context = context; sendContextIfReady() }
-    func setStyle(pitchColor: String, guideColor: String) { self.pitchColor = pitchColor; self.guideColor = guideColor; sendContextIfReady() }
+    func setStyle(pitchColor: String, guideColor: String, makamIntervals: iPadMakamIntervalsStore? = nil) {
+        self.pitchColor = pitchColor
+        self.guideColor = guideColor
+        if let makamIntervals { self.makamIntervals = makamIntervals }
+        sendContextIfReady()
+    }
 
     func reset() {
         pendingFrames.removeAll()
         webView.evaluateJavaScript("window.kvLive && window.kvLive.reset();")
     }
 
+    /// Starts/stops the graph's own stream clock.  While running, the window
+    /// scrolls on wall time instead of waiting for the next voiced frame, so
+    /// silences keep flowing; while stopped it freezes where it is.
+    func setRunning(_ running: Bool) {
+        isRunning = running
+        sendRunningIfReady()
+    }
+
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
         ready = true
         sendContextIfReady()
+        sendRunningIfReady()
         flush()
     }
 
@@ -105,16 +123,42 @@ final class iPadLiveWebViewStore: NSObject, ObservableObject, WKNavigationDelega
         guard ready else { return }
         let payload: [String: Any] = [
             "makam": context.makam.rawValue, "karar": context.karar.rawValue,
-            "guides": context.guideFrequencies(), "follow": context.followsCurve,
+            "guides": context.guideNotes(commas: makamIntervals.commas(for: context.makam)).map { ["name": $0.name, "hz": $0.hz] }, "follow": context.followsCurve,
             "pitchColor": pitchColor, "guideColor": guideColor,
         ]
         guard let data = try? JSONSerialization.data(withJSONObject: payload), let json = String(data: data, encoding: .utf8) else { return }
         webView.evaluateJavaScript("window.kvLive && window.kvLive.context(\(json));")
     }
+
+    private func sendRunningIfReady() {
+        guard ready else { return }
+        webView.evaluateJavaScript("window.kvLive && window.kvLive.setRunning(\(isRunning));")
+    }
 }
 
 struct iPadLiveWebView: UIViewRepresentable {
     @ObservedObject var store: iPadLiveWebViewStore
-    func makeUIView(context: Context) -> WKWebView { store.webView }
-    func updateUIView(_ uiView: WKWebView, context: Context) {}
+
+    func makeUIView(context: Context) -> WKWebView {
+        let webView = store.webView
+        disableWebViewGestures(webView)
+        return webView
+    }
+
+    func updateUIView(_ uiView: WKWebView, context: Context) {
+        disableWebViewGestures(uiView)
+    }
+
+    /// The graph reads raw touches itself (see the `touchstart`/`touchmove`
+    /// handlers in LiveViewer.html — the same in-page, no-native-gesture
+    /// approach StudyViewer.html and the macOS viewer's wheel zoom use), so
+    /// WKWebView's own pinch-zoom/pan must stay out of the way: it scales the
+    /// whole page, which moves the perde labels off their lines and rescales
+    /// every stroke. Unlike the study viewer there is no video pane here, so
+    /// the graph always owns the surface and this is unconditional.
+    private func disableWebViewGestures(_ webView: WKWebView) {
+        webView.scrollView.pinchGestureRecognizer?.isEnabled = false
+        webView.scrollView.isScrollEnabled = false
+        webView.scrollView.bouncesZoom = false
+    }
 }

@@ -241,6 +241,23 @@ final class LiveNotationTests: XCTestCase {
         XCTAssertTrue(changedPoints.requiresPathRebuild(comparedWith: shifted))
     }
 
+    func testPitchGraphRenderStateDoesNotRebuildForVerticalFollowPanning() {
+        let original = graphState(windowStart: 0, windowEnd: 12, playheadTime: 6, verticalCenter: 0)
+        let panned = graphState(windowStart: 0, windowEnd: 12, playheadTime: 6, verticalCenter: 250)
+
+        // Panning the follow-curve target is handled as a cheap transform in
+        // PitchGraphNSView, not a full path rebuild.
+        XCTAssertFalse(panned.requiresPathRebuild(comparedWith: original))
+    }
+
+    func testPitchGraphRenderStateRebuildsForVerticalZoom() {
+        let original = graphState(windowStart: 0, windowEnd: 12, playheadTime: 6, verticalSpan: 1_200)
+        let zoomed = graphState(windowStart: 0, windowEnd: 12, playheadTime: 6, verticalSpan: 600)
+
+        // Zooming changes the vertical pixel scale, so it must still rebuild.
+        XCTAssertTrue(zoomed.requiresPathRebuild(comparedWith: original))
+    }
+
     @MainActor
     func testNativePitchGraphKeepsOneOpaqueSurfaceAcrossTimeAndResize() throws {
         let view = PitchGraphNSView(frame: CGRect(x: 0, y: 0, width: 640, height: 320))
@@ -539,6 +556,8 @@ final class LiveNotationTests: XCTestCase {
         windowStart: Double,
         windowEnd: Double,
         playheadTime: Double,
+        verticalCenter: Double = 0,
+        verticalSpan: Double = 1_200,
         fixedContentRange: ClosedRange<Double>? = nil
     ) -> PitchGraphRenderState {
         PitchGraphRenderState(
@@ -550,8 +569,8 @@ final class LiveNotationTests: XCTestCase {
             makamIntervals: LiveScale.major.intervals.map(Int.init),
             windowStart: windowStart,
             windowEnd: windowEnd,
-            verticalCenter: 0,
-            verticalSpan: 1_200,
+            verticalCenter: verticalCenter,
+            verticalSpan: verticalSpan,
             playheadTime: playheadTime,
             loopA: nil,
             loopB: nil,

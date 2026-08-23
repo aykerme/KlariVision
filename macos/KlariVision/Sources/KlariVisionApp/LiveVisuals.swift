@@ -441,7 +441,6 @@ struct PitchGraphRenderState: Equatable {
             || tonic != previous.tonic
             || makamIntervals != previous.makamIntervals
             || abs(duration - previous.duration) > 0.000_001
-            || verticalCenter != previous.verticalCenter
             || verticalSpan != previous.verticalSpan
             || loopA != previous.loopA
             || loopB != previous.loopB
@@ -612,6 +611,7 @@ final class PitchGraphNSView: NSView {
     private var state: PitchGraphRenderState?
     private var pendingState: PitchGraphRenderState?
     private var baseWindowStart = 0.0
+    private var baseVerticalCenter = 0.0
     private var lastPresentationTime: Double?
     private var lastLayoutSize = CGSize.zero
     private var lastDisplayTimestamp: CFTimeInterval?
@@ -768,6 +768,8 @@ final class PitchGraphNSView: NSView {
             rebuildLayers(at: windowStart, presentationTime: time)
         } else if let state, abs(windowStart - baseWindowStart) > state.duration * 0.35 {
             rebuildLayers(at: windowStart, presentationTime: time)
+        } else if let state, abs(state.verticalCenter - baseVerticalCenter) > state.verticalSpan * 0.35 {
+            rebuildLayers(at: windowStart, presentationTime: time)
         } else {
             updateDynamicLayers(time: time)
         }
@@ -806,6 +808,7 @@ final class PitchGraphNSView: NSView {
         #endif
         pathRebuildCount += 1
         baseWindowStart = state.fixedContentRange?.lowerBound ?? windowStart
+        baseVerticalCenter = state.verticalCenter
         let chart = chartRect
         renderedChartRect = chart
         let palette = PitchGraphPalette.resolve(state.theme)
@@ -821,6 +824,8 @@ final class PitchGraphNSView: NSView {
         timeGridLayer.transform = CATransform3DIdentity
         timeTextLayer.transform = CATransform3DIdentity
         plotContentLayer.transform = CATransform3DIdentity
+        guideLayer.transform = CATransform3DIdentity
+        guideTextLayer.transform = CATransform3DIdentity
         layer?.backgroundColor = NSColor(palette.background).cgColor
         layer?.contentsScale = scale
         guideLayer.frame = chart
@@ -1003,12 +1008,22 @@ final class PitchGraphNSView: NSView {
             duration: state.duration,
             width: chart.width
         )
+        // Vertical follow-curve panning is applied as a cheap transform rather
+        // than baked into the path, mirroring the horizontal `shift` above, so
+        // the "follow curve" feature doesn't force a full `rebuildLayers` on
+        // every playback snapshot. See `PitchGraphGeometry.y`: a change in
+        // `verticalCenter` alone (span held constant) is linear in pixels.
+        let verticalShift = (state.verticalCenter - baseVerticalCenter)
+            * chart.height / max(1, state.verticalSpan)
         CATransaction.begin()
         CATransaction.setDisableActions(true)
-        let transform = CATransform3DMakeTranslation(shift, 0, 0)
-        timeGridLayer.transform = transform
-        timeTextLayer.transform = transform
+        let transform = CATransform3DMakeTranslation(shift, verticalShift, 0)
+        timeGridLayer.transform = CATransform3DMakeTranslation(shift, 0, 0)
+        timeTextLayer.transform = CATransform3DMakeTranslation(shift, 0, 0)
         plotContentLayer.transform = transform
+        let verticalOnly = CATransform3DMakeTranslation(0, verticalShift, 0)
+        guideLayer.transform = verticalOnly
+        guideTextLayer.transform = verticalOnly
         renderedContentFrame = plotContentLayer.frame
 
         let playheadX = PitchGraphGeometry.x(

@@ -9,8 +9,10 @@ import SwiftUI
 /// playback or analysis state.
 struct iPadCompactStudyWorkspace: View {
     @Bindable var study: iPadStudyState
+    let intervals: iPadMakamIntervalsStore
     let close: () -> Void
     let retryCompletedRecording: () -> Void
+    @State private var isPresentingSettings = false
 
     var body: some View {
         NavigationStack {
@@ -18,10 +20,31 @@ struct iPadCompactStudyWorkspace: View {
                 Group {
                     switch study.phase {
                     case .ready:
-                        iPadStudyWebView(store: study.webView)
-                            .frame(maxWidth: .infinity, maxHeight: .infinity)
-                            .clipShape(RoundedRectangle(cornerRadius: 14))
-                            .padding(.horizontal, 8)
+                        // The graph/video toggle inside StudyViewer.html always fills the
+                        // whole stage with one of the two, so the WebView can extend past
+                        // the bottom safe area; playback controls float on top instead of
+                        // claiming a fixed strip of screen. The top safe area is left alone
+                        // so the WebView's content area starts below the navigation bar —
+                        // ignoring it too would let the mini graph/video corner button land
+                        // underneath the nav bar's title/close button.
+                        ZStack(alignment: .bottom) {
+                            iPadStudyWebView(store: study.webView, isGraphMode: study.isGraphMode)
+                                .ignoresSafeArea(edges: .bottom)
+                            compactControls(compact: proxy.size.width < 430)
+                                .padding(.horizontal, 12)
+                                .padding(.bottom, 8)
+                                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+                                .padding(.horizontal, 12)
+                                .padding(.bottom, 8)
+                        }
+                        .overlay(alignment: .topTrailing) {
+                            // Native, not HTML: WKWebView scales page content (including
+                            // `position:fixed` elements) together during pinch-zoom, so an
+                            // in-page toggle button would zoom/pan out of reach along with
+                            // the graph or video. This one lives outside the WebView, so it
+                            // stays put and tappable at any zoom level.
+                            if study.hasVideo { videoFullscreenToggle }
+                        }
                     case .importing:
                         progressView(title: "Dosya hazırlanıyor", detail: "Dosya yerel çalışma alanına kopyalanıyor.", progress: nil)
                     case let .analyzing(progress):
@@ -38,9 +61,6 @@ struct iPadCompactStudyWorkspace: View {
                     }
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .safeAreaInset(edge: .bottom, spacing: 0) {
-                    if study.phase == .ready { compactControls(compact: proxy.size.width < 430) }
-                }
             }
             .navigationTitle(study.currentStudy?.title ?? "Dinleme")
             .navigationBarTitleDisplayMode(.inline)
@@ -56,6 +76,23 @@ struct iPadCompactStudyWorkspace: View {
         }
     }
 
+    /// Shows the icon of the side tapping it would switch to (a video icon
+    /// while the graph is fullscreen, a waveform icon while the video is).
+    private var videoFullscreenToggle: some View {
+        Button {
+            study.toggleVideoFullscreen()
+        } label: {
+            Image(systemName: study.isVideoFullscreen ? "waveform" : "play.rectangle.fill")
+                .font(.system(size: 18, weight: .semibold))
+                .frame(width: 44, height: 44)
+                .background(.black.opacity(0.55), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .foregroundStyle(.white)
+        }
+        .padding(.top, 16)
+        .padding(.trailing, 16)
+        .accessibilityLabel(study.isVideoFullscreen ? "Grafiği tam ekran yap" : "Videoyu tam ekran yap")
+    }
+
     private func progressView(title: String, detail: String, progress: Double?) -> some View {
         VStack(spacing: 16) {
             if let progress { ProgressView(value: progress).frame(maxWidth: 260) }
@@ -68,59 +105,55 @@ struct iPadCompactStudyWorkspace: View {
 
     @ViewBuilder private func compactControls(compact: Bool) -> some View {
         VStack(spacing: 8) {
-            HStack(spacing: 8) {
-                Text(formatTime(study.playbackTime)).font(.caption.monospacedDigit()).foregroundStyle(.secondary)
-                Slider(value: Binding(get: { study.playbackTime }, set: { study.command(.seek($0)) }), in: 0...max(study.duration, 0.01))
-                    .accessibilityLabel("Konum")
-                Text(formatTime(study.duration)).font(.caption.monospacedDigit()).foregroundStyle(.secondary)
-            }
-            if compact {
-                HStack(spacing: 8) {
-                    playbackButton(study.isPlaying ? "Duraklat" : "Oynat", systemImage: study.isPlaying ? "pause.fill" : "play.fill") { study.command(.playPause) }
-                    markerButton("A", label: "A noktasını işaretle") { study.command(.markA) }
-                    markerButton("B", label: "B noktasını işaretle") { study.command(.markB) }
-                    settingsMenu
-                }
-            } else {
-                HStack(spacing: 10) {
-                    playbackButton(study.isPlaying ? "Duraklat" : "Oynat", systemImage: study.isPlaying ? "pause.fill" : "play.fill") { study.command(.playPause) }
-                    markerButton("A", label: "A noktasını işaretle") { study.command(.markA) }
-                    markerButton("B", label: "B noktasını işaretle") { study.command(.markB) }
-                    settingsMenu
-                }
+            // No position slider: the graph itself scrubs (one-finger horizontal
+            // drag in StudyViewer.html), which keeps the white playhead centered.
+            iPadStudyPositionReadout(time: study.playbackTime, duration: study.duration) { study.command(.seek($0)) }
+            HStack(spacing: compact ? 8 : 10) {
+                playbackButton(study.isPlaying ? "Duraklat" : "Oynat", systemImage: study.isPlaying ? "pause.fill" : "play.fill") { study.command(.playPause) }
+                Spacer(minLength: 8)
+                markerButton("A", label: "A noktasını işaretle") { study.command(.markA) }
+                markerButton("B", label: "B noktasını işaretle") { study.command(.markB) }
+                loopButton
+                Spacer(minLength: 8)
+                settingsButton
             }
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
-        .background(.bar)
+        .sheet(isPresented: $isPresentingSettings) {
+            iPadStudySettingsSheet(study: study, intervals: intervals)
+        }
     }
 
-    private var settingsMenu: some View {
-        Menu {
-            Toggle("Döngü", isOn: Binding(get: { study.looping }, set: { _ in study.command(.loop) }))
-            Toggle("Eğriyi takip et", isOn: Binding(get: { study.followsCurve }, set: { _ in study.command(.follow) }))
-            Picker("Hız", selection: Binding(get: { study.rate }, set: { study.command(.rate($0)) })) {
-                ForEach(iPadStudyPlaybackRate.values.filter { $0 >= 0.10 && $0 <= 2.00 }, id: \.self) { rate in Text(iPadStudyPlaybackRate.label(for: rate)).tag(rate) }
-            }
-            Picker("Makam", selection: Binding(get: { study.currentStudy?.context.makam ?? .nihavend }, set: { study.updateContext(makam: $0) })) { ForEach(iPadMakam.allCases) { Text($0.rawValue).tag($0) } }
-            Picker("Karar", selection: Binding(get: { study.currentStudy?.context.karar ?? .rast }, set: { study.updateContext(karar: $0) })) { ForEach(iPadKarar.allCases) { Text($0.rawValue).tag($0) } }
-        } label: { Label("Ayarlar", systemImage: "slider.horizontal.3") }
-            .frame(minWidth: 44, minHeight: 44)
-            .accessibilityLabel("Çalışma ayarları")
+    /// Opens the shared settings sheet.  It sits in the exact slot the old
+    /// inline `Menu` occupied, so the control bar's layout is unchanged.
+    private var settingsButton: some View {
+        iPadWorkspaceSettingsButton(label: "Çalışma ayarları") { isPresentingSettings = true }
+    }
+
+    /// Toggles A–B looping.  Filled while looping is on, so the bar shows the
+    /// state that used to live behind the settings menu's "Döngü" switch.
+    @ViewBuilder private var loopButton: some View {
+        let label = Label("Döngü", systemImage: "repeat").labelStyle(.iconOnly)
+        let action = { study.command(.loop) }
+        if study.looping {
+            Button(action: action) { label }
+                .buttonStyle(.borderedProminent).controlSize(.large).frame(minWidth: 44, minHeight: 44)
+                .accessibilityLabel("Döngü").accessibilityValue("Açık")
+        } else {
+            Button(action: action) { label }
+                .buttonStyle(.bordered).controlSize(.large).frame(minWidth: 44, minHeight: 44)
+                .accessibilityLabel("Döngü").accessibilityValue("Kapalı")
+        }
     }
 
     private func playbackButton(_ title: String, systemImage: String, action: @escaping () -> Void) -> some View {
-        Button(action: action) { Label(title, systemImage: systemImage).labelStyle(.titleAndIcon) }
-            .buttonStyle(.borderedProminent).controlSize(.large).frame(minHeight: 44)
+        Button(action: action) { Label(title, systemImage: systemImage).labelStyle(.iconOnly) }
+            .buttonStyle(.borderedProminent).controlSize(.large).frame(minWidth: 44, minHeight: 44)
     }
 
     private func markerButton(_ title: String, label: String, action: @escaping () -> Void) -> some View {
         Button(title, action: action).buttonStyle(.bordered).controlSize(.large).frame(minWidth: 44, minHeight: 44).accessibilityLabel(label)
-    }
-
-    private func formatTime(_ value: Double) -> String {
-        guard value.isFinite else { return "0:00" }
-        return String(format: "%d:%02d", Int(value) / 60, Int(value) % 60)
     }
 }
 
