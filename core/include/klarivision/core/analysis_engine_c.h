@@ -28,7 +28,7 @@ typedef struct {
     double default_minimum_rms;
 } kv_pitch_contract_v1;
 
-enum { KV_ENGINE_YIN_V1 = 0, KV_ENGINE_V2 = 1, KV_ENGINE_VPM_LIKE = 2 };
+enum { KV_ENGINE_YIN_V1 = 0, KV_ENGINE_V2 = 1, KV_ENGINE_VPM_LIKE = 2, KV_ENGINE_HAPT_V1 = 3 };
 enum { KV_PROFILE_REALTIME = 0, KV_PROFILE_OFFLINE_TRACK = 1 };
 enum { KV_PITCH_C_ABI_V1 = 1 };
 enum {
@@ -39,6 +39,7 @@ enum {
     KV_CAP_PROFILE_OFFLINE_TRACK_V1 = 1u << 4,
     KV_CAP_SOURCE_TIMESTAMPS = 1u << 5,
     KV_CAP_V2_FIXED_LAG_FINISH = 1u << 6,
+    KV_CAP_ENGINE_HAPT_V1 = 1u << 7,
 };
 
 /// Returns 1 on success and 0 for an invalid output pointer. Ownership remains

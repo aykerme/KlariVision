@@ -165,7 +165,10 @@ final class AppStateTests: XCTestCase {
     }
 
     func testAllEnginesRemainNeutralUserChoices() {
-        XCTAssertEqual(iPadPitchEngine.allCases.map(\.title), ["YIN v1", "Pitch Engine v2", "VPM-benzeri"])
+        XCTAssertEqual(
+            iPadPitchEngine.allCases.map(\.title),
+            ["YIN v1", "Pitch Engine v2", "VPM-benzeri", "Harmonik-Faz (HAPT)"]
+        )
     }
 
     func testStudyImportValidatesAudioAndVideoExtensions() {

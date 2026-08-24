@@ -1,5 +1,6 @@
 #include "klarivision/core/analysis_engine.hpp"
 #include "klarivision/core/analysis_engine_c.h"
+#include "klarivision/core/hapt.hpp"
 #include "klarivision/core/pitch_engine_v2_session.hpp"
 
 #include <algorithm>
@@ -29,7 +30,7 @@ Wav read_wav(const std::string& path) {
     return wav;
 }
 std::vector<float> resample(const Wav& source) { constexpr double target=48000; if(source.rate==target) return source.samples; const std::size_t size=static_cast<std::size_t>(source.samples.size()*target/source.rate); std::vector<float> output(size); for(std::size_t i=0;i<size;++i) { const double p=i*source.rate/target; const auto lo=static_cast<std::size_t>(p); const auto hi=std::min(lo+1,source.samples.size()-1); output[i]=static_cast<float>(source.samples[lo]+(source.samples[hi]-source.samples[lo])*(p-lo)); } return output; }
-klarivision::core::PitchEngineId parse_engine(const std::string& value) { if(value=="yin_v1") return klarivision::core::PitchEngineId::yin_v1; if(value=="pitch_engine_v2") return klarivision::core::PitchEngineId::pitch_engine_v2; if(value=="vpm_like") return klarivision::core::PitchEngineId::vpm_like; throw std::runtime_error("Geçersiz pitch motoru."); }
+klarivision::core::PitchEngineId parse_engine(const std::string& value) { if(value=="yin_v1") return klarivision::core::PitchEngineId::yin_v1; if(value=="pitch_engine_v2") return klarivision::core::PitchEngineId::pitch_engine_v2; if(value=="vpm_like") return klarivision::core::PitchEngineId::vpm_like; if(value=="hapt_v1") return klarivision::core::PitchEngineId::hapt_v1; throw std::runtime_error("Geçersiz pitch motoru."); }
 bool same_frame(const klarivision::core::EngineFrame& left, const klarivision::core::EngineFrame& right) {
     if (std::abs(left.time_seconds - right.time_seconds) > 0.000001 ||
         left.frequency_hz.has_value() != right.frequency_hz.has_value()) return false;
@@ -121,6 +122,48 @@ void write_vpm_diagnostic(
            << ",\"bridged_frames\":" << diagnostic.bridged_frames
            << ",\"publication_reason\":\"" << diagnostic.publication_reason << "\"}";
 }
+void write_hapt_hypothesis(
+    std::ostream& output,
+    const klarivision::core::HAPTHypothesisDiagnostic& hypothesis
+) {
+    output << "{\"frequency_hz\":" << hypothesis.frequency_hz
+           << ",\"periodicity\":" << hypothesis.periodicity
+           << ",\"odd_harmonic_occupancy\":" << hypothesis.odd_harmonic_occupancy
+           << ",\"half_grid_veto\":" << hypothesis.half_grid_veto
+           << ",\"third_grid_veto\":" << hypothesis.third_grid_veto
+           << ",\"half_grid_spectrally_resolvable\":"
+           << (hypothesis.half_grid_spectrally_resolvable ? "true" : "false")
+           << ",\"third_grid_spectrally_resolvable\":"
+           << (hypothesis.third_grid_spectrally_resolvable ? "true" : "false")
+           << ",\"continuity_bonus\":" << hypothesis.continuity_bonus
+           << ",\"score\":" << hypothesis.score
+           << ",\"selected\":" << (hypothesis.selected ? "true" : "false") << "}";
+}
+void write_hapt_diagnostic(
+    std::ostream& output,
+    const klarivision::core::HAPTFrameDiagnostic& diagnostic
+) {
+    output << "{\"rms\":" << diagnostic.rms
+           << ",\"signal_eligible\":" << (diagnostic.signal_eligible ? "true" : "false")
+           << ",\"onset_recovery_attempted\":" << (diagnostic.onset_recovery_attempted ? "true" : "false")
+           << ",\"onset_recovery_used\":" << (diagnostic.onset_recovery_used ? "true" : "false")
+           << ",\"decay_recovery_attempted\":" << (diagnostic.decay_recovery_attempted ? "true" : "false")
+           << ",\"decay_recovery_used\":" << (diagnostic.decay_recovery_used ? "true" : "false")
+           << ",\"if_lock_attempted\":" << (diagnostic.if_lock_attempted ? "true" : "false")
+           << ",\"if_lock_applied\":" << (diagnostic.if_lock_applied ? "true" : "false")
+           << ",\"if_lock_harmonic\":" << diagnostic.if_lock_harmonic
+           << ",\"pre_if_lock_frequency_hz\":" << diagnostic.pre_if_lock_frequency_hz
+           << ",\"frequency_hz\":";
+    write_optional_number(output, diagnostic.pitch ? std::optional<double>(diagnostic.pitch->frequency_hz) : std::nullopt);
+    output << ",\"confidence\":";
+    write_optional_number(output, diagnostic.pitch ? std::optional<double>(diagnostic.pitch->confidence) : std::nullopt);
+    output << ",\"decision\":\"" << diagnostic.decision << "\",\"hypotheses\":[";
+    for (std::size_t index = 0; index < diagnostic.hypotheses.size(); ++index) {
+        write_hapt_hypothesis(output, diagnostic.hypotheses[index]);
+        if (index + 1 != diagnostic.hypotheses.size()) output << ',';
+    }
+    output << "]}";
+}
 }
 int main(int argc, char** argv) {
     if (argc == 2 && std::string(argv[1]) == "--contract") {
@@ -131,18 +174,18 @@ int main(int argc, char** argv) {
                   << ",\"sample_rate_hz\":" << contract.sample_rate_hz
                   << ",\"window_size\":" << contract.window_size
                   << ",\"hop_size\":" << contract.hop_size
-                  << ",\"engines\":[\"yin_v1\",\"pitch_engine_v2\",\"vpm_like\"]}\\n";
+                  << ",\"engines\":[\"yin_v1\",\"pitch_engine_v2\",\"vpm_like\",\"hapt_v1\"]}\\n";
         return 0;
     }
     if((argc != 6 && argc != 8) || std::string(argv[2]) != "--engine" || std::string(argv[4]) != "--output" ||
-       (argc == 8 && std::string(argv[6]) != "--diagnostic")) { std::cerr << "Kullanım: pitch_track_cli INPUT.wav --engine yin_v1|pitch_engine_v2|vpm_like --output OUTPUT.json [--diagnostic DIAG.json]\\n"; return 2; }
+       (argc == 8 && std::string(argv[6]) != "--diagnostic")) { std::cerr << "Kullanım: pitch_track_cli INPUT.wav --engine yin_v1|pitch_engine_v2|vpm_like|hapt_v1 --output OUTPUT.json [--diagnostic DIAG.json]\\n"; return 2; }
     try {
         const auto wav = read_wav(argv[1]);
         const auto samples = resample(wav);
         const bool diagnostic_requested = argc == 8;
         if (diagnostic_requested && std::string(argv[3]) != "pitch_engine_v2" &&
-            std::string(argv[3]) != "vpm_like") {
-            throw std::runtime_error("Tanı yalnız pitch_engine_v2 ve vpm_like için kullanılabilir.");
+            std::string(argv[3]) != "vpm_like" && std::string(argv[3]) != "hapt_v1") {
+            throw std::runtime_error("Tanı yalnız pitch_engine_v2, vpm_like ve hapt_v1 için kullanılabilir.");
         }
         klarivision::core::PitchEngine engine(
             parse_engine(argv[3]), klarivision::core::PitchEngineProfile::offline_track
@@ -203,7 +246,7 @@ int main(int argc, char** argv) {
                 }
                 (void)session.finish();
                 separate(); write_diagnostic(diagnostic_output, session.last_diagnostic());
-            } else {
+            } else if (std::string(argv[3]) == "vpm_like") {
                 klarivision::core::ProductionPitchSession session(
                     klarivision::core::PitchEngineId::vpm_like,
                     klarivision::core::PitchEngineConfig{
@@ -218,6 +261,17 @@ int main(int argc, char** argv) {
                     separate(); write_vpm_diagnostic(
                         diagnostic_output, session.last_vpm_diagnostic()
                     );
+                }
+            } else {
+                klarivision::core::HAPTConfig hapt_config;
+                klarivision::core::HAPTTracker hapt_tracker(hapt_config);
+                for (std::size_t start = 0; start + 1536 <= samples.size(); start += 512) {
+                    const std::span<const float> window(std::span<const float>(samples).subspan(start, 1536));
+                    const auto diagnostic = klarivision::core::diagnose_hapt_pitch(
+                        window, 48000, hapt_config, hapt_tracker.published_frequency_hz()
+                    );
+                    (void)hapt_tracker.process(diagnostic.pitch, diagnostic.rms);
+                    separate(); write_hapt_diagnostic(diagnostic_output, diagnostic);
                 }
             }
             diagnostic_output << "\n  ]\n}\n";

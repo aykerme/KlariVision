@@ -1,0 +1,60 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Python: açık dosya",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${file}",
+      "console": "integratedTerminal",
+      "cwd": "${workspaceFolder}",
+      "justMyCode": false
+    },
+    {
+      "name": "Python: pytest (açık dosya)",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "pytest",
+      "args": ["-q", "${file}"],
+      "console": "integratedTerminal",
+      "cwd": "${workspaceFolder}",
+      "justMyCode": false
+    },
+    {
+      "name": "Python: klarivision CLI",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "klarivision.cli",
+      "args": ["${input:cliArgs}"],
+      "console": "integratedTerminal",
+      "cwd": "${workspaceFolder}",
+      "justMyCode": false
+    },
+    {
+      "name": "Python: yerel uygulama (local_app)",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "klarivision.local_app",
+      "console": "integratedTerminal",
+      "cwd": "${workspaceFolder}",
+      "justMyCode": false
+    },
+    {
+      "name": "C++: pitch_track_cli (LLDB)",
+      "type": "lldb",
+      "request": "launch",
+      "program": "${workspaceFolder}/build/debug/klarivision_pitch_track_cli",
+      "args": ["${input:cliArgs}"],
+      "cwd": "${workspaceFolder}",
+      "preLaunchTask": "C++: pitch_track_cli derle (debug)"
+    }
+  ],
+  "inputs": [
+    {
+      "id": "cliArgs",
+      "type": "promptString",
+      "description": "Komut satırı argümanları",
+      "default": "--help"
+    }
+  ]
+}

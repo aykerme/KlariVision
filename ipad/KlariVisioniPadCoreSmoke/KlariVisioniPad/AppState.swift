@@ -83,6 +83,7 @@ enum iPadPitchEngine: String, CaseIterable, Identifiable, Codable {
     case yinV1 = "yin_v1"
     case pitchEngineV2 = "pitch_engine_v2"
     case vpmLike = "vpm_like"
+    case haptV1 = "hapt_v1"
 
     var id: String { rawValue }
 
@@ -91,6 +92,7 @@ enum iPadPitchEngine: String, CaseIterable, Identifiable, Codable {
         case .yinV1: "YIN v1"
         case .pitchEngineV2: "Pitch Engine v2"
         case .vpmLike: "VPM-benzeri"
+        case .haptV1: "Harmonik-Faz (HAPT)"
         }
     }
 }

@@ -9,7 +9,7 @@
 
 namespace klarivision::core {
 
-enum class PitchEngineId { yin_v1, pitch_engine_v2, vpm_like };
+enum class PitchEngineId { yin_v1, pitch_engine_v2, vpm_like, hapt_v1 };
 enum class PitchEngineProfile { realtime, offline_track };
 
 struct PitchEngineConfig {

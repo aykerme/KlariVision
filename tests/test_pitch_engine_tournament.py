@@ -23,6 +23,7 @@ from pitch_tournament_engines import (  # noqa: E402
     EngineTrace,
     _bridge_short_v2_gaps,
     _v2_is_publishable,
+    hapt_frames,
     v2_frames,
     vpm_frames,
 )
@@ -203,6 +204,7 @@ def test_selection_veto_keeps_yin_when_candidate_hides_voiced_frames() -> None:
         _result("yin_v1", "holdout.wav", 1),
         _result("pitch_engine_v2", "holdout.wav", 5),
         _result("vpm_like", "holdout.wav", 0),
+        _result("hapt_v1", "holdout.wav", 0),
     ]
     decision = selection(rows)
     assert decision["default_engine"] == "yin_v1"
@@ -214,6 +216,7 @@ def test_selection_ranks_serious_then_non_serious_without_veto_affecting_winner(
         _result("yin_v1", "holdout.wav", 8),
         _result("pitch_engine_v2", "holdout.wav", 9),
         _result("vpm_like", "holdout.wav", 10),
+        _result("hapt_v1", "holdout.wav", 8),
     ]
     rows[0].update({"serious_total_error_frames": 3, "serious_missing_voiced_frames": 3})
     rows[1].update({"serious_total_error_frames": 2, "serious_missing_voiced_frames": 2})
@@ -226,6 +229,8 @@ def test_selection_ranks_serious_then_non_serious_without_veto_affecting_winner(
     # VPM has the same serious total as V2 but fewer raw remainder errors.
     rows[2]["total_error_frames"] = 4
     rows[2]["missing_voiced_frames"] = 4
+    # HAPT ties yin's worst-case serious total so it cannot outrank vpm_like.
+    rows[3].update({"serious_total_error_frames": 3, "serious_missing_voiced_frames": 3})
     decision = selection(rows, rows)
     assert decision["benchmark_winner"] == "vpm_like"
     assert decision["decisions"]["vpm_like"]["vetoes"]
@@ -233,12 +238,18 @@ def test_selection_ranks_serious_then_non_serious_without_veto_affecting_winner(
 
 
 def test_selection_uses_cents_then_latency_after_both_error_totals_tie() -> None:
-    rows = [_result(engine, "holdout.wav", 2) for engine in ("yin_v1", "pitch_engine_v2", "vpm_like")]
+    rows = [
+        _result(engine, "holdout.wav", 2)
+        for engine in ("yin_v1", "pitch_engine_v2", "vpm_like", "hapt_v1")
+    ]
     for row in rows:
         row.update({"serious_total_error_frames": 1, "serious_missing_voiced_frames": 1})
     rows[0].update({"correct_pitch_mean_absolute_cents": 4.0, "correct_pitch_absolute_cents_sum": 392.0})
     rows[1].update({"correct_pitch_mean_absolute_cents": 3.0, "correct_pitch_absolute_cents_sum": 294.0})
     rows[2].update({"correct_pitch_mean_absolute_cents": 3.0, "correct_pitch_absolute_cents_sum": 294.0, "latency": {"decision_latency_ms": 8.0}})
+    # HAPT sits out of contention here (worse serious total than the tied
+    # three) so this stays a pure cents-then-latency tie-break test.
+    rows[3].update({"serious_total_error_frames": 2})
     assert selection(rows, rows)["benchmark_winner"] == "vpm_like"
 
 
@@ -370,6 +381,31 @@ def test_v2_has_no_serious_error_on_yin_holdouts(
         trace = EngineTrace(
             "pitch_engine_v2", "Python mirror of shipped Swift V2", v2_frames(audio, rate),
             0.0, len(audio) / rate, LIVE_WINDOW / (2 * rate) * 1_000, 5 * 512 / rate * 1_000,
+        )
+        result = score_trace(
+            trace, effective_manifest_for_signal(manifest, audio, rate), rate
+        )
+        assert result["serious_total_error_frames"] == 0, filename
+
+
+@pytest.mark.parametrize(
+    ("writer", "label"),
+    [
+        (write_holdout, "v1"), (write_holdout_v2, "v2"), (write_holdout_v3, "v3"),
+        (write_holdout_v4, "v4"), (write_holdout_v5, "v5"),
+    ],
+)
+def test_hapt_has_no_serious_error_on_all_holdouts(
+    tmp_path: Path,
+    writer: object,
+    label: str,
+) -> None:
+    manifest = writer(tmp_path / label)  # type: ignore[operator]
+    for filename in manifest["variants"]:
+        audio, rate = read_wav(tmp_path / label / filename)
+        trace = EngineTrace(
+            "hapt_v1", "Production C++ HAPT core", hapt_frames(audio, rate),
+            0.0, len(audio) / rate, LIVE_WINDOW / (2 * rate) * 1_000, 0.0,
         )
         result = score_trace(
             trace, effective_manifest_for_signal(manifest, audio, rate), rate

@@ -160,7 +160,7 @@ struct SettingsView: View {
                     }
                 }
                 .accessibilityHint(AccessibilityText.enginePickerHint)
-                Text("Üç motor eşit kullanıcı seçeneğidir. Yeni dosya yalnız seçilen motorla analiz edilir; mevcut çalışmada hazır sonuç yoksa yeniden analiz gerekir.")
+                Text("Dört motor eşit kullanıcı seçeneğidir. Yeni dosya yalnız seçilen motorla analiz edilir; mevcut çalışmada hazır sonuç yoksa yeniden analiz gerekir.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
                 Picker("Çalma modu motoru", selection: $liveEngine) {
@@ -432,6 +432,7 @@ enum LivePitchEngine: String, CaseIterable, Identifiable {
     case autocorrelation
     case candidateV2
     case vpmLike
+    case hapt
 
     var id: String { rawValue }
     var title: String {
@@ -440,6 +441,7 @@ enum LivePitchEngine: String, CaseIterable, Identifiable {
         case .autocorrelation: return "Öz-ilinti"
         case .candidateV2: return "Pitch Engine v2"
         case .vpmLike: return "VPM-benzeri"
+        case .hapt: return "Harmonik-Faz (HAPT)"
         }
     }
 
@@ -449,6 +451,7 @@ enum LivePitchEngine: String, CaseIterable, Identifiable {
         case .autocorrelation: return "autocorrelation_experimental"
         case .candidateV2: return "pitch_engine_v2_experimental"
         case .vpmLike: return "yamaoka_vpm_like_experimental"
+        case .hapt: return "hapt_v1"
         }
     }
 
@@ -456,6 +459,7 @@ enum LivePitchEngine: String, CaseIterable, Identifiable {
         switch PitchEngineSettings.storedSelection(for: PitchEngineSettings.liveEngineKey) {
         case "pitch_engine_v2": return .candidateV2
         case "vpm_like": return .vpmLike
+        case "hapt_v1": return .hapt
         default: return .yin
         }
     }
@@ -1546,6 +1550,7 @@ final class LivePitchAnalyzer: ObservableObject, @unchecked Sendable {
         case .candidateV2: return Int32(KV_ENGINE_V2)
         case .vpmLike: return Int32(KV_ENGINE_VPM_LIKE)
         case .autocorrelation: return Int32(KV_ENGINE_YIN_V1)
+        case .hapt: return Int32(KV_ENGINE_HAPT_V1)
         }
     }
     #endif
@@ -2747,7 +2752,7 @@ final class LivePitchAnalyzer: ObservableObject, @unchecked Sendable {
             case .vpmLike:
                 pendingVPMLikeGapFrames.removeAll(keepingCapacity: true)
                 _ = vpmHarmonicJumpGate.filter(nil)
-            case .autocorrelation:
+            case .autocorrelation, .hapt:
                 break
             }
             return nil
@@ -3132,7 +3137,7 @@ final class LivePitchAnalyzer: ObservableObject, @unchecked Sendable {
             return v2HarmonicJumpGate.filter(result)
         case .vpmLike:
             return vpmHarmonicJumpGate.filter(result)
-        case .yin, .autocorrelation:
+        case .yin, .autocorrelation, .hapt:
             return result
         }
     }
@@ -3735,6 +3740,12 @@ final class LivePitchAnalyzer: ObservableObject, @unchecked Sendable {
             return estimatePitchYIN(samples: samples, sampleRate: sampleRate)
         case .vpmLike:
             return estimatePitchVPMLike(samples: samples, sampleRate: sampleRate)
+        case .hapt:
+            // No Swift mirror exists by design (see docs/HAPTPitchEngine.md);
+            // this reference-only path (Swift Package / parity builds) is
+            // unreachable for HAPT in the shipped app, which always routes
+            // through the production C++ core.
+            return nil
         }
     }
 

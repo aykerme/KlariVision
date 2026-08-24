@@ -10,7 +10,7 @@ from pathlib import Path
 from ..runtime_paths import resource_root
 
 
-ENGINES = frozenset({"yin_v1", "pitch_engine_v2", "vpm_like"})
+ENGINES = frozenset({"yin_v1", "pitch_engine_v2", "vpm_like", "hapt_v1"})
 # Keep the public offline_track_v1 JSON contract stable while preventing a
 # result made by an older decision pipeline from being reused after an engine
 # behaviour change.

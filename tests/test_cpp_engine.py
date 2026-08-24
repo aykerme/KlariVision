@@ -40,7 +40,7 @@ def test_reads_the_v1_cli_contract(monkeypatch, tmp_path: Path) -> None:
         "sample_rate_hz": 48000,
         "window_size": 1536,
         "hop_size": 512,
-        "engines": ["yin_v1", "pitch_engine_v2", "vpm_like"],
+        "engines": ["yin_v1", "pitch_engine_v2", "vpm_like", "hapt_v1"],
     }
 
     class Completed:

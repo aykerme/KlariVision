@@ -1,0 +1,98 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Doğrula: C++ çekirdek testleri",
+      "detail": "scripts/test_core.sh — 8 çekirdek test ikilisini derleyip çalıştırır",
+      "type": "shell",
+      "command": "zsh scripts/test_core.sh",
+      "options": { "cwd": "${workspaceFolder}" },
+      "group": "test",
+      "problemMatcher": ["$gcc"],
+      "presentation": { "reveal": "always", "panel": "dedicated" }
+    },
+    {
+      "label": "Doğrula: Python testleri",
+      "detail": ".venv/bin/python -B -m pytest -q",
+      "type": "shell",
+      "command": "${workspaceFolder}/.venv/bin/python -B -m pytest -q",
+      "options": { "cwd": "${workspaceFolder}" },
+      "group": { "kind": "test", "isDefault": true },
+      "problemMatcher": [],
+      "presentation": { "reveal": "always", "panel": "dedicated" }
+    },
+    {
+      "label": "Doğrula: Python testleri (açık dosya)",
+      "type": "shell",
+      "command": "${workspaceFolder}/.venv/bin/python -B -m pytest -q '${file}'",
+      "options": { "cwd": "${workspaceFolder}" },
+      "group": "test",
+      "problemMatcher": []
+    },
+    {
+      "label": "macOS: swift build",
+      "type": "shell",
+      "command": "swift build",
+      "options": { "cwd": "${workspaceFolder}/macos/KlariVision" },
+      "group": "build",
+      "problemMatcher": ["$swiftc"]
+    },
+    {
+      "label": "macOS: swift test",
+      "type": "shell",
+      "command": "swift test",
+      "options": { "cwd": "${workspaceFolder}/macos/KlariVision" },
+      "group": "test",
+      "problemMatcher": ["$swiftc"]
+    },
+    {
+      "label": "macOS: xcodebuild (imzasız)",
+      "detail": "Tam uygulama hedefi; C++ köprüsü ve paketleme Xcode akışındadır",
+      "type": "shell",
+      "command": "xcodebuild -project macos/KlariVision/KlariVision.xcodeproj -scheme KlariVision -configuration Debug -derivedDataPath /private/tmp/KlariVisionDerivedData CODE_SIGNING_ALLOWED=NO build",
+      "options": { "cwd": "${workspaceFolder}" },
+      "group": "build",
+      "problemMatcher": ["$swiftc"]
+    },
+    {
+      "label": "iPad: xcodebuild (simulator)",
+      "type": "shell",
+      "command": "xcodebuild -project ipad/KlariVisioniPadCoreSmoke.xcodeproj -scheme KlariVisioniPad -sdk iphonesimulator build-for-testing",
+      "options": { "cwd": "${workspaceFolder}" },
+      "group": "build",
+      "problemMatcher": ["$swiftc"]
+    },
+    {
+      "label": "C++: clangd indeksini yenile",
+      "detail": "core/ altına yeni .cpp eklendiğinde çalıştır",
+      "type": "shell",
+      "command": "python3 scripts/generate_compile_commands.py",
+      "options": { "cwd": "${workspaceFolder}" },
+      "problemMatcher": []
+    },
+    {
+      "label": "C++: pitch_track_cli derle (debug)",
+      "detail": "LLDB ile adım adım izlemek için sembollü ikili üretir",
+      "type": "shell",
+      "command": "mkdir -p build/debug && clang++ -std=c++20 -g -O0 -I core/include core/src/*.cpp core/tools/pitch_track_cli.cpp -framework Accelerate -o build/debug/klarivision_pitch_track_cli",
+      "options": { "cwd": "${workspaceFolder}" },
+      "group": "build",
+      "problemMatcher": ["$gcc"]
+    },
+    {
+      "label": "Doküman: mimariyi tarayıcıda aç",
+      "type": "shell",
+      "command": "open docs/architecture.html",
+      "options": { "cwd": "${workspaceFolder}" },
+      "problemMatcher": []
+    },
+    {
+      "label": "iPad SourceKit köprüsü kur (tek seferlik, opsiyonel)",
+      "detail": "xcode-build-server kurar ve .xcodeproj için Swift tanıma-gitme özelliğini açar",
+      "type": "shell",
+      "command": "brew install xcode-build-server && xcode-build-server config -project ipad/KlariVisioniPadCoreSmoke.xcodeproj -scheme KlariVisioniPad",
+      "options": { "cwd": "${workspaceFolder}" },
+      "problemMatcher": []
+    }
+  ]
+}

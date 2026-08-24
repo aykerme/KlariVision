@@ -33,7 +33,7 @@ BENCHMARKS = ROOT / "data/benchmarks"
 OUTPUT = ROOT / "outputs/pitch-engine-tournament-all-synthetic-2026-08-09.json"
 MARKDOWN = ROOT / "outputs/pitch-engine-tournament-all-synthetic-2026-08-09.md"
 SAMPLE_INDEX = ROOT / "outputs/pitch-engine-tournament-all-synthetic-sample-index-2026-08-09.md"
-ENGINE_ORDER = ("yin_v1", "pitch_engine_v2", "vpm_like")
+ENGINE_ORDER = ("yin_v1", "pitch_engine_v2", "vpm_like", "hapt_v1")
 TRUTH_STEP_SECONDS = 0.01
 REAL_RECORDING_PREFIX = "klarnet_gercek_"
 
@@ -345,6 +345,7 @@ def selection(all_results: list[dict[str, object]], safety_results: list[dict[st
         "yin_v1": {"verified": True, "evidence": "protected production baseline"},
         "pitch_engine_v2": {"verified": False, "evidence": "benchmark mirror; C++/Swift trace parity not yet proven"},
         "vpm_like": {"verified": False, "evidence": "production C++ trace; duplicated Swift trace parity not yet proven"},
+        "hapt_v1": {"verified": False, "evidence": "production C++ trace; no Swift mirror exists by design (see docs/HAPTPitchEngine.md)"},
     }
     decisions = {"yin_v1": {"eligible": True, "significant_gain": False, "vetoes": [], "parity": parity["yin_v1"]}}
     contenders = []

@@ -37,7 +37,7 @@ int kv_pitch_contract_get_v1(kv_pitch_contract_v1 *out_contract) {
         .capabilities = KV_CAP_ENGINE_YIN_V1 | KV_CAP_ENGINE_V2 |
             KV_CAP_ENGINE_VPM_LIKE | KV_CAP_PROFILE_REALTIME |
             KV_CAP_PROFILE_OFFLINE_TRACK_V1 | KV_CAP_SOURCE_TIMESTAMPS |
-            KV_CAP_V2_FIXED_LAG_FINISH,
+            KV_CAP_V2_FIXED_LAG_FINISH | KV_CAP_ENGINE_HAPT_V1,
         .sample_rate_hz = 48'000,
         .window_size = 1'536,
         .hop_size = 512,
@@ -47,7 +47,7 @@ int kv_pitch_contract_get_v1(kv_pitch_contract_v1 *out_contract) {
     return 1;
 }
 kv_pitch_engine *kv_pitch_engine_create(int id, int profile) {
-    if (id < KV_ENGINE_YIN_V1 || id > KV_ENGINE_VPM_LIKE || profile < KV_PROFILE_REALTIME || profile > KV_PROFILE_OFFLINE_TRACK) return nullptr;
+    if (id < KV_ENGINE_YIN_V1 || id > KV_ENGINE_HAPT_V1 || profile < KV_PROFILE_REALTIME || profile > KV_PROFILE_OFFLINE_TRACK) return nullptr;
     return new kv_pitch_engine(static_cast<klarivision::core::PitchEngineId>(id), static_cast<klarivision::core::PitchEngineProfile>(profile));
 }
 void kv_pitch_engine_destroy(kv_pitch_engine *engine) { delete engine; }
@@ -62,7 +62,7 @@ kv_production_pitch_session *kv_production_pitch_session_create(
     const int id,
     const double minimum_rms
 ) {
-    if (id < KV_ENGINE_YIN_V1 || id > KV_ENGINE_VPM_LIKE ||
+    if (id < KV_ENGINE_YIN_V1 || id > KV_ENGINE_HAPT_V1 ||
         !std::isfinite(minimum_rms) || minimum_rms < 0) return nullptr;
     try {
         return new kv_production_pitch_session(

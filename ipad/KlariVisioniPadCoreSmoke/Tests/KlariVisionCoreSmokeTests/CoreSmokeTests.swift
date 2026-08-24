@@ -13,11 +13,12 @@ final class CoreSmokeTests: XCTestCase {
         XCTAssertNotEqual(contract.capabilities & UInt32(KV_CAP_ENGINE_YIN_V1), 0)
         XCTAssertNotEqual(contract.capabilities & UInt32(KV_CAP_ENGINE_V2), 0)
         XCTAssertNotEqual(contract.capabilities & UInt32(KV_CAP_ENGINE_VPM_LIKE), 0)
+        XCTAssertNotEqual(contract.capabilities & UInt32(KV_CAP_ENGINE_HAPT_V1), 0)
 
         let sampleRate = 48_000.0
         let windowSize = Int(contract.window_size)
         let hopSize = Int(contract.hop_size)
-        for engine in [KV_ENGINE_YIN_V1, KV_ENGINE_V2, KV_ENGINE_VPM_LIKE] {
+        for engine in [KV_ENGINE_YIN_V1, KV_ENGINE_V2, KV_ENGINE_VPM_LIKE, KV_ENGINE_HAPT_V1] {
             guard let session = kv_production_pitch_session_create(Int32(engine), contract.default_minimum_rms) else {
                 return XCTFail("C ABI oturumu oluşturulamadı: \(engine)")
             }
