@@ -55,6 +55,7 @@ ortamında aynı komut tüm turnuva denetimlerini de çalıştırır.
 ## Belge düzeni
 
 - `docs/architecture.html`: güncel, grafikli sistem açıklaması
+- `docs/VSCODE_SETUP.md`: VS Code ile kod okuma ortamı ve okuma sırası
 - `docs/PROJECT_STATE.md`: doğrulanmış güncel ürün durumu
 - `docs/CODEX_HANDOFF.md`: son çalışma ve sıradaki tek somut iş
 - `docs/DECISIONS.md`: kalıcı karar günlüğü

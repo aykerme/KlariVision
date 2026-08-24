@@ -1,0 +1,246 @@
+{
+  // ===============================================================
+  // KlariVision — VS Code okuma/analiz ortamı (Source Insight düzeni)
+  // Bu dosya derleme davranışını değiştirmez; yalnız editörü ayarlar.
+  // ===============================================================
+
+  // ---------------------------------------------------------------
+  // 1. SOURCE INSIGHT GÖRÜNÜMÜ
+  // ---------------------------------------------------------------
+  // Klasik SI açık tema + sembol türüne göre renk. Eski görünüme
+  // dönmek için sadece workbench.colorTheme satırını silin; alttaki
+  // renkler yalnız bu temaya bağlıdır.
+  "workbench.colorTheme": "Default Light Modern",
+  "editor.semanticHighlighting.enabled": true,
+
+  // Sembol türüne göre renk — SI'ın Syntax Formatting karşılığı.
+  "editor.semanticTokenColorCustomizations": {
+    "[Default Light Modern]": {
+      "enabled": true,
+      "rules": {
+        "function": { "foreground": "#7B0052", "bold": true },
+        "method": { "foreground": "#7B0052", "bold": true },
+        "class": { "foreground": "#008080", "bold": true },
+        "struct": { "foreground": "#008080", "bold": true },
+        "interface": { "foreground": "#008080", "bold": true },
+        "enum": { "foreground": "#008080", "bold": true },
+        "type": { "foreground": "#008080" },
+        "typeParameter": { "foreground": "#008080", "italic": true },
+        "namespace": { "foreground": "#005F87" },
+        "property": { "foreground": "#6A3D9A" },
+        "enumMember": { "foreground": "#B05000" },
+        "macro": { "foreground": "#B03060", "bold": true },
+        "variable": { "foreground": "#1A1A1A" },
+        "variable.readonly": { "foreground": "#1A1A1A", "bold": true },
+        "parameter": { "foreground": "#3A3A6A", "italic": true },
+        "*.declaration": { "underline": true }
+      }
+    }
+  },
+  "editor.tokenColorCustomizations": {
+    "[Default Light Modern]": {
+      "comments": { "foreground": "#008000", "fontStyle": "italic" },
+      "strings": "#A31515",
+      "numbers": "#B05000",
+      "keywords": { "foreground": "#0000C0", "fontStyle": "bold" }
+    }
+  },
+
+  // ---------------------------------------------------------------
+  // 2. SEMBOL PENCERESİ / BAĞLAM PENCERESİ DAVRANIŞI
+  // ---------------------------------------------------------------
+  // Referanslar SI'ın alt penceresi gibi panelde açılsın (peek değil).
+  "references.preferredLocation": "view",
+  "editor.gotoLocation.multipleDefinitions": "goto",
+  "editor.gotoLocation.multipleReferences": "view",
+  "editor.gotoLocation.multipleImplementations": "view",
+  // SI'ın Context Window'u anında açılır; hover gecikmesini kısalt.
+  "editor.hover.delay": 150,
+  "editor.hover.sticky": true,
+  "editor.definitionLinkOpensInPeek": false,
+  // SI tek kaynak penceresini yeniden kullanır.
+  "workbench.editor.enablePreview": true,
+  "workbench.editor.enablePreviewFromQuickOpen": true,
+  "explorer.autoReveal": true,
+
+  // Yerleşik Outline paneli = SI Symbol Window
+  "outline.collapseItems": "alwaysExpand",
+  "outline.showVariables": true,
+  "outline.showProperties": true,
+  "outline.showFunctions": true,
+  "outline.showClasses": true,
+  "outline.showMethods": true,
+  "outline.icons": true,
+
+  // Outline Map: proje geneli sembol ağacı + referans sayısı
+  "outline-map.follow": "cursor",
+  "outline-map.expand": "cursor",
+  "outline-map.findRef.enabled": true,
+  "outline-map.workspace.enabled": true,
+  "outline-map.workspace.IncludeSymbols": [
+    "Class",
+    "Struct",
+    "Interface",
+    "Enum",
+    "Function",
+    "Method",
+    "Constructor",
+    "Property",
+    "Field",
+    "Constant",
+    "__om_Tag__",
+    "__om_Region__"
+  ],
+  "outline-map.workspace.excludes": [
+    "**/.venv/**",
+    "**/.python/**",
+    "**/build/**",
+    "**/dist/**",
+    "**/outputs/**",
+    "**/.build/**",
+    "**/__pycache__/**",
+    "**/node_modules/**"
+  ],
+
+  // ---------------------------------------------------------------
+  // 3. GEZİNME KOLAYLIKLARI (uzun Swift dosyaları için)
+  // ---------------------------------------------------------------
+  "editor.stickyScroll.enabled": true,
+  "editor.stickyScroll.maxLineCount": 6,
+  "breadcrumbs.enabled": true,
+  "breadcrumbs.showFunctions": true,
+  "editor.guides.bracketPairs": "active",
+  "editor.rulers": [100],
+  "editor.renderWhitespace": "trailing",
+  "editor.occurrencesHighlight": "multiFile",
+  "editor.selectionHighlight": true,
+  "editor.linkedEditing": true,
+  "workbench.editor.highlightModifiedTabs": true,
+
+  // Satır içi tanılama (SI'da yok ama okurken hatayı yerinde gösterir)
+  "errorLens.enabledDiagnosticLevels": ["error", "warning"],
+  "errorLens.messageMaxChars": 140,
+  "errorLens.fontStyleItalic": true,
+
+  "bookmarks.saveBookmarksInProject": true,
+  "bookmarks.navigateThroughAllFiles": true,
+  "bookmarks.label.suggestion": "useWhenSelected",
+
+  "todo-tree.tree.showCountsInTree": true,
+  "todo-tree.filtering.excludeGlobs": [
+    "**/.venv/**",
+    "**/build/**",
+    "**/dist/**",
+    "**/outputs/**"
+  ],
+
+  "indent-rainbow.indicatorStyle": "light",
+
+  // ---------------------------------------------------------------
+  // 4. DİL SUNUCULARI
+  // ---------------------------------------------------------------
+  // Python: src/klarivision, scripts/, tests/
+  "python.defaultInterpreterPath": "${workspaceFolder}/.venv/bin/python",
+  "python.testing.pytestEnabled": true,
+  "python.testing.unittestEnabled": false,
+  "python.testing.pytestArgs": ["tests"],
+  "python.analysis.extraPaths": ["${workspaceFolder}/src"],
+  "python.analysis.typeCheckingMode": "basic",
+  "python.analysis.inlayHints.functionReturnTypes": true,
+  "python.analysis.inlayHints.variableTypes": true,
+  "python.analysis.exclude": [
+    "**/.venv/**",
+    "**/.python/**",
+    "**/.uv-cache/**",
+    "**/dist/**",
+    "**/build/**",
+    "**/outputs/**",
+    "**/__pycache__/**"
+  ],
+  "python.analysis.packageIndexDepths": [
+    { "name": "klarivision", "depth": 4, "includeAllSymbols": true }
+  ],
+
+  // C++ çekirdek: clangd + core/compile_commands.json
+  // Veritabanını yenilemek için: Tasks → "C++: clangd indeksini yenile"
+  "clangd.path": "/usr/bin/clangd",
+  "clangd.arguments": [
+    "--background-index",
+    "--compile-commands-dir=${workspaceFolder}/core",
+    "--header-insertion=never",
+    "--completion-style=detailed",
+    "--pch-storage=memory",
+    "--clang-tidy"
+  ],
+  "clangd.onConfigChanged": "restart",
+  "C_Cpp.intelliSenseEngine": "disabled",
+
+  // Swift: macos/KlariVision alt klasöründeki SwiftPM paketi bulunsun
+  "swift.searchSubfoldersForPackages": true,
+  "swift.backgroundCompilation": false,
+  "swift.autoGenerateLaunchConfigurations": false,
+  "swift.sourcekit-lsp.backgroundIndexing": "on",
+
+  // ---------------------------------------------------------------
+  // 5. DOSYA TÜRLERİ
+  // ---------------------------------------------------------------
+  "files.associations": {
+    "*.spec": "python",
+    "*.pbxproj": "plaintext",
+    "*.pcm": "plaintext"
+  },
+  "[swift]": { "editor.tabSize": 4, "editor.insertSpaces": true },
+  "[cpp]": { "editor.tabSize": 4, "editor.insertSpaces": true },
+  "[python]": { "editor.tabSize": 4, "editor.insertSpaces": true },
+
+  // ---------------------------------------------------------------
+  // 6. GÜRÜLTÜ FİLTRESİ
+  // ---------------------------------------------------------------
+  // Geçici olarak görmek istersen ilgili satırı false yap.
+  "files.exclude": {
+    "**/.DS_Store": true,
+    "**/__pycache__": true,
+    "**/*.egg-info": true,
+    ".venv": true,
+    ".python": true,
+    ".tools": true,
+    ".uv-cache": true,
+    ".pytest_cache": true,
+    "build": true,
+    "dist": true,
+    "outputs": true,
+    "core/compile_commands.json": true,
+    "macos/KlariVision/.build": true,
+    "macos/KlariVision/.swiftpm": true
+  },
+
+  "search.useIgnoreFiles": true,
+  "search.exclude": {
+    "**/.venv/**": true,
+    "**/.python/**": true,
+    "**/.uv-cache/**": true,
+    "**/.tools/**": true,
+    "**/build/**": true,
+    "**/dist/**": true,
+    "**/outputs/**": true,
+    "**/.build/**": true,
+    "**/__pycache__/**": true,
+    "data/**": true,
+    "research/**": true,
+    "tools/sonic-annotator/**": true,
+    "**/*.pbxproj": true
+  },
+
+  "files.watcherExclude": {
+    "**/.venv/**": true,
+    "**/.python/**": true,
+    "**/.uv-cache/**": true,
+    "**/outputs/**": true,
+    "**/dist/**": true,
+    "**/build/**": true,
+    "**/.build/**": true,
+    "**/data/**": true
+  },
+
+  "git.ignoreLimitWarning": true
+}

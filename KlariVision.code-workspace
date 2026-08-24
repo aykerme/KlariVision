@@ -1,12 +1,18 @@
 {
   "folders": [
-    { "path": "." }
+    {
+      "name": "KlariVision",
+      "path": "."
+    }
   ],
-  "settings": {
-    "files.exclude": {
-      "**/__pycache__": true,
-      ".venv": true
-    },
-    "python.testing.pytestEnabled": true
+  "settings": {},
+  "extensions": {
+    "recommendations": [
+      "swiftlang.swift-vscode",
+      "llvm-vs-code-extensions.vscode-clangd",
+      "ms-python.python",
+      "ms-python.vscode-pylance",
+      "vadimcn.vscode-lldb"
+    ]
   }
 }

@@ -35,3 +35,12 @@ ipad/KlariVisioniPadCoreSmoke.xcodeproj/project.xcworkspace/xcuserdata/
 
 # Operating-system files
 .DS_Store
+
+# Editor index output (scripts/generate_compile_commands.py ile yeniden üretilir)
+core/compile_commands.json
+core/.cache/
+buildServer.json
+
+# Local-only tool state
+.claude/settings.local.json
+.ua/
