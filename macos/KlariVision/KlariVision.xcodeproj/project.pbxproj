@@ -16,6 +16,9 @@
 		A10000000000000000000051 /* vpm_like.cpp in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000050 /* vpm_like.cpp */; };
 		A10000000000000000000055 /* fixed_lag_tracker.cpp in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000054 /* fixed_lag_tracker.cpp */; };
 		A10000000000000000000057 /* pitch_engine_v2_session.cpp in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000056 /* pitch_engine_v2_session.cpp */; };
+		A10000000000000000000059 /* harmonic_arbitration.cpp in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000058 /* harmonic_arbitration.cpp */; };
+		A10000000000000000000081 /* hapt.cpp in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000080 /* hapt.cpp */; };
+		A10000000000000000000083 /* harmonic_probe.cpp in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000082 /* harmonic_probe.cpp */; };
 		A10000000000000000000061 /* AppSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000060 /* AppSettings.swift */; };
 		A10000000000000000000063 /* StudyModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000062 /* StudyModels.swift */; };
 		A10000000000000000000065 /* StudyWorkspace.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000064 /* StudyWorkspace.swift */; };
@@ -43,6 +46,9 @@
 		A10000000000000000000052 /* KlariVisionBridge.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Sources/KlariVisionApp/KlariVisionBridge.h; sourceTree = "<group>"; };
 		A10000000000000000000054 /* fixed_lag_tracker.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ../../core/src/fixed_lag_tracker.cpp; sourceTree = "<group>"; };
 		A10000000000000000000056 /* pitch_engine_v2_session.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ../../core/src/pitch_engine_v2_session.cpp; sourceTree = "<group>"; };
+		A10000000000000000000058 /* harmonic_arbitration.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ../../core/src/harmonic_arbitration.cpp; sourceTree = "<group>"; };
+		A10000000000000000000080 /* hapt.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ../../core/src/hapt.cpp; sourceTree = "<group>"; };
+		A10000000000000000000082 /* harmonic_probe.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ../../core/src/harmonic_probe.cpp; sourceTree = "<group>"; };
 		A10000000000000000000030 /* canli_pitch_referans_v1.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; name = canli_pitch_referans_v1.wav; path = ../../data/benchmarks/canli_pitch_referans_v1.wav; sourceTree = "<group>"; };
 		A10000000000000000000012 /* KlariVision.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = KlariVision.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -77,6 +83,9 @@
 				A10000000000000000000050 /* vpm_like.cpp */,
 				A10000000000000000000054 /* fixed_lag_tracker.cpp */,
 				A10000000000000000000056 /* pitch_engine_v2_session.cpp */,
+				A10000000000000000000058 /* harmonic_arbitration.cpp */,
+				A10000000000000000000080 /* hapt.cpp */,
+				A10000000000000000000082 /* harmonic_probe.cpp */,
 				A10000000000000000000030 /* canli_pitch_referans_v1.wav */,
 				A10000000000000000000015 /* Products */,
 				3B26BD003018B5F90047710D /* frequency_viewer.py */,
@@ -175,6 +184,9 @@
 				A10000000000000000000051 /* vpm_like.cpp in Sources */,
 				A10000000000000000000055 /* fixed_lag_tracker.cpp in Sources */,
 				A10000000000000000000057 /* pitch_engine_v2_session.cpp in Sources */,
+				A10000000000000000000059 /* harmonic_arbitration.cpp in Sources */,
+				A10000000000000000000081 /* hapt.cpp in Sources */,
+				A10000000000000000000083 /* harmonic_probe.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -1,24 +1,34 @@
 # KlariVision — Güncel Proje Durumu
 
-Son güncelleme: 20 Ağustos 2026
+Son güncelleme: 24 Ağustos 2026
 Aktif dal: `agent/pitch-engine-v2`
 Durum anı: Dinleme ve Çalma grafikleri WebKit/JavaScript canvas renderer'ında
 Sürüm anı: `v0.6.0-beta.3`
+
+24 Ağustos'ta dördüncü, bağımsız tasarlanmış bir pitch motoru eklendi:
+Harmonik-Faz (`hapt_v1`), `KV_ENGINE_HAPT_V1 = 3`. ABI sürümü 1 olarak kaldı
+(yeni yetenek biti eklendi); dört motor da eşit son kullanıcı seçeneği,
+`yin_v1` varsayılan olarak kaldı. Yöntem, kalibrasyon (turnuva holdout v1–v5
+üzerinde) ve v6 tek-seferlik doğrulama sonucu `docs/HAPTPitchEngine.md` ve
+`docs/PITCH_ENGINE_USER_OPTION_ACCEPTANCE_V1.md`'dedir; karar kaydı D-036.
+Fiziksel klarnet kabul oturumu henüz yapılmadı. Diğer üç motorun davranışı
+değişmedi.
 
 13 Ağustos'ta uygulama davranışı değiştirilmeden Swift kaynakları küçük
 sorumluluk dosyalarına ayrıştırıldı: ayarlar, çalışma modelleri/medya köprüsü,
 Çalma görünümleri, canlı analiz ve görsel/tüner desteği. Üç motor seçimi,
 ayrı kalıcılık ve önbellek anahtarları korunur.
 
-Ortak C++ pitch dış arayüzü ABI v1 olarak donduruldu. YIN v1, Pitch Engine v2
-ve VPM-benzeri aynı 48 kHz mono Float32 PCM, kaynak-zamanlı oturum
-sözleşmesini kullanır; Python CLI sözleşmeyi doğrular. Ayrıntı:
-`docs/PITCH_ENGINE_C_ABI_V1.md`.
+Ortak C++ pitch dış arayüzü ABI v1 olarak donduruldu (Harmonik-Faz eklentisi
+dahil, sürüm değişmedi). YIN v1, Pitch Engine v2, VPM-benzeri ve Harmonik-Faz
+aynı 48 kHz mono Float32 PCM, kaynak-zamanlı oturum sözleşmesini kullanır;
+Python CLI sözleşmeyi doğrular. Ayrıntı: `docs/PITCH_ENGINE_C_ABI_V1.md`.
 
-Üç motorun aynı kullanıcı-seçeneği kabul protokolü v6 dondurulmuş fixtures
+Dört motorun aynı kullanıcı-seçeneği kabul protokolü v6 dondurulmuş fixtures
 üzerinde yeniden çalıştırıldı; her motorun ciddi hata sayısı sıfırdır. Fiziksel
 çalım/izin/kulakla WAV doğrulamasının otomasyondan ayrı olduğu kayıt ve ayrıntı
-`docs/PITCH_ENGINE_USER_OPTION_ACCEPTANCE_V1.md` içindedir.
+`docs/PITCH_ENGINE_USER_OPTION_ACCEPTANCE_V1.md` içindedir (Harmonik-Faz'ın
+fiziksel oturumu henüz yapılmadı).
 
 Beta sonrası P1 erişilebilirlik turunda Dinleme dosya alma için `⌘O`, ikona
 dayalı oynatma/canlı görünüm denetimleri için VoiceOver adları, Dinleme ve

@@ -1,7 +1,9 @@
 #include "klarivision/core/analysis_engine.hpp"
 
+#include "klarivision/core/harmonic_arbitration.hpp"
 #include "klarivision/core/pitch_engine_v2_session.hpp"
 #include "klarivision/core/vpm_like.hpp"
+#include "klarivision/core/hapt.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -111,22 +113,40 @@ std::vector<Candidate> yin_candidates(std::span<const float> samples, double rat
     for (std::size_t index = 0; index < original_count; ++index) {
         const double upper = result[index].frequency * 2;
         if (upper <= 800 || upper > config.maximum_frequency_hz) continue;
-        if (spectral_energy(samples, rate, upper) >
-            spectral_energy(samples, rate, result[index].frequency) * 8) {
-            // A narrow direct-spectrum recovery for an f/2 period choice.
-            // The high confidence ensures the offline path resolver retains
-            // this evidence instead of preferring the repeated lower period.
-            result.push_back({upper, 0.99999, std::log(0.99999)});
-        }
+        if (spectral_energy(samples, rate, upper) <=
+            spectral_energy(samples, rate, result[index].frequency) * 8) continue;
+        // A narrow direct-spectrum recovery for an f/2 period choice.
+        // The high confidence ensures the offline path resolver retains
+        // this evidence instead of preferring the repeated lower period.
+        result.push_back({upper, 0.99999, std::log(0.99999)});
     }
     std::sort(result.begin(), result.end(), [](const Candidate& a, const Candidate& b) { return a.confidence > b.confidence; });
     if (result.size() > 12) result.resize(12);
     return result;
 }
 
+// Score adjustment for a candidate whose own frequency is a spectral
+// near-null next to a dominant 2x/3x multiple -- an autocorrelation ghost,
+// not a real period. See `harmonic_arbitration.hpp` for why this pattern
+// exists on closed-pipe clarinet tones and why the threshold is
+// conservative. The penalty is graded, not a hard rejection: it must still
+// lose fairly to continuity and to genuinely ambiguous candidates rather
+// than overriding them outright.
+double ghost_subharmonic_penalty(
+    std::span<const float> samples, double sample_rate, double candidate_hz, double maximum_frequency_hz
+) {
+    const auto existence = spectral_existence(samples, sample_rate, candidate_hz, maximum_frequency_hz);
+    if (!existence.is_ghost_subharmonic) return 0.0;
+    const double severity = std::clamp((existence.dominant_multiple_ratio - 6.0) / 20.0, 0.0, 1.0);
+    return 0.15 * severity;
+}
+
 std::optional<Candidate> causal_yin_choice(
     const std::vector<Candidate>& candidates,
-    const std::optional<Candidate>& previous
+    const std::optional<Candidate>& previous,
+    std::span<const float> samples,
+    double sample_rate,
+    double maximum_frequency_hz
 ) {
     if (candidates.empty()) return std::nullopt;
     // `yin_candidates` grants this confidence only to a high-register line
@@ -143,18 +163,56 @@ std::optional<Candidate> causal_yin_choice(
     );
     if (direct_high != candidates.end() &&
         direct_high->frequency > 800 && direct_high->confidence >= .9999) return *direct_high;
-    std::optional<Candidate> best;
-    double best_score = -std::numeric_limits<double>::infinity();
-    for (const auto& candidate : candidates) {
-        if (candidate.confidence < .55) continue;
-        double score = candidate.confidence;
-        if (previous) {
-            const double distance = cents_distance(candidate.frequency, previous->frequency);
-            score -= .30 * std::min(distance / 700.0, 1.0);
-        }
-        if (score > best_score) { best = candidate; best_score = score; }
+    const auto is_ghost = [&](const Candidate& candidate) {
+        return spectral_existence(samples, sample_rate, candidate.frequency, maximum_frequency_hz)
+            .is_ghost_subharmonic;
+    };
+    const auto adjusted_score = [&](const Candidate& candidate) {
+        return candidate.confidence -
+            ghost_subharmonic_penalty(samples, sample_rate, candidate.frequency, maximum_frequency_hz);
+    };
+    std::optional<Candidate> choice;
+    if (!previous) {
+        // With no continuity prior -- exactly the state right after an
+        // articulation gap, where a weak-fundamental/strong-third-harmonic
+        // note is most likely to hand autocorrelation a ghost subharmonic
+        // as its top raw-confidence candidate -- bootstrap from the
+        // ghost-adjusted ranking instead of raw confidence alone.
+        const auto confident = std::max_element(
+            candidates.begin(), candidates.end(),
+            [&](const Candidate& left, const Candidate& right) {
+                return adjusted_score(left) < adjusted_score(right);
+            }
+        );
+        if (confident != candidates.end() && confident->confidence >= .76) choice = *confident;
     }
-    return best;
+    if (!choice) {
+        std::optional<Candidate> best;
+        double best_score = -std::numeric_limits<double>::infinity();
+        for (const auto& candidate : candidates) {
+            if (candidate.confidence < .55) continue;
+            double score = adjusted_score(candidate);
+            if (previous) {
+                const double distance = cents_distance(candidate.frequency, previous->frequency);
+                score -= .30 * std::min(distance / 700.0, 1.0);
+            }
+            if (score > best_score) { best = candidate; best_score = score; }
+        }
+        choice = best;
+    }
+    if (choice && is_ghost(*choice)) {
+        // A closed-pipe clarinet tone's ambiguous, thinnest transient
+        // frames can leave nothing in the ladder but ghost subharmonics --
+        // no candidate with real acoustic energy of its own clears the
+        // confidence floor at all. A ghost has no period-domain claim to be
+        // published as a fundamental regardless of how it ranks against
+        // its equally-unreliable neighbours; staying silent lets the
+        // existing gap-bridging path (`append_bridged`) recover the frame
+        // from its surrounding context instead of reporting a spurious
+        // subharmonic.
+        return std::nullopt;
+    }
+    return choice;
 }
 
 void append_bridged(
@@ -164,7 +222,14 @@ void append_bridged(
     const std::optional<EngineFrame>& frame,
     bool signal_eligible,
     double hop_seconds,
-    double minimum_endpoint_confidence
+    double minimum_endpoint_confidence,
+    // The stronger endpoint must still clear `minimum_endpoint_confidence`;
+    // this only relaxes the *weaker* one. A dropout's trailing edge is
+    // exactly where a real engine's own confidence is most degraded by the
+    // interruption itself, so requiring both endpoints to independently
+    // clear the same bar under-bridges genuine short gaps. A negative value
+    // (the default) keeps the original single-threshold, symmetric check.
+    double minimum_weaker_endpoint_confidence = -1.0
 ) {
     if (!frame) {
         if (!signal_eligible) { pending_gap.clear(); last.reset(); }
@@ -173,8 +238,11 @@ void append_bridged(
         } else { pending_gap.clear(); last.reset(); }
         return;
     }
+    const double weaker_floor = minimum_weaker_endpoint_confidence >= 0.0
+        ? minimum_weaker_endpoint_confidence : minimum_endpoint_confidence;
     if (!pending_gap.empty() && last && last->frequency_hz && frame->frequency_hz &&
-        std::min(last->confidence, frame->confidence) >= minimum_endpoint_confidence &&
+        std::max(last->confidence, frame->confidence) >= minimum_endpoint_confidence &&
+        std::min(last->confidence, frame->confidence) >= weaker_floor &&
         cents_distance(*last->frequency_hz, *frame->frequency_hz) <= 90) {
         output.insert(output.end(), pending_gap.begin(), pending_gap.end());
     }
@@ -261,8 +329,16 @@ struct ProductionPitchSession::Impl {
     std::optional<EngineFrame> last_published;
     bool finished{};
 
+    HAPTConfig hapt_config;
+    HAPTTracker hapt_tracker;
+
     Impl(const PitchEngineId selected, const PitchEngineConfig selected_config)
-        : id(selected), config(selected_config), v2_session(selected_config.minimum_rms, 5) {}
+        : id(selected), config(selected_config), v2_session(selected_config.minimum_rms, 5) {
+        hapt_config.minimum_frequency_hz = selected_config.minimum_frequency_hz;
+        hapt_config.maximum_frequency_hz = selected_config.maximum_frequency_hz;
+        hapt_config.minimum_rms = selected_config.minimum_rms;
+        hapt_tracker = HAPTTracker(hapt_config);
+    }
 };
 
 ProductionPitchSession::ProductionPitchSession(
@@ -316,16 +392,9 @@ std::vector<EngineFrame> ProductionPitchSession::process_frame(
         }
         if (eligible) {
             const auto candidates = yin_candidates(samples, rate, impl_->config);
-            auto choice = causal_yin_choice(candidates, impl_->last_yin);
-            if (!impl_->last_yin) {
-                const auto confident = std::max_element(
-                    candidates.begin(), candidates.end(),
-                    [](const Candidate& left, const Candidate& right) {
-                        return left.confidence < right.confidence;
-                    }
-                );
-                if (confident != candidates.end() && confident->confidence >= .76) choice = *confident;
-            }
+            auto choice = causal_yin_choice(
+                candidates, impl_->last_yin, samples, rate, impl_->config.maximum_frequency_hz
+            );
             // The same narrow ambiguity repair exists in the established
             // live YIN path: 2f must be a real YIN minimum with almost equal
             // periodicity and at least three times the measured line energy.
@@ -352,9 +421,19 @@ std::vector<EngineFrame> ProductionPitchSession::process_frame(
                 if (recovery) choice = recovery;
             }
             if (choice) {
-                double energy_scale = 0;
-                for (const float sample : samples) energy_scale += sample * sample;
-                energy_scale *= static_cast<double>(samples.size());
+                // Promote to a genuine higher-register candidate only when a
+                // real candidate exists there. The previous unconditional
+                // form invented a synthetic candidate at
+                // `candidate.frequency * factor` from bare spectral energy
+                // alone, disconnected from anything YIN's own difference
+                // function had actually found -- on a closed-pipe clarinet
+                // tone the dominant spectral partial can be the third
+                // harmonic of a note whose fundamental is still the correct,
+                // quieter answer, so comparing that partial's absolute
+                // energy against the fundamental's is not evidence the
+                // partial is itself a fundamental. Require it to already be
+                // a scored YIN candidate (i.e. a genuine CMND minimum)
+                // before treating it as one.
                 std::optional<Candidate> upper_recovery;
                 double strongest_upper_energy = 0;
                 for (const auto& candidate : candidates) {
@@ -365,11 +444,15 @@ std::vector<EngineFrame> ProductionPitchSession::process_frame(
                         const double upper = candidate.frequency * factor;
                         if (upper <= std::max(900.0, choice->frequency) ||
                             upper > impl_->config.maximum_frequency_hz) continue;
-                        const double upper_energy = spectral_energy(samples, rate, upper);
-                        if (upper_energy > std::max(candidate_energy * 80, energy_scale * .008) &&
-                            upper_energy > strongest_upper_energy) {
-                            upper_recovery = Candidate{upper, candidate.confidence,
-                                std::log(std::max(1e-6, candidate.confidence))};
+                        const auto upper_it = std::find_if(
+                            candidates.begin(), candidates.end(), [&](const Candidate& other) {
+                                return cents_distance(other.frequency, upper) <= 55;
+                            }
+                        );
+                        if (upper_it == candidates.end()) continue;
+                        const double upper_energy = spectral_energy(samples, rate, upper_it->frequency);
+                        if (upper_energy > candidate_energy * 8 && upper_energy > strongest_upper_energy) {
+                            upper_recovery = *upper_it;
                             strongest_upper_energy = upper_energy;
                         }
                     }
@@ -657,13 +740,34 @@ std::vector<EngineFrame> ProductionPitchSession::process_frame(
         }
         diagnostic.pending_gap_frames = impl_->vpm_pending_gap.size();
         return vpm_output;
+    } else if (impl_->id == PitchEngineId::hapt_v1) {
+        // HAPT's own onset/decay recovery and inter-harmonic veto live in the
+        // stateless estimator; HAPTTracker owns the RMS release detector and
+        // the downward-harmonic-jump confirmation delay (the one piece of
+        // state shared verbatim with the offline/tournament trace tool, so
+        // both see identical release behaviour). Below the hard minimum_rms
+        // floor there is no signal at all, so a full reset is simpler than
+        // feeding the tracker a sub-floor RMS value.
+        if (eligible) {
+            const auto estimate = estimate_hapt_pitch(
+                samples, rate, impl_->hapt_config, impl_->hapt_tracker.published_frequency_hz()
+            );
+            const auto tracked = impl_->hapt_tracker.process(estimate, rms);
+            if (tracked) {
+                publication = EngineFrame{source_time, tracked->frequency_hz, tracked->confidence};
+            }
+        } else {
+            impl_->hapt_tracker.reset();
+        }
     }
 
     std::vector<EngineFrame> output;
     append_bridged(
         output, impl_->pending_gap, impl_->last_published, publication, eligible,
         static_cast<double>(impl_->config.hop_size) / rate,
-        impl_->id == PitchEngineId::yin_v1 ? .55 : .70
+        impl_->id == PitchEngineId::yin_v1 ? .55 :
+            (impl_->id == PitchEngineId::hapt_v1 ? .60 : .70),
+        impl_->id == PitchEngineId::hapt_v1 ? .30 : -1.0
     );
     return output;
 }
@@ -693,6 +797,7 @@ void ProductionPitchSession::set_minimum_rms(const double minimum_rms) {
     if (!std::isfinite(minimum_rms) || minimum_rms < 0) return;
     impl_->config.minimum_rms = minimum_rms;
     impl_->v2_session.set_minimum_rms(minimum_rms);
+    impl_->hapt_config.minimum_rms = minimum_rms;
 }
 
 PitchEngine::PitchEngine(PitchEngineId id, PitchEngineProfile profile, PitchEngineConfig config) : id_(id), profile_(profile), config_(config) {}

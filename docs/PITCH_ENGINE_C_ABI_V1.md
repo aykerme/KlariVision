@@ -1,8 +1,9 @@
 # Pitch Engine C ABI v1
 
-Bu sözleşme, YIN v1 (`yin_v1`), Pitch Engine v2 (`pitch_engine_v2`) ve
-VPM-benzeri (`vpm_like`) için ortak ve eşit ürün sınırıdır. Bir kalite sırası,
-öneri veya terfi kuralı değildir.
+Bu sözleşme, YIN v1 (`yin_v1`), Pitch Engine v2 (`pitch_engine_v2`),
+VPM-benzeri (`vpm_like`) ve Harmonik-Faz (`hapt_v1`, bkz.
+`docs/HAPTPitchEngine.md`) için ortak ve eşit ürün sınırıdır. Bir kalite
+sırası, öneri veya terfi kuralı değildir.
 
 ## Taşıma ve yapılandırma
 
@@ -29,9 +30,11 @@ gelir; başarılı sessiz çağrı hata değildir. Hata durumunda çağrı `0` d
 
 ## Sürümler ve çevrimdışı dosya çıktısı
 
-`KV_PITCH_C_ABI_V1` geriye uyumlu ilk ABI'dir. Yetenek maskesi üç motoru,
-gerçek-zamanlı ve `offline_track_v1` profillerini, kaynak zamanlarını ve
-v2'nin `finish` ile sabit-gecikme kuyruğu boşaltmasını bildirir.
+`KV_PITCH_C_ABI_V1` geriye uyumlu ilk ABI'dir. Yetenek maskesi dört motoru
+(`KV_CAP_ENGINE_HAPT_V1` dahil, `hapt_v1`'in eklenmesiyle genişletildi; ABI
+sürümü 1 olarak kaldı), gerçek-zamanlı ve `offline_track_v1` profillerini,
+kaynak zamanlarını ve v2'nin `finish` ile sabit-gecikme kuyruğu boşaltmasını
+bildirir.
 
 Python, ABI'nin paketlenebilir projeksiyonu olan
 `klarivision-pitch-track-cli --contract` komutunu doğrular; çevrimdışı

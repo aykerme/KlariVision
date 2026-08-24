@@ -417,6 +417,45 @@ def _bridge_short_vpm_gaps(
     return bridged
 
 
+def _bridge_short_hapt_gaps(
+    frames: list[tuple[float, float, float]],
+    hop_seconds: float,
+    blocked_times: set[float] | None = None,
+) -> list[tuple[float, float, float]]:
+    """Mirror ProductionPitchSession's shared append_bridged() for hapt_v1:
+    the stronger endpoint must clear .60, the weaker one only .30. A
+    dropout's trailing edge is exactly where a real engine's own confidence
+    is most degraded by the interruption itself (measured as low as .376 on
+    the v1 adverse holdout, .551 on v1 room), so requiring both endpoints to
+    independently clear the same bar under-bridges genuine short gaps."""
+    if not frames:
+        return []
+    blocked_times = blocked_times or set()
+    bridged: list[tuple[float, float, float]] = [frames[0]]
+    for current in frames[1:]:
+        previous = bridged[-1]
+        missing = round((current[0] - previous[0]) / hop_seconds) - 1
+        missing_times = [previous[0] + index * hop_seconds for index in range(1, missing + 1)]
+        crosses_hard_gate = any(
+            abs(time_seconds - blocked) <= hop_seconds * 0.1
+            for time_seconds in missing_times
+            for blocked in blocked_times
+        )
+        same_contour = abs(1200 * math.log2(current[1] / previous[1])) <= 90
+        if (
+            0 < missing <= 7
+            and same_contour
+            and max(previous[2], current[2]) >= 0.60
+            and min(previous[2], current[2]) >= 0.30
+            and not crosses_hard_gate
+        ):
+            bridged.extend(
+                (time_seconds, previous[1], previous[2]) for time_seconds in missing_times
+            )
+        bridged.append(current)
+    return bridged
+
+
 def v2_frames(
     audio: np.ndarray,
     rate: int,
@@ -664,11 +703,62 @@ def vpm_frames(
     return _bridge_short_vpm_gaps(frames, hop / rate, blocked_times)
 
 
+def _compile_hapt_runner(destination: Path) -> None:
+    subprocess.run([
+        "xcrun", "clang++", "-O3", "-std=c++20", "-Wall", "-Wextra", "-Werror",
+        "-I", str(ROOT / "core/include"), str(ROOT / "core/src/hapt.cpp"),
+        str(ROOT / "core/src/harmonic_probe.cpp"),
+        str(ROOT / "core/tools/hapt_trace.cpp"), "-o", str(destination),
+    ], check=True)
+
+
+def _hapt_runner() -> Path:
+    runner = Path(tempfile.gettempdir()) / "klarivision_hapt_tournament_trace"
+    sources = [
+        ROOT / "core/include/klarivision/core/hapt.hpp",
+        ROOT / "core/include/klarivision/core/harmonic_probe.hpp",
+        ROOT / "core/src/hapt.cpp",
+        ROOT / "core/src/harmonic_probe.cpp",
+        ROOT / "core/tools/hapt_trace.cpp",
+    ]
+    if not runner.exists() or runner.stat().st_mtime < max(source.stat().st_mtime for source in sources):
+        _compile_hapt_runner(runner)
+    return runner
+
+
+def hapt_frames(
+    audio: np.ndarray,
+    rate: int,
+    window: int = LIVE_WINDOW,
+    hop: int = HOP,
+    minimum_rms: float = DEFAULT_MINIMUM_RMS,
+) -> list[tuple[float, float, float]]:
+    runner = _hapt_runner()
+    with tempfile.NamedTemporaryFile(suffix=".f32") as raw:
+        np.asarray(audio, dtype=np.float32).tofile(raw.name)
+        completed = subprocess.run([
+            str(runner), raw.name, str(rate), str(window), str(hop), str(minimum_rms),
+        ], check=True, capture_output=True, text=True)
+    rows = csv.DictReader(completed.stdout.splitlines())
+    half_window = window / (2 * rate)
+    frames = [
+        (float(row["time_seconds"]) - half_window, float(row["frequency_hz"]), float(row["confidence"]))
+        for row in rows
+    ]
+    blocked_times = {
+        round((end - window / 2) / rate, 9)
+        for end in range(window, len(audio) + 1, hop)
+        if centered_rms(audio[end - window:end]) < minimum_rms
+    }
+    return _bridge_short_hapt_gaps(frames, hop / rate, blocked_times)
+
+
 def run_engines(
     audio: np.ndarray, rate: int, minimum_rms: float = DEFAULT_MINIMUM_RMS
 ) -> dict[str, EngineTrace]:
     # Compilation is setup, not pitch-analysis CPU time.
     _vpm_runner()
+    _hapt_runner()
     # Numba compilation is setup as well. Use a deterministic audible warm-up
     # long enough to exercise both the YIN and MPM inner kernels.
     warm_count = LIVE_WINDOW + (V2_LAG_FRAMES + 1) * HOP
@@ -682,6 +772,7 @@ def run_engines(
         "yin_v1": ("Python mirror of shipped Swift YIN v1", lambda: [(*frame, 1.0) for frame in causal_yin_frames(audio, rate, minimum_rms)], 0.0),
         "pitch_engine_v2": ("Canonical shared C++ V2 session", lambda: v2_cpp_frames(audio, rate, minimum_rms=minimum_rms), V2_LAG_FRAMES * HOP / rate * 1_000),
         "vpm_like": ("Production C++ core vpm_like.cpp", lambda: vpm_frames(audio, rate, minimum_rms=minimum_rms), 0.0),
+        "hapt_v1": ("Production C++ core hapt.cpp", lambda: hapt_frames(audio, rate, minimum_rms=minimum_rms), 0.0),
     }
     traces: dict[str, EngineTrace] = {}
     for name, (implementation, operation, fixed_lag_ms) in definitions.items():

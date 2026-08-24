@@ -15,7 +15,9 @@ def main() -> None:
     parser.add_argument("--reanalyze-viewer", type=Path, metavar="HTML")
     parser.add_argument("--makam", default="huzzam")
     parser.add_argument("--karar", default="dugah")
-    parser.add_argument("--engine", choices=("yin_v1", "pitch_engine_v2", "vpm_like"), default="yin_v1")
+    parser.add_argument(
+        "--engine", choices=("yin_v1", "pitch_engine_v2", "vpm_like", "hapt_v1"), default="yin_v1"
+    )
     arguments = parser.parse_args()
 
     if arguments.refresh_viewer:

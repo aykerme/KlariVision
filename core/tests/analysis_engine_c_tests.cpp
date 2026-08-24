@@ -18,6 +18,7 @@ int main() {
     assert((contract.capabilities & KV_CAP_ENGINE_YIN_V1) != 0);
     assert((contract.capabilities & KV_CAP_ENGINE_V2) != 0);
     assert((contract.capabilities & KV_CAP_ENGINE_VPM_LIKE) != 0);
+    assert((contract.capabilities & KV_CAP_ENGINE_HAPT_V1) != 0);
     assert((contract.capabilities & KV_CAP_PROFILE_OFFLINE_TRACK_V1) != 0);
     assert(!kv_pitch_contract_get_v1(nullptr));
 
@@ -53,7 +54,7 @@ int main() {
     assert(!kv_v2_session_set_minimum_rms(session, -1));
     kv_v2_session_destroy(session);
 
-    for (const int engine : {KV_ENGINE_YIN_V1, KV_ENGINE_V2, KV_ENGINE_VPM_LIKE}) {
+    for (const int engine : {KV_ENGINE_YIN_V1, KV_ENGINE_V2, KV_ENGINE_VPM_LIKE, KV_ENGINE_HAPT_V1}) {
         auto* shared = kv_production_pitch_session_create(engine, 0.015);
         assert(shared != nullptr);
         std::size_t emitted = 0;

@@ -3,6 +3,29 @@
 Bu dosya yalnızca sonraki çalışmaları etkileyen kararları tutar. Günlük ilerleme
 notları `CODEX_HANDOFF.md`, sayısal durum `TEST_BASELINE.md` içindedir.
 
+## D-036 — Dördüncü motor (Harmonik-Faz / `hapt_v1`) eşit son kullanıcı seçeneğidir
+
+`hapt_v1`, D-020'nin "eşit son kullanıcı seçeneği" politikasına dördüncü,
+bağımsız tasarlanmış bir motor olarak eklenir. Yöntem, sözleşme, kalibrasyon
+kaynağı ve bilinen sınırlar `docs/HAPTPitchEngine.md`'dedir. D-020, D-031
+(ortak C++ ABI v1 sözleşmesi) ve D-011 (VPM'in ACF'yi yalnız aşağı düzeltmesi)
+şu şekilde genişler:
+
+- `PitchEngineId::hapt_v1` / `KV_ENGINE_HAPT_V1 = 3` eklendi; ABI **sürümü 1
+  olarak kaldı** (`KV_CAP_ENGINE_HAPT_V1` yetenek maskesine eklendi — başlığın
+  kendi sözleşmesi bu genişlemeyi öngörüyor).
+- `PitchEngineSettings.initialEngine` (`yin_v1`) değişmedi; dört motor da
+  Dinleme ve Çalma Modu'nda eşit erişilebilir.
+- YIN v1, Pitch Engine v2 ve VPM-benzeri'nin davranışı **değişmedi**.
+- HAPT'ın Swift aynası yoktur (V2/VPM'nin aksine): `KLARIVISION_SWIFT_PACKAGE`
+  derlemesinde `.hapt` her zaman `nil` döner. Ürün onu her zaman üretim C++
+  çekirdeği üzerinden çalıştırır.
+- Eşikler yalnız turnuva holdout v1–v5 üzerinde kalibre edildi; v6 dondurulmuş
+  kabul kümesi yalnız tek, son doğrulama koşusunda kullanıldı (bkz.
+  `docs/PITCH_ENGINE_USER_OPTION_ACCEPTANCE_V1.md`).
+- Fiziksel klarnet/mikrofon kabul oturumu (D-035'teki gibi bir fiziksel kapı)
+  HAPT için henüz yapılmadı; otomasyon bunun yerine geçmez.
+
 ## D-035 — Mobil fiziksel harici ses rotası kapısı Bluetooth'tur
 
 iOS/iPadOS fiziksel kabulünde zorunlu harici ses rotası senaryosu Bluetooth

@@ -464,7 +464,7 @@ private struct iPadSettingsView: View {
         Picker(title, selection: selection) {
             ForEach(iPadPitchEngine.allCases) { Text($0.title).tag($0) }
         }
-        Text("YIN v1, Pitch Engine v2 ve VPM-benzeri eşit kullanıcı seçenekleridir.")
+        Text("YIN v1, Pitch Engine v2, VPM-benzeri ve Harmonik-Faz (HAPT) eşit kullanıcı seçenekleridir.")
             .font(.footnote)
             .foregroundStyle(.secondary)
     }

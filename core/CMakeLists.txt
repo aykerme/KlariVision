@@ -5,6 +5,9 @@ add_library(klarivision_core STATIC
     src/analysis_engine.cpp
     src/analysis_engine_c.cpp
     src/fixed_lag_tracker.cpp
+    src/hapt.cpp
+    src/harmonic_arbitration.cpp
+    src/harmonic_probe.cpp
     src/mpm.cpp
     src/pitch_display.cpp
     src/pitch_engine_v2.cpp
@@ -27,6 +30,9 @@ target_link_libraries(klarivision_pitch_track_cli PRIVATE klarivision_core)
 
 add_executable(klarivision_pitch_engine_v2_trace tools/pitch_engine_v2_trace.cpp)
 target_link_libraries(klarivision_pitch_engine_v2_trace PRIVATE klarivision_core)
+
+add_executable(klarivision_hapt_trace tools/hapt_trace.cpp)
+target_link_libraries(klarivision_hapt_trace PRIVATE klarivision_core)
 
 option(KLARIVISION_CORE_BUILD_TESTS "Build core validation tests" ON)
 if(KLARIVISION_CORE_BUILD_TESTS)
@@ -62,4 +68,12 @@ if(KLARIVISION_CORE_BUILD_TESTS)
     add_executable(klarivision_analysis_engine_c_tests tests/analysis_engine_c_tests.cpp)
     target_link_libraries(klarivision_analysis_engine_c_tests PRIVATE klarivision_core)
     add_test(NAME klarivision_analysis_engine_c_tests COMMAND klarivision_analysis_engine_c_tests)
+
+    add_executable(klarivision_harmonic_arbitration_tests tests/harmonic_arbitration_tests.cpp)
+    target_link_libraries(klarivision_harmonic_arbitration_tests PRIVATE klarivision_core)
+    add_test(NAME klarivision_harmonic_arbitration_tests COMMAND klarivision_harmonic_arbitration_tests)
+
+    add_executable(klarivision_hapt_tests tests/hapt_tests.cpp)
+    target_link_libraries(klarivision_hapt_tests PRIVATE klarivision_core)
+    add_test(NAME klarivision_hapt_tests COMMAND klarivision_hapt_tests)
 endif()

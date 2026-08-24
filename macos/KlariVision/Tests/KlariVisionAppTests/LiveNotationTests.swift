@@ -3,14 +3,14 @@ import XCTest
 @testable import KlariVisionApp
 
 final class LiveNotationTests: XCTestCase {
-    func testPitchEngineSettingsKeepsThreeNeutralUserChoices() {
+    func testPitchEngineSettingsKeepsFourNeutralUserChoices() {
         XCTAssertEqual(
             PitchEngineSettings.userChoices.map(\.id),
-            ["yin_v1", "pitch_engine_v2", "vpm_like"]
+            ["yin_v1", "pitch_engine_v2", "vpm_like", "hapt_v1"]
         )
         XCTAssertEqual(
             PitchEngineSettings.userChoices.map(\.title),
-            ["YIN v1", "Pitch Engine v2", "VPM-benzeri"]
+            ["YIN v1", "Pitch Engine v2", "VPM-benzeri", "Harmonik-Faz (HAPT)"]
         )
         XCTAssertEqual(PitchEngineSettings.initialEngine, "yin_v1")
         XCTAssertEqual(PitchEngineSettings.resolvedSelection(nil), "yin_v1")
