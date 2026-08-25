@@ -7,22 +7,32 @@
 #include <string>
 #include <vector>
 
+// This file is the C ABI bridge (opaque-handle wrappers) that lets the
+// Swift apps (and any other C-compatible caller) drive the C++ pitch
+// engines without exposing C++ types across the boundary. It contains no
+// pitch-tracking logic of its own -- every function here just forwards to
+// the real algorithms implemented in analysis_engine.cpp /
+// pitch_engine_v2_session.cpp and translates results into the plain-C
+// `kv_pitch_frame` struct declared in analysis_engine_c.h. Each opaque
+// struct below owns one C++ engine/session object plus a small cache of its
+// most recent output frames (so index-based getters can be O(1) without a
+// second engine call) and a last-error string for the C caller to inspect.
 struct kv_pitch_engine {
-    klarivision::core::PitchEngine engine;
-    std::vector<klarivision::core::EngineFrame> frames;
-    std::string error;
+    klarivision::core::PitchEngine engine;                       // the real offline/causal engine wrapper
+    std::vector<klarivision::core::EngineFrame> frames;           // cached result of the last finish() call
+    std::string error;                                            // last exception message, if any
     kv_pitch_engine(klarivision::core::PitchEngineId id, klarivision::core::PitchEngineProfile profile) : engine(id, profile) {}
 };
 struct kv_v2_session {
-    klarivision::core::v2::PitchEngineV2Session engine;
-    std::vector<klarivision::core::v2::PublishedPitchFrame> frames;
+    klarivision::core::v2::PitchEngineV2Session engine;            // the real V2 streaming session
+    std::vector<klarivision::core::v2::PublishedPitchFrame> frames; // cached result of the last process_frame/finish call
     std::string error;
     kv_v2_session(double minimum_rms, size_t fixed_lag_frames)
         : engine(minimum_rms, fixed_lag_frames) {}
 };
 struct kv_production_pitch_session {
-    klarivision::core::ProductionPitchSession engine;
-    std::vector<klarivision::core::EngineFrame> frames;
+    klarivision::core::ProductionPitchSession engine;              // the real multi-engine (YIN/VPM-like/HAPT/V2) session
+    std::vector<klarivision::core::EngineFrame> frames;             // cached result of the last process_frame/finish call
     std::string error;
     kv_production_pitch_session(
         const klarivision::core::PitchEngineId id,
@@ -30,14 +40,17 @@ struct kv_production_pitch_session {
     ) : engine(id, klarivision::core::PitchEngineConfig{.minimum_rms = minimum_rms}) {}
 };
 extern "C" {
+// Reports the ABI/feature contract this build implements, so a Swift
+// caller can check compatibility and read the engines' default analysis
+// parameters (sample rate, window/hop size, etc.) without hard-coding them.
 int kv_pitch_contract_get_v1(kv_pitch_contract_v1 *out_contract) {
-    if (!out_contract) return 0;
+    if (!out_contract) return 0;  // null output pointer: nothing to fill in
     *out_contract = kv_pitch_contract_v1{
         .abi_version = KV_PITCH_C_ABI_V1,
         .capabilities = KV_CAP_ENGINE_YIN_V1 | KV_CAP_ENGINE_V2 |
             KV_CAP_ENGINE_VPM_LIKE | KV_CAP_PROFILE_REALTIME |
             KV_CAP_PROFILE_OFFLINE_TRACK_V1 | KV_CAP_SOURCE_TIMESTAMPS |
-            KV_CAP_V2_FIXED_LAG_FINISH | KV_CAP_ENGINE_HAPT_V1,
+            KV_CAP_V2_FIXED_LAG_FINISH | KV_CAP_ENGINE_HAPT_V1,  // bitmask of every engine/profile/feature this build supports
         .sample_rate_hz = 48'000,
         .window_size = 1'536,
         .hop_size = 512,
@@ -46,24 +59,32 @@ int kv_pitch_contract_get_v1(kv_pitch_contract_v1 *out_contract) {
     };
     return 1;
 }
+// Allocates an offline/causal PitchEngine wrapper for the given engine id
+// and analysis profile.
 kv_pitch_engine *kv_pitch_engine_create(int id, int profile) {
-    if (id < KV_ENGINE_YIN_V1 || id > KV_ENGINE_HAPT_V1 || profile < KV_PROFILE_REALTIME || profile > KV_PROFILE_OFFLINE_TRACK) return nullptr;
+    if (id < KV_ENGINE_YIN_V1 || id > KV_ENGINE_HAPT_V1 || profile < KV_PROFILE_REALTIME || profile > KV_PROFILE_OFFLINE_TRACK) return nullptr;  // reject out-of-range enum values
     return new kv_pitch_engine(static_cast<klarivision::core::PitchEngineId>(id), static_cast<klarivision::core::PitchEngineProfile>(profile));
 }
 void kv_pitch_engine_destroy(kv_pitch_engine *engine) { delete engine; }
+// Appends a block of mono samples to the engine's internal buffer.
 int kv_pitch_engine_push(kv_pitch_engine *engine, const float *samples, size_t count, double rate) {
-    if (!engine || (!samples && count)) return 0;
+    if (!engine || (!samples && count)) return 0;  // null engine, or a null buffer claiming non-zero samples
     try { engine->engine.push({samples, count}, rate); return 1; } catch (const std::exception& error) { engine->error = error.what(); return 0; }
 }
+// Runs the full pitch-tracking analysis over everything pushed so far and
+// caches the resulting frames for kv_pitch_engine_frame to read.
 size_t kv_pitch_engine_finish(kv_pitch_engine *engine) { if (!engine) return 0; try { engine->frames = engine->engine.finish(); return engine->frames.size(); } catch (const std::exception& error) { engine->error = error.what(); return 0; } }
+// Reads one cached output frame by index into the plain-C output struct.
 int kv_pitch_engine_frame(const kv_pitch_engine *engine, size_t index, kv_pitch_frame *out) { if (!engine || !out || index >= engine->frames.size()) return 0; const auto& f = engine->frames[index]; out->time_seconds=f.time_seconds; out->frequency_hz=f.frequency_hz.value_or(0); out->confidence=f.confidence; out->voiced=f.frequency_hz.has_value(); return 1; }
 const char *kv_pitch_engine_last_error(const kv_pitch_engine *engine) { return engine ? engine->error.c_str() : "invalid engine"; }
+// Allocates a streaming, causal ProductionPitchSession (the engine used by
+// the live/study apps) for the given engine id and starting RMS floor.
 kv_production_pitch_session *kv_production_pitch_session_create(
     const int id,
     const double minimum_rms
 ) {
     if (id < KV_ENGINE_YIN_V1 || id > KV_ENGINE_HAPT_V1 ||
-        !std::isfinite(minimum_rms) || minimum_rms < 0) return nullptr;
+        !std::isfinite(minimum_rms) || minimum_rms < 0) return nullptr;  // reject an invalid engine id or a nonsensical RMS floor
     try {
         return new kv_production_pitch_session(
             static_cast<klarivision::core::PitchEngineId>(id), minimum_rms
@@ -72,7 +93,7 @@ kv_production_pitch_session *kv_production_pitch_session_create(
 }
 void kv_production_pitch_session_reset(kv_production_pitch_session *session) {
     if (!session) return;
-    session->engine.reset(); session->frames.clear(); session->error.clear();
+    session->engine.reset(); session->frames.clear(); session->error.clear();  // rebuild the C++ session and clear the cached output/error
 }
 int kv_production_pitch_session_set_minimum_rms(
     kv_production_pitch_session *session,
@@ -82,6 +103,8 @@ int kv_production_pitch_session_set_minimum_rms(
     session->engine.set_minimum_rms(minimum_rms); return 1;
 }
 void kv_production_pitch_session_destroy(kv_production_pitch_session *session) { delete session; }
+// Feeds one analysis window into the session and caches whatever frames it
+// publishes this call.
 int kv_production_pitch_session_process_frame(
     kv_production_pitch_session *session,
     const float *samples,
@@ -90,7 +113,7 @@ int kv_production_pitch_session_process_frame(
     const double time
 ) {
     if (!session || (!samples && count) || !std::isfinite(rate) || rate <= 0 ||
-        !std::isfinite(time)) return 0;
+        !std::isfinite(time)) return 0;  // reject any invalid input before touching the C++ engine
     try {
         session->frames = session->engine.process_frame({samples, count}, rate, time);
         session->error.clear(); return 1;
@@ -98,6 +121,8 @@ int kv_production_pitch_session_process_frame(
         session->error = error.what(); session->frames.clear(); return 0;
     }
 }
+// Flushes any end-of-stream buffered frames (relevant to the V2 engine's
+// fixed-lag tracker) and caches the result.
 size_t kv_production_pitch_session_finish(kv_production_pitch_session *session) {
     if (!session) return 0;
     try {
@@ -127,8 +152,10 @@ int kv_production_pitch_session_output_frame(
 const char *kv_production_pitch_session_last_error(
     const kv_production_pitch_session *session
 ) { return session ? session->error.c_str() : "invalid session"; }
+// Allocates a standalone V2-only streaming session (used by the parity/
+// trace tooling to exercise V2 in isolation from the other engines).
 kv_v2_session *kv_v2_session_create(double minimum_rms, size_t fixed_lag_frames) {
-    if (!std::isfinite(minimum_rms) || minimum_rms < 0 || fixed_lag_frames == 0) return nullptr;
+    if (!std::isfinite(minimum_rms) || minimum_rms < 0 || fixed_lag_frames == 0) return nullptr;  // fixed_lag_frames == 0 would make the Viterbi tracker meaningless
     try { return new kv_v2_session(minimum_rms, fixed_lag_frames); } catch (...) { return nullptr; }
 }
 void kv_v2_session_reset(kv_v2_session *session) {
@@ -140,6 +167,8 @@ int kv_v2_session_set_minimum_rms(kv_v2_session *session, double minimum_rms) {
     session->engine.set_minimum_rms(minimum_rms); return 1;
 }
 void kv_v2_session_destroy(kv_v2_session *session) { delete session; }
+// Feeds one analysis window into the V2 session and caches whatever frames
+// its fixed-lag Viterbi tracker resolves this call.
 int kv_v2_session_process_frame(kv_v2_session *session, const float *samples, size_t count, double rate, double time) {
     if (!session || (!samples && count) || !std::isfinite(rate) || rate <= 0 || !std::isfinite(time)) return 0;
     try {
@@ -148,6 +177,7 @@ int kv_v2_session_process_frame(kv_v2_session *session, const float *samples, si
         return 1;
     } catch (const std::exception& error) { session->error = error.what(); session->frames.clear(); return 0; }
 }
+// Drains any frames still buffered in the fixed-lag tracker at end-of-stream.
 size_t kv_v2_session_finish(kv_v2_session *session) {
     if (!session) return 0;
     try {
@@ -159,6 +189,10 @@ size_t kv_v2_session_finish(kv_v2_session *session) {
     }
 }
 size_t kv_v2_session_output_count(const kv_v2_session *session) { return session ? session->frames.size() : 0; }
+// Reads one cached output frame by index. Unlike the other two session
+// types, every V2 PublishedPitchFrame is by construction voiced (V2 only
+// emits actual pitch publications, never an explicit "silence" frame), so
+// `voiced` is always set to 1 here.
 int kv_v2_session_output_frame(const kv_v2_session *session, size_t index, kv_pitch_frame *out) {
     if (!session || !out || index >= session->frames.size()) return 0;
     const auto& frame = session->frames[index];
