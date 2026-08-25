@@ -19,6 +19,9 @@ rm -rf "$ENGINE_DIST" "$ENGINE_WORK" "$ENGINE_SPEC"
 clang++ -std=c++20 -O3 -I "$PROJECT_ROOT/core/include" \
   "$PROJECT_ROOT/core/src/analysis_engine.cpp" \
   "$PROJECT_ROOT/core/src/analysis_engine_c.cpp" \
+  "$PROJECT_ROOT/core/src/harmonic_arbitration.cpp" \
+  "$PROJECT_ROOT/core/src/hapt.cpp" \
+  "$PROJECT_ROOT/core/src/harmonic_probe.cpp" \
   "$PROJECT_ROOT/core/src/mpm.cpp" \
   "$PROJECT_ROOT/core/src/pitch_engine_v2.cpp" \
   "$PROJECT_ROOT/core/src/fixed_lag_tracker.cpp" \

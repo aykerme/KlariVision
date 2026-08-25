@@ -65,6 +65,7 @@ struct WorkspaceView: View {
     @State private var studySettings: StudySettingsDraft?
     @State private var pitchTrack: StudyPitchTrack?
     @State private var pitchTrackError: String?
+    @State private var webViewReloadToken = 0
     @StateObject private var playback = StudyPlaybackState()
     @AppStorage(GraphAppearance.pitchColorKey) private var graphPitchHex = GraphAppearance.defaultPitchHex
     @AppStorage(GraphAppearance.noteGuideColorKey) private var graphNoteGuideHex = GraphAppearance.defaultNoteGuideHex
@@ -176,7 +177,13 @@ struct WorkspaceView: View {
             loadPitchTrack()
         }
         .onChange(of: library.isAnalysing) { wasAnalysing, isAnalysing in
-            if wasAnalysing && !isAnalysing { loadPitchTrack() }
+            if wasAnalysing && !isAnalysing {
+                loadPitchTrack()
+                // Refresh/reanalyse rewrite the same HTML file in place, so the
+                // viewer URL never changes; bump a token to force the WebView
+                // to reload even though `webView.url == viewer` still holds.
+                webViewReloadToken += 1
+            }
         }
         .onChange(of: playback.time) { _, time in
             updatePlaybackFrequency(at: time)
@@ -192,6 +199,7 @@ struct WorkspaceView: View {
             playback: playback,
             appTheme: appTheme,
             graphAppearance: GraphAppearance(pitchHex: graphPitchHex, noteGuideHex: graphNoteGuideHex),
+            reloadToken: webViewReloadToken,
             webView: $webView
         )
         .frame(minWidth: 300)
@@ -806,6 +814,7 @@ private struct LocalViewer: NSViewRepresentable {
     @ObservedObject var playback: StudyPlaybackState
     let appTheme: AppTheme
     let graphAppearance: GraphAppearance
+    let reloadToken: Int
     @Binding var webView: WKWebView?
 
     func makeCoordinator() -> Coordinator {
@@ -1284,18 +1293,30 @@ private struct LocalViewer: NSViewRepresentable {
         let webView = WKWebView(frame: .zero, configuration: configuration)
         webView.setValue(false, forKey: "drawsBackground")
         webView.loadFileURL(viewer, allowingReadAccessTo: readAccessRoot)
+        context.coordinator.lastAppliedReloadToken = reloadToken
         DispatchQueue.main.async { self.webView = webView }
         return webView
     }
 
     func updateNSView(_ webView: WKWebView, context: Context) {
-        guard webView.url == viewer else {
+        // Refresh/reanalyse rewrite the saved HTML file in place at the same
+        // path, so `webView.url == viewer` still holds afterwards. Without
+        // also checking the reload token, the freshly written pitch curve on
+        // disk would never actually get shown in the already-loaded page.
+        let urlChanged = webView.url != viewer
+        let reloadRequested = context.coordinator.lastAppliedReloadToken != reloadToken
+        guard !urlChanged, !reloadRequested else {
             // A fresh page load resets JS-side theme/appearance state, so the
             // next successful update must re-apply rather than trust the
             // stale cache from the previous page.
             context.coordinator.lastAppliedGraphAppearance = nil
             context.coordinator.lastAppliedTheme = nil
-            webView.loadFileURL(viewer, allowingReadAccessTo: readAccessRoot)
+            context.coordinator.lastAppliedReloadToken = reloadToken
+            if urlChanged {
+                webView.loadFileURL(viewer, allowingReadAccessTo: readAccessRoot)
+            } else {
+                webView.reloadFromOrigin()
+            }
             return
         }
         // SwiftUI re-evaluates this representable on every `StudyPlaybackState`
@@ -1347,6 +1368,7 @@ private struct LocalViewer: NSViewRepresentable {
         let playback: StudyPlaybackState
         var lastAppliedGraphAppearance: GraphAppearance?
         var lastAppliedTheme: AppTheme?
+        var lastAppliedReloadToken: Int?
 
         init(playback: StudyPlaybackState) {
             self.playback = playback

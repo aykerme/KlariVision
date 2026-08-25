@@ -58,14 +58,25 @@ final class RecentLibrary {
            let stored = try? JSONDecoder().decode([String: StudyMetadata].self, from: metadataData) {
             studyMetadata = stored
         }
+        // A stale, empty `recent_analyses.json` can exist at an earlier root
+        // (e.g. a leftover Application Support cache) while the actual
+        // entries live at a later one. Stopping at the first root that merely
+        // *decodes* would lock `items` to that empty file forever, which in
+        // turn makes `item(for:)` never find a match. Prefer the first root
+        // that actually has entries, and only fall back to an empty result
+        // if none of them do.
+        var fallback: [Item]?
         for root in dataRoots() {
             let file = root.appending(path: "data/recent_analyses.json")
             guard let data = try? Data(contentsOf: file),
                   let decoded = try? JSONDecoder().decode([Item].self, from: data) else { continue }
-            items = decoded
-            return
+            if !decoded.isEmpty {
+                items = decoded
+                return
+            }
+            if fallback == nil { fallback = decoded }
         }
-        items = []
+        items = fallback ?? []
     }
 
     func study(for item: Item) -> StudyMetadata {
