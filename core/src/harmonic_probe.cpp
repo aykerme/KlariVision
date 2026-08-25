@@ -13,6 +13,13 @@ std::complex<double> hann_windowed_probe(
     if (samples.size() <= 8 || sample_rate <= 0.0 || frequency_hz <= 0.0) {
         return {};
     }
+    // This is a single-bin Goertzel-style DFT: correlate the Hann-windowed
+    // signal against a complex exponential at exactly `frequency_hz`
+    // (equivalently, against cos/sin references), rather than running a
+    // full FFT and reading off the nearest bin. That gives an exact
+    // amplitude/phase estimate *at the requested frequency itself*, which
+    // matters here because candidate frequencies rarely land on an FFT
+    // bin centre.
     const auto denominator = static_cast<double>(samples.size() - 1);
     const auto step = 2.0 * std::numbers::pi * frequency_hz / sample_rate;
     double real = 0.0;
