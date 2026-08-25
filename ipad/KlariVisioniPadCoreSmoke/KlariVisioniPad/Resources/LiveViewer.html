@@ -47,7 +47,29 @@
   let streamReceived = performance.now();
   let lastAppendedTime = -Infinity;
   const historySeconds = 65;
-  const current = () => streamNow + (running ? (performance.now() - streamReceived) / 1000 : 0);
+  // Hedef saat: verinin ucunu izler, iki parti arasında duvar saatiyle akar.
+  const target = () => streamNow + (running ? (performance.now() - streamReceived) / 1000 : 0);
+  // Gösterilen saat.  Pencereyi doğrudan hedefe oturtmak takılmanın kaynağıydı:
+  // kareler Swift'ten ~33 ms'lik partiler hâlinde ve düzensiz gecikmeyle
+  // geliyor, dolayısıyla hedef her partide birkaç ms ileri/geri zıplıyor.  Eski
+  // kod bunu `Math.max` ile yalnız ileri yönde yutuyordu, yani her jitter tepesi
+  // pencereyi bir sıçratıyordu.  Bunun yerine saat kendi hızıyla akar ve hedefe
+  // süzülerek yaklaşır; düzeltme o karenin adımının çeyreğiyle sınırlı olduğu
+  // için akış hiç geri gitmez, gerçek atlamalar (yeni oturum, 0,35 sn üstü
+  // fark) ise anında yakalanır.  Aynı sözleşme Dinleme grafiğinde de var.
+  let shown = null;
+  let shownAt = performance.now();
+  const current = () => shown === null ? target() : shown;
+  const advance = () => {
+    const wall = performance.now(), goal = target();
+    if (shown === null || !running) { shown = goal; shownAt = wall; return shown; }
+    const step = (wall - shownAt) / 1000;
+    shownAt = wall;
+    const flowed = shown + step, error = goal - flowed;
+    if (Math.abs(error) > .35) { shown = goal; return shown; }
+    shown = flowed + Math.max(-step * .75, Math.min(step * .75, error * .05));
+    return shown;
+  };
 
   // --- Görünür pencere --------------------------------------------------
   // Visible time-window length (seconds) and vertical pitch-range multiplier.
@@ -80,6 +102,28 @@
     return currentCenter;
   };
 
+  // Tanı sayacı: takılmanın kaynağını ayırmak için — kareler gerçekten
+  // düşüyorsa "atlanan" artar, akış saati sorunluysa "donan"/"geri" artar.
+  let diagFrames = [], diagDropped = 0, diagWorst = 0, diagFrozen = 0, diagBack = 0, diagLastView = null;
+  const noteFrame = (ts, graphNow) => {
+    const previous = diagFrames.length ? diagFrames[diagFrames.length - 1] : null;
+    diagFrames.push(ts);
+    while (diagFrames.length > 2 && ts - diagFrames[0] > 1000) diagFrames.shift();
+    if (previous !== null && running) { const gap = ts - previous; if (gap > 25) { diagDropped++; if (gap > diagWorst) diagWorst = gap; } }
+    if (running) { if (diagLastView !== null) { const step = graphNow - diagLastView; if (Math.abs(step) < 1e-6) diagFrozen++; else if (step < 0) diagBack++; } diagLastView = graphNow; }
+    else diagLastView = null;
+  };
+  const drawDiagnostics = () => {
+    if (diagFrames.length < 2) return;
+    const seconds = (diagFrames[diagFrames.length - 1] - diagFrames[0]) / 1000, fps = seconds > 0 ? (diagFrames.length - 1) / seconds : 0;
+    const lines = [`${fps.toFixed(1)} fps`, `atlanan ${diagDropped} · en uzun ${diagWorst.toFixed(0)} ms`, `donan ${diagFrozen} · geri ${diagBack}`];
+    drawing.save(); drawing.font = '600 10px ui-monospace,SFMono-Regular,Menlo,monospace'; drawing.textAlign = 'left';
+    const width = Math.max(...lines.map(line => drawing.measureText(line).width)) + 12, bx = 8, by = 30;
+    drawing.fillStyle = 'rgba(14,22,32,.78)'; drawing.fillRect(bx, by, width, lines.length * 13 + 7);
+    drawing.fillStyle = '#8ef0c0'; lines.forEach((line, index) => drawing.fillText(line, bx + 6, by + 5 + index * 13 + 9));
+    drawing.restore();
+  };
+
   function draw() {
     needsDraw = false;
 
@@ -99,7 +143,8 @@
     drawing.setTransform(scale, 0, 0, scale, 0, 0);
     drawing.clearRect(0, 0, width, height);
 
-    const now = current();
+    const now = advance();
+    noteFrame(performance.now(), now);
     const windowStart = now - windowSeconds;
     const timeX = time => (time - windowStart) / windowSeconds * width;
 
@@ -226,6 +271,7 @@
       drawing.arc(timeX(previous.t), pitchY(previous.f), 2.5, 0, Math.PI * 2);
       drawing.fill();
     }
+    drawDiagnostics();
   }
 
   function tick() {
@@ -299,6 +345,8 @@
     lastAppendedTime = -Infinity;
     streamNow = 0;
     streamReceived = performance.now();
+    shown = null;
+    shownAt = performance.now();
     verticalCenter = null;
     verticalOffset = 0;
     drag = null;
@@ -322,7 +370,7 @@
         lastAppendedTime = value.t;
       }
       if (lastAppendedTime > -Infinity) {
-        streamNow = Math.max(current(), lastAppendedTime);
+        streamNow = lastAppendedTime;
         streamReceived = performance.now();
       }
       const cutoff = streamNow - historySeconds;
@@ -345,8 +393,9 @@
     setRunning: value => {
       const next = !!value;
       if (next === running) return;
-      if (next) streamReceived = performance.now();
-      else streamNow = current();
+      const wall = performance.now();
+      if (next) { streamReceived = wall; shownAt = wall; }
+      else { streamNow = target(); shown = current(); }
       running = next;
       needsDraw = true;
     },

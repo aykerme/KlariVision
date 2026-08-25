@@ -351,7 +351,22 @@ struct LivePracticeView: View {
     }
 
     private var practiceControls: some View {
-        ViewThatFits(in: .horizontal) {
+        // Eskiden `ViewThatFits` idi.  O yapı her yeniden değerlendirmede İKİ
+        // alternatif düzeni de kurup ölçer; bu görünüm analizörün yayınları
+        // yüzünden saniyede onlarca kez yeniden değerlendiği için bütün kontrol
+        // ağacı (tuner dahil) sürekli iki kez inşa ediliyordu.  Dinleme
+        // Modu'nda ölçülen etki büyüktü (10 sn'de 203 → 80 atlanan kare), aynı
+        // kalıp burada da vardı.  Genişlik eşiği açıkça okunuyor ve yalnız
+        // seçilen düzen inşa ediliyor; uyum davranışı korunuyor.
+        GeometryReader { geometry in
+            practiceControlsLayout(isWide: geometry.size.width >= 1_040)
+        }
+        .frame(minHeight: 132)
+    }
+
+    @ViewBuilder
+    private func practiceControlsLayout(isWide: Bool) -> some View {
+        if isWide {
             ZStack {
                 HStack(alignment: .center) {
                     primaryPracticeControls
@@ -365,10 +380,10 @@ struct LivePracticeView: View {
 
                 tuner
             }
-            // Reserve each side group before accepting the horizontal layout,
-            // so the tuner stays at the graph's actual horizontal centre.
+            // Reserve each side group so the tuner stays at the graph's actual
+            // horizontal centre.
             .frame(minWidth: 1_040, minHeight: 132)
-
+        } else {
             VStack(spacing: 12) {
                 tuner
                     .frame(maxWidth: .infinity, alignment: .center)

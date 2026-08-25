@@ -185,9 +185,6 @@ struct WorkspaceView: View {
                 webViewReloadToken += 1
             }
         }
-        .onChange(of: playback.time) { _, time in
-            updatePlaybackFrequency(at: time)
-        }
         .onDisappear { sendPlaybackCommand("pause") }
     }
 
@@ -272,24 +269,17 @@ struct WorkspaceView: View {
 
     private func loadPitchTrack() {
         do {
-            pitchTrack = try StudyPitchTrack.load(viewer: viewer)
+            let track = try StudyPitchTrack.load(viewer: viewer)
+            pitchTrack = track
             pitchTrackError = nil
-            updatePlaybackFrequency(at: playback.time)
+            playback.pitchPoints = track.points
         } catch {
             pitchTrack = nil
+            playback.pitchPoints = []
             pitchTrackError = "Pitch eğrisi okunamadı: \(error.localizedDescription)"
         }
     }
 
-    private func updatePlaybackFrequency(at time: Double) {
-        guard let points = pitchTrack?.points,
-              let nearest = points.min(by: { abs($0.time - time) < abs($1.time - time) }),
-              abs(nearest.time - time) <= 0.15 else {
-            playback.frequency = nil
-            return
-        }
-        playback.frequency = nearest.frequency
-    }
 }
 
 /// A monotonic presentation clock for the Study graph.  WebKit reports media
@@ -368,8 +358,22 @@ struct StudyPlaybackClock {
     }
 }
 
-private final class StudyPlaybackState: ObservableObject {
+/// Oynatma boyunca saniyede ~20 kez değişen iki değer.  Bunlar bilinçli olarak
+/// `StudyPlaybackState`'ten ayrı tutuluyor: aynı nesnede olduklarında her tik
+/// bütün çalışma alanını (toolbar, GeometryReader, ScrollView ve WKWebView
+/// temsilcisi dahil) geçersizleştiriyor, ana thread bununla meşgulken de
+/// WebView kare düşürüyordu.  Ayrı nesne sayesinde yalnız saat etiketi ile
+/// Tuner paneli yeniden çiziliyor.
+private final class StudyTicker: ObservableObject {
     @Published var time = 0.0
+    @Published var frequency: Double?
+}
+
+private final class StudyPlaybackState: ObservableObject {
+    /// Yayımlanmaz: kimliği sabit, içeriğini yalnız onu gözleyen yaprak
+    /// görünümler izler.
+    let ticker = StudyTicker()
+    var time: Double { ticker.time }
     @Published var duration = 0.0
     @Published var isReady = false
     @Published var isPlaying = false
@@ -379,11 +383,36 @@ private final class StudyPlaybackState: ObservableObject {
     @Published var loopB = 0.0
     @Published var followsCurve = false
     @Published var theme = "focus"
-    @Published var frequency: Double?
+    var frequency: Double? { ticker.frequency }
     @Published var scale: LiveScale = .nihavent
     @Published var tonic = 9
     @Published var intervals: [Int] = LiveMakamIntervals.defaults[LiveScale.nihavent.rawValue] ?? [9, 4, 9, 9, 4, 9, 9]
     private var presentationClock = StudyPlaybackClock()
+    /// Tuner'ın gösterdiği frekans buradan çözülür.  Hesap bilinçli olarak bir
+    /// SwiftUI `.onChange` işleyicisinde değil burada yapılıyor: orada her tik
+    /// çalışma alanının gövdesini de geçersizleştiriyordu.
+    var pitchPoints: [StudyPitchPoint] = []
+
+    private func updateFrequency(at time: Double) {
+        guard !pitchPoints.isEmpty else {
+            if ticker.frequency != nil { ticker.frequency = nil }
+            return
+        }
+        var low = 0, high = pitchPoints.count
+        while low < high {
+            let middle = (low + high) / 2
+            if pitchPoints[middle].time < time { low = middle + 1 } else { high = middle }
+        }
+        var nearest: StudyPitchPoint?
+        for index in [low - 1, low] where pitchPoints.indices.contains(index) {
+            let candidate = pitchPoints[index]
+            if nearest == nil || abs(candidate.time - time) < abs(nearest!.time - time) {
+                nearest = candidate
+            }
+        }
+        let resolved = nearest.flatMap { abs($0.time - time) <= 0.15 ? $0.frequency : nil }
+        if ticker.frequency != resolved { ticker.frequency = resolved }
+    }
 
     func displayTime(at uptime: TimeInterval = ProcessInfo.processInfo.systemUptime) -> Double {
         presentationClock.advance(to: uptime)
@@ -404,32 +433,39 @@ private final class StudyPlaybackState: ObservableObject {
             discontinuity: discontinuity,
             at: ProcessInfo.processInfo.systemUptime
         )
-        time = snapshotTime
-        duration = snapshotDuration
-        isReady = ((values["ready"] as? Bool) ?? isReady) || duration > 0
-        isPlaying = snapshotIsPlaying
-        rate = snapshotRate
-        loopEnabled = (values["loopEnabled"] as? Bool) ?? loopEnabled
-        loopA = (values["loopA"] as? NSNumber)?.doubleValue ?? loopA
-        loopB = (values["loopB"] as? NSNumber)?.doubleValue ?? loopB
-        followsCurve = (values["followsCurve"] as? Bool) ?? followsCurve
+        // @Published, değer aynı olsa bile her atamada objectWillChange
+        // gönderir.  Bu anlık görüntü saniyede 20 kez gelip 14 alana yazdığı
+        // için, gerçekte yalnız `time` değişirken saniyede ~280 geçersizleştirme
+        // sinyali doğuyor ve bunu gözleyen HER görünüm (oynatma çubuğu ve
+        // WKWebView temsilcisi dahil) yeniden değerlendiriliyordu.  Yalnız
+        // gerçekten değişen alan yayımlanır.
+        func publish<Value: Equatable>(_ value: Value, to keyPath: ReferenceWritableKeyPath<StudyPlaybackState, Value>) {
+            if self[keyPath: keyPath] != value { self[keyPath: keyPath] = value }
+        }
+        if ticker.time != snapshotTime { ticker.time = snapshotTime }
+        updateFrequency(at: snapshotTime)
+        publish(snapshotDuration, to: \.duration)
+        publish(((values["ready"] as? Bool) ?? isReady) || duration > 0, to: \.isReady)
+        publish(snapshotIsPlaying, to: \.isPlaying)
+        publish(snapshotRate, to: \.rate)
+        publish((values["loopEnabled"] as? Bool) ?? loopEnabled, to: \.loopEnabled)
+        publish((values["loopA"] as? NSNumber)?.doubleValue ?? loopA, to: \.loopA)
+        publish((values["loopB"] as? NSNumber)?.doubleValue ?? loopB, to: \.loopB)
+        publish((values["followsCurve"] as? Bool) ?? followsCurve, to: \.followsCurve)
         if let proposedTheme = values["theme"] as? String,
            ["focus", "studio", "classic"].contains(proposedTheme) {
-            theme = proposedTheme
-        }
-        frequency = (values["frequency"] as? NSNumber).flatMap { value in
-            value.doubleValue.isFinite && value.doubleValue > 0 ? value.doubleValue : nil
+            publish(proposedTheme, to: \.theme)
         }
         if let rawScale = values["scale"] as? String, let selected = LiveScale(rawValue: rawScale) {
-            scale = selected
+            publish(selected, to: \.scale)
         }
         if let value = (values["tonic"] as? NSNumber)?.intValue, (0...11).contains(value) {
-            tonic = value
+            publish(value, to: \.tonic)
         }
         if let proposed = values["intervals"] as? [NSNumber] {
             let parsed = proposed.map(\.intValue)
             if parsed.count == 7, parsed.allSatisfy({ (1...13).contains($0) }), parsed.reduce(0, +) == 53 {
-                intervals = parsed
+                publish(parsed, to: \.intervals)
             }
         }
     }
@@ -440,10 +476,13 @@ private struct StudyPlaybackBar: View {
     let command: (String) -> Void
 
     var body: some View {
-        ViewThatFits(in: .horizontal) {
-            HStack(spacing: 12) { controls; tuner }
-            VStack(alignment: .leading, spacing: 8) { controls; tuner }
-        }
+        // `ViewThatFits` her yeniden değerlendirmede İKİ alternatif düzeni de
+        // baştan kurup ölçer.  Bu çubuk `playback.time` yüzünden saniyede 20
+        // kez yeniden değerlendiği için, bütün ControlGroup/HoverTooltip/
+        // TunerPanel ağacı saniyede 40 kez yeniden inşa ediliyordu; örnekleme
+        // ana thread'i Observation/AttributeGraph içinde gösteriyordu ve
+        // WebView'in kare teslimi bundan bozuluyordu.  Tek, sabit düzen yeter.
+        HStack(spacing: 12) { controls; tuner }
         .padding(.horizontal, 16)
         .padding(.vertical, 10)
         .background(.bar)
@@ -464,10 +503,7 @@ private struct StudyPlaybackBar: View {
                     .accessibilityHint("Medyanın zamanını sıfıra getirir.")
                     .disabled(!playback.isReady)
                 }
-                Text(clock(playback.time) + " / " + clock(playback.duration))
-                    .font(.callout.monospacedDigit())
-                    .foregroundStyle(.secondary)
-                    .frame(minWidth: 100)
+                StudyClockLabel(ticker: playback.ticker, duration: playback.duration)
             }
 
             ControlGroup("Oynatma Hızı") {
@@ -513,7 +549,7 @@ private struct StudyPlaybackBar: View {
     }
 
     private var tuner: some View {
-        TunerPanel(frequency: playback.frequency, scale: playback.scale, tonic: playback.tonic, intervals: playback.intervals)
+        StudyTunerReadout(ticker: playback.ticker, scale: playback.scale, tonic: playback.tonic, intervals: playback.intervals)
             .frame(width: 420)
     }
 
@@ -674,7 +710,7 @@ private struct StudyPitchGraphPanel: View {
         .overlay(RoundedRectangle(cornerRadius: 12).stroke(.quaternary))
         .onAppear { initialiseVerticalCenterIfNeeded() }
         .onChange(of: points) { _, _ in initialiseVerticalCenterIfNeeded(force: true) }
-        .onReceive(playback.$time) { _ in
+        .onReceive(playback.ticker.$time) { _ in
             // Vertical follow-curve smoothing is applied inside PitchGraphNSView
             // via a CADisplayLink-driven transform (see LiveVisuals.swift), not
             // via SwiftUI animation: re-issuing `withAnimation` on every ~50ms
@@ -783,6 +819,37 @@ private struct StudyVerticalSlider: NSViewRepresentable {
     }
 }
 
+/// Saniyede ~20 kez değişen tek şey burada; bu yüzden yalnız bu küçük görünüm
+/// yeniden çiziliyor, oynatma çubuğunun geri kalanı değil.
+private struct StudyClockLabel: View {
+    @ObservedObject var ticker: StudyTicker
+    let duration: Double
+
+    var body: some View {
+        Text(clock(ticker.time) + " / " + clock(duration))
+            .font(.callout.monospacedDigit())
+            .foregroundStyle(.secondary)
+            .frame(minWidth: 100)
+    }
+
+    private func clock(_ value: Double) -> String {
+        let seconds = max(0, Int(value.rounded(.down)))
+        return "\(seconds / 60):" + String(format: "%02d", seconds % 60)
+    }
+}
+
+/// Tuner de yalnız frekans değişiminde yeniden çizilsin diye ayrı tutuldu.
+private struct StudyTunerReadout: View {
+    @ObservedObject var ticker: StudyTicker
+    let scale: LiveScale
+    let tonic: Int
+    let intervals: [Int]
+
+    var body: some View {
+        TunerPanel(frequency: ticker.frequency, scale: scale, tonic: tonic, intervals: intervals)
+    }
+}
+
 private struct HoverTooltip<Content: View>: View {
     let message: String
     let content: Content
@@ -811,7 +878,11 @@ private struct LocalViewer: NSViewRepresentable {
     let viewer: URL
     let readAccessRoot: URL
     let study: RecentLibrary.StudyMetadata?
-    @ObservedObject var playback: StudyPlaybackState
+    // Bilinçli olarak @ObservedObject DEĞİL: bu temsilci playback'i yalnız
+    // Coordinator'a aktarmak için taşıyor, gövdesinde hiçbir alanını okumuyor.
+    // Gözlemci yapıldığında her anlık görüntüde (saniyede 20 kez) yeniden
+    // değerlendiriliyor ve WKWebView'in kare teslimiyle yarışıyordu.
+    let playback: StudyPlaybackState
     let appTheme: AppTheme
     let graphAppearance: GraphAppearance
     let reloadToken: Int

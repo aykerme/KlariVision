@@ -1320,9 +1320,38 @@ struct LiveWebPitchGraph: NSViewRepresentable {
       const s={points:[],guides:[],pitch:'#0A84FF',guide:'#8E8E93',now:0,received:performance.now(),animating:false,visibleDuration:12,verticalCenter:0,verticalSpan:2400};
       let dragY=null;
       const resize=()=>{const d=devicePixelRatio||1,w=Math.max(1,c.clientWidth),h=Math.max(1,c.clientHeight);if(c.width!==Math.round(w*d)||c.height!==Math.round(h*d)){c.width=Math.round(w*d);c.height=Math.round(h*d);x.setTransform(d,0,0,d,0,0)}};
-      const current=()=>s.now+(s.animating?(performance.now()-s.received)/1000:0);
+      // Sunum saati.  `s.now` SwiftUI body'sinde Date() ile okunur ve
+      // Coordinator onu 1/30 sn'lik birleştirme gecikmesiyle yollar; bu
+      // gecikme her turda farklı olduğu için saati doğrudan `s.now`a
+      // oturtmak pencereyi kare kare ileri geri zıplatır (ölçüm: 500 karede
+      // 24 kare geri, tek karede +48 ms sıçrama).  Bunun yerine saat kendi
+      // hızıyla akar ve hedefe yalnızca süzülerek yaklaşır: küçük farklar
+      // ~0,3 sn'lik bir zaman sabitiyle kapanır, gerçek atlamalar (arama,
+      // yeni oturum) 0,35 sn eşiğinin üstünde kaldığı için anında yakalanır.
+      const target=()=>s.now+(s.animating?(performance.now()-s.received)/1000:0);
+      let shown=null,shownAt=performance.now();
+      const advance=()=>{
+        const wall=performance.now(),goal=target();
+        if(shown===null||!s.animating){shown=goal;shownAt=wall;return shown}
+        const flowed=shown+(wall-shownAt)/1000;
+        shownAt=wall;
+        const error=goal-flowed;
+        shown=Math.abs(error)>.35?goal:flowed+error*.05;
+        return shown;
+      };
+      // Tanı sayacı: takılmanın kaynağını ayırmak için — kareler gerçekten
+      // düşüyorsa "atlanan" artar, akış saati sorunluysa "donan"/"geri" artar.
+      let diagFrames=[],diagDropped=0,diagWorst=0,diagFrozen=0,diagBack=0,diagLastView=null;
+      const noteFrame=(ts,graphNow)=>{const previous=diagFrames.length?diagFrames[diagFrames.length-1]:null;diagFrames.push(ts);while(diagFrames.length>2&&ts-diagFrames[0]>1000)diagFrames.shift();
+        if(previous!==null&&s.animating){const gap=ts-previous;if(gap>25){diagDropped++;if(gap>diagWorst)diagWorst=gap}}
+        if(s.animating){if(diagLastView!==null){const step=graphNow-diagLastView;if(Math.abs(step)<1e-6)diagFrozen++;else if(step<0)diagBack++}diagLastView=graphNow}else diagLastView=null};
+      const drawDiagnostics=(gutterLeft,gutterTop)=>{if(diagFrames.length<2)return;const seconds=(diagFrames[diagFrames.length-1]-diagFrames[0])/1000,fps=seconds>0?(diagFrames.length-1)/seconds:0;
+        const lines=[`${fps.toFixed(1)} fps`,`atlanan ${diagDropped} · en uzun ${diagWorst.toFixed(0)} ms`,`donan ${diagFrozen} · geri ${diagBack}`];
+        x.save();x.font='600 10px ui-monospace,SFMono-Regular,Menlo,monospace';x.textAlign='left';
+        const width=Math.max(...lines.map(line=>x.measureText(line).width))+12,bx=gutterLeft+8,by=gutterTop+6;
+        x.fillStyle='rgba(14,22,32,.78)';x.fillRect(bx,by,width,lines.length*13+7);x.fillStyle='#8ef0c0';lines.forEach((line,index)=>x.fillText(line,bx+6,by+5+index*13+9));x.restore()};
       const draw=()=>{
-        resize();const w=c.clientWidth,h=c.clientHeight,L=86,R=18,T=16,B=28,cw=Math.max(1,w-L-R),ch=Math.max(1,h-T-B),now=current(),start=now-s.visibleDuration,high=s.verticalCenter+s.verticalSpan/2;
+        resize();const w=c.clientWidth,h=c.clientHeight,L=86,R=18,T=16,B=28,cw=Math.max(1,w-L-R),ch=Math.max(1,h-T-B),now=advance(),start=now-s.visibleDuration,high=s.verticalCenter+s.verticalSpan/2;noteFrame(performance.now(),now);
         const dark=matchMedia('(prefers-color-scheme:dark)').matches,bg=dark?'#20262d':'#ffffff',label=dark?'#e7f3f7':'#3d4854',axis=dark?'#bdcad5':'#3d4854';
         x.fillStyle=bg;x.fillRect(0,0,w,h);x.font='600 11px -apple-system,system-ui';x.textAlign='right';
         const Y=hz=>T+(high-1200*Math.log2(hz/440))/s.verticalSpan*ch,X=t=>L+(t-start)/s.visibleDuration*cw;
@@ -1330,7 +1359,7 @@ struct LiveWebPitchGraph: NSViewRepresentable {
         const step=s.visibleDuration<=12?1:s.visibleDuration<=30?2:5;x.font='500 9px -apple-system,system-ui';x.textAlign='center';for(let t=Math.max(0,Math.ceil(start/step)*step);t<=now+.001;t+=step){const xx=X(t);x.strokeStyle=axis+'38';x.beginPath();x.moveTo(xx,T);x.lineTo(xx,h-B);x.stroke();x.fillStyle=label;x.fillText(Math.round(t)+' sn',xx,h-B+15)}
         x.save();x.beginPath();x.rect(L,T,cw,ch);x.clip();x.strokeStyle=s.pitch;x.lineWidth=1.7;x.lineJoin='round';x.lineCap='round';x.beginPath();let p=null;for(const q of s.points){if(q.t<start-.05||q.t>now+.05)continue;const xx=X(q.t),yy=Y(q.hz),ok=p&&q.t-p.t>0&&q.t-p.t<.040&&Math.abs(1200*Math.log2(q.hz/p.hz))<520;ok?x.lineTo(xx,yy):x.moveTo(xx,yy);p=q}x.stroke();x.strokeStyle=dark?'#9a6ab0':'#7755b8';x.lineWidth=1.5;x.beginPath();x.moveTo(w-R,T);x.lineTo(w-R,h-B);x.stroke();x.restore();x.strokeStyle=axis+'66';x.strokeRect(L,T,cw,ch);
         if(!s.points.length){x.fillStyle=label;x.font='13px -apple-system,system-ui';x.textAlign='center';x.fillText('Mikrofonu başlatıp klarnet çalmaya başla.',w/2,h/2)}
-        requestAnimationFrame(draw);
+        drawDiagnostics(L,T);requestAnimationFrame(draw);
       };
       window.KlariLiveGraph={update:v=>{if(v.reset)s.points=[];if(v.points?.length)s.points.push(...v.points);s.points=s.points.filter(p=>p.t>=v.now-65);const {points,reset,...config}=v;Object.assign(s,config);s.received=performance.now()}};
       if(window.__klariLivePending)window.KlariLiveGraph.update(window.__klariLivePending);
