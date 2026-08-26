@@ -210,3 +210,40 @@ def test_frequency_viewer_keeps_supported_low_register_pitch() -> None:
         {"time_seconds": 0.0, "frequency_hz": 82.4069, "voiced": True, "confidence": .9},
     ]})
     assert result == [{"t": 0.0, "hz": 82.4069}]
+
+
+def test_frequency_viewer_includes_engine_identity_in_title_and_meta(tmp_path) -> None:
+    pitch_json = tmp_path / "pitch.json"
+    pitch_json.write_text(json.dumps({"frames": []}), encoding="utf-8")
+    output = tmp_path / "viewer.html"
+    build_frequency_viewer(pitch_json, "audio.wav", output, engine="vpm_like")
+
+    html = output.read_text(encoding="utf-8")
+    assert '<title>KlariVision v0.6 Beta 1 — VPM-benzeri · Pitch konturu</title>' in html
+    assert '<meta name="klarivision-engine" content="vpm_like">' in html
+    assert '<meta name="klarivision-offline-revision" content="shared-production-session-r5">' in html
+    assert 'Motor: VPM-benzeri' in html
+
+
+def test_frequency_viewer_preserves_backward_compatibility_without_engine(tmp_path) -> None:
+    pitch_json = tmp_path / "pitch.json"
+    pitch_json.write_text(json.dumps({"frames": []}), encoding="utf-8")
+    output = tmp_path / "viewer.html"
+    build_frequency_viewer(pitch_json, "audio.wav", output)
+
+    html = output.read_text(encoding="utf-8")
+    assert '<title>KlariVision v0.6 Beta 1 — Duyulan frekans</title>' in html
+    assert 'klarivision-engine' not in html
+    assert 'klarivision-offline-revision' not in html
+
+
+def test_frequency_viewer_uses_cpp_engine_revision_only_for_cpp_engines(tmp_path) -> None:
+    pitch_json = tmp_path / "pitch.json"
+    pitch_json.write_text(json.dumps({"frames": []}), encoding="utf-8")
+    output = tmp_path / "viewer.html"
+    build_frequency_viewer(pitch_json, "audio.wav", output, engine="vamp")
+
+    html = output.read_text(encoding="utf-8")
+    assert '<meta name="klarivision-engine" content="vamp">' in html
+    assert 'klarivision-offline-revision' not in html
+    assert 'Motor: Vamp pYIN (referans)' in html

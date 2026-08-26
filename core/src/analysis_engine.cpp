@@ -7,6 +7,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdint>
 #include <limits>
 #include <memory>
 #include <numbers>
@@ -137,12 +138,33 @@ std::vector<Candidate> yin_candidates(std::span<const float> samples, double rat
     // near-maximal-confidence candidate -- the CMND minimum alone may have
     // locked onto a lower sub-period while the true fundamental sits an
     // octave up.
+    // Odd-harmonic occupancy, the one test that separates "this candidate is
+    // a ghost subharmonic" from "this is a real clarinet fundamental whose
+    // own first partial happens to be thin right now".  A clarinet is a
+    // stopped cylinder: odd partials (3f, 5f) carry the tone and even ones
+    // are physically weak.  So a true fundamental f always leaves energy at
+    // 3f/5f, while a ghost at f -- where the real note is 2f -- leaves 3f and
+    // 5f sitting between the real note's partials, on nothing.
+    const auto odd_support = [&](const double frequency) {
+        double total = 0;
+        for (const double multiple : {3.0, 5.0}) {
+            const double probe = frequency * multiple;
+            if (probe < rate / 2) total += spectral_energy(samples, rate, probe);
+        }
+        return total;
+    };
     const auto original_count = result.size();
     for (std::size_t index = 0; index < original_count; ++index) {
         const double upper = result[index].frequency * 2;
         if (upper <= 800 || upper > config.maximum_frequency_hz) continue;  // only in the high register
         if (spectral_energy(samples, rate, upper) <=
             spectral_energy(samples, rate, result[index].frequency) * 8) continue;  // not a decisive enough dominance
+        // Raw 2x dominance alone was promoting real fundamentals: measured on
+        // the Şükrü Tunar verdict set it produced 12 of YIN v1's 13 marked
+        // octave errors, every one of them above 800 Hz.  Require the upper
+        // line to also own the odd-harmonic pattern before believing the
+        // lower candidate was never a real note.
+        if (odd_support(upper) <= odd_support(result[index].frequency)) continue;
         // A narrow direct-spectrum recovery for an f/2 period choice.
         // The high confidence ensures the offline path resolver retains
         // this evidence instead of preferring the repeated lower period.
@@ -955,6 +977,208 @@ std::vector<EngineFrame> PitchEngine::finish() { auto result = analyse(buffered_
 // Runs a fresh ProductionPitchSession over the whole buffer, frame by frame
 // (as if streaming live), collecting every published frame plus the final
 // flush from session.finish().
+namespace {
+
+// Per-engine transition width for the offline path refinement, in cents.
+// Calibrated against the Şükrü Tunar listener verdicts: a narrower width
+// suppresses isolated jumps harder, but too narrow also fights genuine fast
+// runs.  Pitch Engine v2 already carries a five-frame Viterbi of its own, so
+// it needs (and tolerates) a looser width than the causal engines.
+double offline_transition_width_cents(const PitchEngineId id) {
+    return id == PitchEngineId::pitch_engine_v2 ? 250.0 : 150.0;
+}
+
+// Spectral evidence sets an alternative's *price*, it does not gate admission.
+// Gating was wrong: on the frames that actually needed repair the correct
+// fundamental often measures below 2% of the family's strongest member -- that
+// is precisely why the causal engine got them wrong, and precisely the case
+// where only the path carries the information.  So every harmonic alternative
+// stays available, and one with no spectral backing simply costs more.
+constexpr double kOfflineUnsupportedFloor = 0.30;
+// Alternatives enter the path search below the causal decision's own score, so
+// a frame only moves when path continuity -- not local evidence -- demands it.
+constexpr double kOfflineAlternativeDiscount = 0.72;
+// Published frames further apart than this are treated as separate runs: no
+// continuity is implied across an articulation gap.
+constexpr double kOfflineSegmentGapSeconds = 0.030;
+// Transition cost is quadratic in cents so that a single 1200-cent excursion
+// pays far more than the many small steps of a real run.  Capped so one wild
+// frame cannot dominate the whole path score.
+constexpr double kOfflineMaximumTransition = 12.0;
+
+// A published run this short, with silence on both sides and no better
+// evidence than this, is a stray point rather than a note.
+constexpr std::size_t kOfflineStrayMaximumFrames = 7;
+// Silence required on *both* sides.  This is what keeps the rule off real
+// ornaments: a çarpma is attached to the note it decorates, not marooned in
+// silence, so it never clears this test.
+constexpr double kOfflineStrayIsolationSeconds = 0.040;
+// VPM-like's own publication bar.  On every stray point the listener marked,
+// VPM-like was the engine that correctly stayed quiet, and the runs the others
+// published peaked at 0.66-0.81 confidence.  Holding a short isolated run to
+// that same bar is the rule; it is not a number fitted to those frames.
+constexpr double kOfflineStrayConfidence = 0.80;
+
+// Drops short, isolated, low-confidence runs from an offline track.
+std::vector<EngineFrame> drop_offline_stray_runs(const std::vector<EngineFrame>& track) {
+    std::vector<std::pair<std::size_t, std::size_t>> runs;  // [first, last] over voiced frames
+    std::vector<std::size_t> voiced;
+    for (std::size_t index = 0; index < track.size(); ++index) {
+        if (track[index].frequency_hz && *track[index].frequency_hz > 0) voiced.push_back(index);
+    }
+    if (voiced.size() < 2) return track;
+    std::size_t begin = 0;
+    for (std::size_t position = 1; position <= voiced.size(); ++position) {
+        const bool split = position == voiced.size() ||
+            track[voiced[position]].time_seconds - track[voiced[position - 1]].time_seconds > 0.012;
+        if (split) { runs.push_back({begin, position - 1}); begin = position; }
+    }
+    std::vector<bool> drop(track.size(), false);
+    for (std::size_t run = 0; run < runs.size(); ++run) {
+        const auto [first, last] = runs[run];
+        if (last - first + 1 > kOfflineStrayMaximumFrames) continue;
+        const double before = run == 0 ? std::numeric_limits<double>::infinity()
+            : track[voiced[first]].time_seconds - track[voiced[runs[run - 1].second]].time_seconds;
+        const double after = run + 1 == runs.size() ? std::numeric_limits<double>::infinity()
+            : track[voiced[runs[run + 1].first]].time_seconds - track[voiced[last]].time_seconds;
+        if (before < kOfflineStrayIsolationSeconds || after < kOfflineStrayIsolationSeconds) continue;
+        double peak = 0;
+        for (std::size_t position = first; position <= last; ++position) {
+            peak = std::max(peak, track[voiced[position]].confidence);
+        }
+        if (peak >= kOfflineStrayConfidence) continue;
+        for (std::size_t position = first; position <= last; ++position) drop[voiced[position]] = true;
+    }
+    std::vector<EngineFrame> kept;
+    kept.reserve(track.size());
+    for (std::size_t index = 0; index < track.size(); ++index) {
+        if (!drop[index]) kept.push_back(track[index]);
+    }
+    return kept;
+}
+
+// Offline (non-causal) harmonic path refinement over the causal baseline.
+//
+// This is the piece `PitchEngineProfile::offline_track` was reserved for.  The
+// causal engines must decide each frame with no future context, and that is
+// exactly where they lose: measured on the listener verdicts, 33 of 47 marked
+// octave errors last only 1-3 frames (median 2, longest 9) in the middle of
+// otherwise correct tracking.  pYIN does not make those errors because it
+// decodes a path over the whole recording, where an isolated 1200-cent
+// excursion can never repay its transition cost.
+//
+// The live path is untouched: `analyse_causal` and every `ProductionPitchSession`
+// keep their latency contract.  Only the Study/offline entry point refines.
+//
+// `resolve_track` above is the generic resolver, but it assumes one candidate
+// layer per hop and reconstructs frame times from the hop index.  A published
+// track is sparse -- gated, bridged and flushed frames only -- so this pass
+// runs its own search over exactly the frames that were published, preserving
+// their times and their voiced/unvoiced decisions untouched.
+std::vector<EngineFrame> refine_offline_harmonics(
+    const std::vector<EngineFrame>& baseline,
+    const std::span<const float> samples,
+    const double rate,
+    const PitchEngineConfig& config,
+    const PitchEngineId id
+) {
+    struct Alternative { double frequency; double confidence; double emission; };
+    struct Layer { std::size_t index; std::vector<Alternative> options; };
+
+    const double width = offline_transition_width_cents(id);
+    const auto window = static_cast<std::int64_t>(config.window_size);
+
+    std::vector<Layer> layers;
+    for (std::size_t index = 0; index < baseline.size(); ++index) {
+        const auto& frame = baseline[index];
+        if (!frame.frequency_hz || *frame.frequency_hz <= 0) continue;  // voicing is not revisited here
+        const double published = *frame.frequency_hz;
+        const double confidence = std::max(frame.confidence, 1e-3);
+        std::vector<Alternative> options{
+            {published, confidence, std::log(confidence)}  // the causal decision always competes
+        };
+        // Locate this frame's own analysis window so alternatives are judged
+        // against the audio the engine actually saw.
+        const auto start = static_cast<std::int64_t>(std::llround(frame.time_seconds * rate)) - window / 2;
+        if (start >= 0 && start + window <= static_cast<std::int64_t>(samples.size())) {
+            const auto view = samples.subspan(static_cast<std::size_t>(start), config.window_size);
+            // Measure the whole harmonic family first and judge each member
+            // against the strongest of them, never against the published line.
+            // The published line is the one under suspicion, and on a clarinet
+            // a true fundamental is routinely weaker than its own third
+            // harmonic -- gating on the published line's energy threw the
+            // correct answer away exactly in the frames that needed it.
+            struct Probe { double frequency; double energy; };
+            std::vector<Probe> family{{published, spectral_energy(view, rate, published)}};
+            for (const double ratio : {1.0 / 3.0, 0.5, 2.0, 3.0}) {
+                const double alternative = published * ratio;
+                if (alternative < config.minimum_frequency_hz ||
+                    alternative > config.maximum_frequency_hz) continue;
+                family.push_back({alternative, spectral_energy(view, rate, alternative)});
+            }
+            double strongest = 0;
+            for (const auto& probe : family) strongest = std::max(strongest, probe.energy);
+            for (std::size_t member = 1; member < family.size(); ++member) {
+                const double support = strongest > 0 ? family[member].energy / strongest : 0.0;
+                const double backing = kOfflineUnsupportedFloor +
+                    (1.0 - kOfflineUnsupportedFloor) * std::clamp(support, 0.0, 1.0);
+                const double scaled = confidence * kOfflineAlternativeDiscount * backing;
+                options.push_back({family[member].frequency, scaled, std::log(std::max(scaled, 1e-6))});
+            }
+        }
+        layers.push_back({index, std::move(options)});
+    }
+    if (layers.size() < 3) return baseline;  // nothing a path can say
+
+    std::vector<std::vector<double>> score(layers.size());
+    std::vector<std::vector<int>> prior(layers.size());
+    for (std::size_t layer = 0; layer < layers.size(); ++layer) {
+        const auto& options = layers[layer].options;
+        score[layer].assign(options.size(), 0.0);
+        prior[layer].assign(options.size(), -1);
+        if (layer == 0) {
+            for (std::size_t option = 0; option < options.size(); ++option) {
+                score[layer][option] = options[option].emission;
+            }
+            continue;
+        }
+        const double elapsed =
+            baseline[layers[layer].index].time_seconds - baseline[layers[layer - 1].index].time_seconds;
+        const bool continuous = elapsed <= kOfflineSegmentGapSeconds;
+        const auto& before = layers[layer - 1].options;
+        for (std::size_t option = 0; option < options.size(); ++option) {
+            double best = -std::numeric_limits<double>::infinity();
+            int chosen = 0;
+            for (std::size_t previous = 0; previous < before.size(); ++previous) {
+                double transition = 0.0;
+                if (continuous) {
+                    const double distance =
+                        cents_distance(options[option].frequency, before[previous].frequency) / width;
+                    transition = -std::min(distance * distance, kOfflineMaximumTransition);
+                }
+                const double total = score[layer - 1][previous] + transition;
+                if (total > best) { best = total; chosen = static_cast<int>(previous); }
+            }
+            score[layer][option] = best + options[option].emission;
+            prior[layer][option] = chosen;
+        }
+    }
+
+    auto refined = baseline;
+    auto cursor = static_cast<int>(std::max_element(score.back().begin(), score.back().end()) - score.back().begin());
+    for (std::size_t layer = layers.size(); layer-- > 0;) {
+        const auto& option = layers[layer].options[static_cast<std::size_t>(cursor)];
+        auto& frame = refined[layers[layer].index];
+        frame.frequency_hz = option.frequency;
+        frame.confidence = option.confidence;
+        cursor = prior[layer][static_cast<std::size_t>(cursor)];
+        if (cursor < 0 && layer > 0) cursor = 0;
+    }
+    return refined;
+}
+
+}  // namespace
+
 std::vector<EngineFrame> PitchEngine::analyse_causal(
     const std::span<const float> samples,
     const double rate
@@ -972,9 +1196,9 @@ std::vector<EngineFrame> PitchEngine::analyse_causal(
     return output;
 }
 
-// Public offline entry point. Currently identical to the causal pass for
-// every profile (the offline_track profile is a placeholder for a future
-// non-causal refinement pass over the causal baseline).
+// Public offline entry point. For the offline_track profile this runs the
+// non-causal harmonic path refinement over the causal baseline; every other
+// profile is returned unchanged, so the live contract is unaffected.
 std::vector<EngineFrame> PitchEngine::analyse(
     const std::span<const float> samples,
     const double rate
@@ -982,6 +1206,8 @@ std::vector<EngineFrame> PitchEngine::analyse(
     auto baseline = analyse_causal(samples, rate);
     if (profile_ != PitchEngineProfile::offline_track || baseline.empty()) return baseline;
 
-    return baseline;
+    return drop_offline_stray_runs(
+        refine_offline_harmonics(baseline, samples, rate, config_, id_)
+    );
 }
 }  // namespace klarivision::core

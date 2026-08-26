@@ -143,12 +143,44 @@ def build_frequency_viewer(
     video_relative_path: str | None = None,
     analysis_status: str | None = None,
     validation: dict[str, object] | None = None,
+    engine: str | None = None,
 ) -> None:
     """Write a self-contained viewer of the measured, sounding frequency."""
     payload = json.loads(pitch_json_path.read_text(encoding="utf-8"))
     frames = prepare_display_frames(payload)
     turkish_reference = extend_reference_octaves(load_turkish_pitch_reference())
     is_audio_only = video_relative_path is None
+
+    # Engine identifier mapping for user-facing labels
+    ENGINE_LABELS = {
+        "yin_v1": "YIN v1",
+        "pitch_engine_v2": "Pitch Engine v2",
+        "vpm_like": "VPM-benzeri",
+        "hapt_v1": "Harmonik-Faz (HAPT)",
+        "vamp": "Vamp pYIN (referans)",
+        "python": "librosa pYIN (geliştirme)",
+    }
+
+    # Prepare title and metadata
+    title = f"KlariVision {VIEWER_VERSION} — Duyulan frekans"
+    engine_label = ""
+    meta_engine = ""
+    meta_revision = ""
+
+    if engine and engine in ENGINE_LABELS:
+        engine_label = ENGINE_LABELS[engine]
+        title = f"KlariVision {VIEWER_VERSION} — {engine_label} · Pitch konturu"
+        meta_engine = engine
+        # Add revision only for C++ engines
+        if engine in {"yin_v1", "pitch_engine_v2", "vpm_like", "hapt_v1"}:
+            from .pitch.cpp_engine import OFFLINE_TRACK_REVISION
+            meta_revision = OFFLINE_TRACK_REVISION
+
+    meta_tags = ""
+    if engine:
+        meta_tags = f'<meta name="klarivision-engine" content="{meta_engine}">'
+        if meta_revision:
+            meta_tags += f'\n<meta name="klarivision-offline-revision" content="{meta_revision}">'
     media = (
         f'<video id="media" controls src="{video_relative_path}"></video>'
         if video_relative_path
@@ -162,11 +194,17 @@ def build_frequency_viewer(
         else ""
     )
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    status = f'<span class="analysis-status">{analysis_status}</span>' if analysis_status else ""
+    status_parts = []
+    if engine_label:
+        status_parts.append(f"Motor: {engine_label}")
+    if analysis_status:
+        status_parts.append(analysis_status)
+    status = f'<span class="analysis-status">{" · ".join(status_parts)}</span>' if status_parts else ""
     validation_json = json.dumps(validation, ensure_ascii=False, separators=(",", ":")) if validation else "null"
     output_path.write_text(
         f"""<!doctype html><html lang="tr"><meta charset="utf-8">
-<title>KlariVision {VIEWER_VERSION} — Duyulan frekans</title>
+<title>{title}</title>
+{meta_tags}
 <style>
 :root{{color-scheme:light}}*{{box-sizing:border-box}}body{{margin:0;background:#f5f6f8;color:#17212b;font:14px system-ui,-apple-system,sans-serif}}main{{max-width:1320px;margin:auto;padding:22px}}h1{{font-size:21px;margin:0 0 4px}}p{{margin:0 0 16px;color:#56616e}}.new-recording{{display:inline-block;border:1px solid #4785be;background:#e7f2fc;border-radius:7px;padding:7px 11px;color:#173d62;text-decoration:none;font-weight:650}}.layout-tools{{display:flex;align-items:center;gap:12px;margin:0 0 14px}}.workspace{{--media-width:660px;--media-height:360px;--chart-height:580px;display:grid;gap:16px;overflow-x:auto}}.workspace.side{{grid-template-columns:minmax(320px,var(--media-width)) minmax(320px,1fr);align-items:start}}.workspace.side-right{{grid-template-columns:minmax(320px,1fr) minmax(320px,var(--media-width))}}.workspace.side-right .media{{order:2}}.media{{position:relative;width:var(--media-width);height:var(--media-height);background:#f5f6f8;padding:10px 0 14px}}video,audio{{display:block;max-width:100%;width:100%;height:100%;max-height:100%;object-fit:contain}}audio{{height:auto;margin-top:calc((var(--media-height) - 54px)/2)}}body.audio-only .layout-tools{{display:none}}.workspace.audio-only .media{{width:100%;height:auto;min-height:74px;background:#fff;border:1px solid #dbe0e6;border-radius:12px;padding:12px 14px}}.audio-content{{display:flex;align-items:center;gap:16px}}.audio-content strong{{white-space:nowrap;color:#405465}}.audio-content audio{{margin:0;height:32px;flex:1}}.workspace.audio-only .panel{{width:100%}}.panel{{position:relative;justify-self:start;display:flex;flex-direction:column;min-width:320px;height:calc(var(--chart-height) + 92px);background:#fff;border:1px solid #dbe0e6;border-radius:12px;padding:14px;overflow:hidden}}.workspace.stacked .panel{{width:100%}}.workspace.side .panel{{width:100%}}.tools{{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:10px;flex:0 0 auto}}button{{border:1px solid #b9c3cf;background:#fff;border-radius:7px;padding:6px 10px;font:inherit;cursor:pointer}}button:hover{{background:#eef5fb}}button[aria-pressed="true"]{{background:#dceefe;border-color:#4785be;color:#173d62;box-shadow:inset 0 0 0 1px #8bb7de}}input{{width:100px}}select{{font:inherit;padding:5px 7px;border:1px solid #b9c3cf;border-radius:7px;background:#fff}}.countdown-status{{min-width:76px;color:#7755b8;font-weight:700}}.chart-scroll{{display:grid;grid-template-columns:minmax(0,1fr) 18px;grid-template-rows:minmax(0,1fr) 18px;gap:5px;min-height:220px;flex:1}}canvas{{display:block;width:100%;height:100%;border:1px solid #dbe0e6;border-radius:8px;touch-action:none}}#time-scroll{{grid-column:1;grid-row:2;width:100%;margin:0;accent-color:#7755b8}}#vertical-scroll{{grid-column:2;grid-row:1;width:18px;height:100%;margin:0;writing-mode:vertical-lr;direction:rtl;accent-color:#7755b8}}.note{{font-size:12px;color:#66717f;margin:8px 0 0;flex:0 0 auto}}.legend{{margin-left:auto;color:#56616e;font-size:12px}}.interval-guide{{position:absolute;z-index:4;right:18px;bottom:38px;font-size:11px;color:#34414e}}.interval-guide summary{{cursor:pointer;list-style:none;border:1px solid #c4d2df;background:rgba(255,255,255,.94);border-radius:999px;padding:5px 9px;box-shadow:0 1px 4px rgba(25,45,65,.12)}}.interval-guide summary::-webkit-details-marker{{display:none}}.interval-guide[open]{{width:286px;background:rgba(255,255,255,.97);border:1px solid #c4d2df;border-radius:9px;padding:9px;box-shadow:0 3px 13px rgba(25,45,65,.16)}}.interval-guide[open] summary{{border:0;padding:0 0 7px;font-weight:700}}.interval-guide table{{width:100%;border-collapse:collapse}}.interval-guide th,.interval-guide td{{padding:3px 2px;border-top:1px solid #e6ebef;text-align:left;white-space:nowrap}}.interval-guide th{{font-weight:650;color:#607080}}dialog{{width:min(630px,calc(100vw - 28px));border:0;border-radius:13px;box-shadow:0 18px 55px rgba(12,25,38,.35);padding:0;color:#17212b}}dialog::backdrop{{background:rgba(22,35,48,.36)}}.settings-form{{padding:20px}}.settings-form h2{{margin:0 0 6px;font-size:18px}}.settings-form p{{font-size:13px;margin-bottom:14px}}.settings-grid{{display:grid;grid-template-columns:repeat(7,minmax(68px,1fr));gap:8px;margin:14px 0}}.settings-grid label{{display:grid;gap:4px;font-size:11px;color:#506070}}.settings-grid select{{width:100%;padding:5px 3px;font-size:12px}}.settings-total{{font-weight:700;color:#1f5d36}}.settings-total.invalid{{color:#a33232}}.settings-actions{{display:flex;justify-content:flex-end;gap:8px;margin-top:16px}}.resize-handle{{position:absolute;z-index:5;touch-action:none}}.resize-right{{right:0;top:0;width:16px;height:100%;cursor:ew-resize}}.resize-bottom{{left:0;bottom:0;width:100%;height:16px;cursor:ns-resize}}.resize-corner{{right:0;bottom:0;width:24px;height:24px;cursor:nwse-resize;background:linear-gradient(135deg,transparent 45%,#91a4b8 46%,#91a4b8 54%,transparent 55%)}}@media(max-width:650px){{main{{padding:12px}}.audio-content{{align-items:stretch;flex-direction:column;gap:7px}}.interval-guide{{right:14px;bottom:36px}}.settings-grid{{grid-template-columns:repeat(4,minmax(68px,1fr))}}}}
 </style><style>

@@ -1,3 +1,213 @@
+# KlariVision Test Tabanı
+
+## Çevrimdışı kaçak nokta elemesi — 26 Ağustos 2026
+
+Çevrimdışı yola ikinci bir aşama eklendi: kısa, iki yanı sessiz ve yalnız düşük
+güvenle yayımlanmış koşular düşürülür. Canlı yol yine dokunulmadı.
+
+### Kural ve dayanağı
+
+Bir koşu şu üçünü birden sağlıyorsa nokta sayılır, nota değil: en çok `7` kare,
+iki yanında en az `40 ms` sessizlik, tepe güven `0,80`in altında.
+
+`0,80` uydurulmuş bir sayı değil, **VPM-benzeri'nin kendi yayın eşiği**.
+Kullanıcının kaçak işaretlediği dört aralığın tamamında doğru davranarak susan
+motor VPM'di; diğerlerinin oraya bastığı koşular `0,66–0,81` güvende
+kalıyordu. Kural, kısa ve yalıtılmış bir koşuyu aynı bara tutmaktan ibarettir.
+
+### Neden çarpmayı silmiyor
+
+Süsleme de kısadır ve kanıtı zayıftır; onu koruyan şey **iki yanındaki
+sessizlik şartıdır**. Çarpma, süslediği notaya bitişiktir, sessizlikte yalnız
+kalmaz, dolayısıyla kuralı hiç geçmez. Bu, eşiğe bırakılmadan
+`core/tests/analysis_engine_tests.cpp` içinde kilitlendi: `40 ms` `300 Hz` +
+hemen ardından `400 ms` `400 Hz` sinyalinde üç motorda da süsleme kareleri
+çevrimdışı geçişten sayıca **değişmeden** çıkar.
+
+### Ölçüm
+
+| Motor | Kaçak öncesi | Kaçak sonrası | Toplam kusur |
+|---|---:|---:|---:|
+| YIN v1 | 3 | **2** | 23 → **22** |
+| Pitch Engine v2 | 3 | **1** | 22 → **20** |
+| VPM-benzeri | 0 | 0 | 33 → 33 |
+| Harmonik-Faz (HAPT) | 2 | **1** | 34 → **33** |
+
+Şükrü Tunar kaydında toplam `13` koşu silindi: `5`i doğrulanmış kaçak, `8`i
+gerçek-değeri olmayan aralıklarda, kullanıcının "sorun yok" dediği hücrelerle
+**sıfır çelişki**. Koruma ihlali VPM'de `7 -> 6` düştü.
+
+Temkinli davranıyor: ayrı bir kayıtta (`gercek-klarnet-calm`) YIN, V2 ve VPM
+tek kare silmedi, HAPT `3` kare sildi.
+
+**Açık kalan:** silinen `8` koşu için gerçek-değer yok. Gözden geçirilmeleri
+gerekir; `162,14 sn` civarındaki iki koşu (YIN ve V2 aynı anda, `~324 Hz`)
+gerçek ama çok kısa bir nota olabilir.
+
+### Üç turun toplamı
+
+| Motor | Başlangıç | Şimdi | Oktav | Kaçak |
+|---|---:|---:|---:|---:|
+| YIN v1 | 35 | **22** | 14 → **2** | 3 → **2** |
+| Pitch Engine v2 | 24 | **20** | 3 → **1** | 3 → **1** |
+| VPM-benzeri | 46 | **33** | 18 → **5** | 0 → 0 |
+| Harmonik-Faz (HAPT) | 45 | **33** | 12 → **1** | 2 → **1** |
+
+Doğrulama: `zsh scripts/test_core.sh` geçti, Python paketi `115 passed`,
+`scripts/quick_pitch_check.py` regresyon yok.
+
+
+## Çevrimdışı harmonik yol iyileştirmesi — 26 Ağustos 2026
+
+`PitchEngineProfile::offline_track` için ayrılmış yer dolduruldu.
+`PitchEngine::analyse()` artık nedensel taban üzerinde **nedensel olmayan** bir
+Viterbi yol araması koşuyor; `analyse_causal()` ve her `ProductionPitchSession`
+dokunulmadı, yani canlı gecikme sözleşmesi aynı.
+
+### Neden
+
+Aynı 85 aralıkta pYIN'in **hiç** oktav hatası yok (8 kusurunun 7'si boşluk,
+1'i kaçak); bizim motorlarımızda 47 vardı. Fark kestiricide değil karar
+vericide: pYIN tüm kayıt üzerinde bir yol çözer, bizim motorlar nedensel karar
+verir. Ölçüm bunu doğruluyor — işaretli 47 oktav hatasının **33'ü 1-3 kare**
+sürüyor (medyan 2, en uzun 9 kare / 96 ms), hepsi doğru takibin ortasında izole
+sıçrama. Viterbi'si olan tek motorumuz V2 ve zaten en az hata onda.
+
+### Yöntem
+
+Yayınlanmış her kare için aday ailesi `{f, f/3, f/2, 2f, 3f}` kurulur, adaylar
+karenin **kendi analiz penceresinde** ölçülür. Nedensel karar her zaman en
+yüksek yayılım skorunu alır (alternatifler `0,72` ile indirimli), bu yüzden bir
+kare yalnız **yol sürekliliği** gerektirdiğinde yer değiştirir. Geçiş cezası
+sent uzaklığının karesidir; `30 ms`ten uzun boşluklar ayrı bölüm sayılır.
+
+Spektral kanıt **kapı değil fiyattır**. Kapı olarak denendi ve yanlıştı: onarıma
+muhtaç karelerde doğru temel ses çoğu zaman ailenin en güçlü üyesinin `%2`sinin
+altında ölçülüyor — zaten bu yüzden nedensel motor yanılıyor ve tam da orada
+bilgi yalnız yolda. Kanıtsız aday elenmez, `0,30` tabanlı bir çarpanla pahalanır.
+
+### Sonuç (kullanıcı hükümleri, 85 aralık)
+
+| Motor | Etiketli kusur | Tur başı | Tur sonu | Oktav başlangıç | Oktav şimdi |
+|---|---:|---:|---:|---:|---:|
+| YIN v1 | 38 | 35 | **23** | 14 | **2** |
+| Pitch Engine v2 | 24 | 24 | **22** | 3 | **1** |
+| VPM-benzeri | 46 | 46 | **33** | 18 | **5** |
+| Harmonik-Faz (HAPT) | 50 | 45 | **34** | 12 | **1** |
+
+Üç turun toplamında dört motorda **oktav hatası `47 -> 9`**. Koruma hücrelerinde
+yeni kusur: YIN `1 -> 0`, V2 `0 -> 0`, VPM `9 -> 7`, HAPT `3 -> 2`.
+
+Temkinli davranıyor: farklı bir kayıtta (`gercek-klarnet-calm`) dört motorun
+hiçbirinde tek kare değişmedi — körü körüne düzleştirme yapmıyor.
+
+### Testler
+
+`core/tests/analysis_engine_tests.cpp` iki değişmezi kilitler: (1) `realtime`
+profili `analyse_causal` ile birebir aynı döner, (2) nedensel geçişin taahhüt
+ettiği gerçek bir register sıçraması yol aramasından sağ çıkar. Onarımın kendisi
+sentetikle değil hüküm kümesiyle ölçülür: nedensel hatayı güvenilir biçimde
+tetikleyen sentetik kurulamadı — kestiriciler temiz eksik-temel durumunu doğru
+çözüyor, sesi gerçekten zıplatınca da oktav zaten **doğru** cevap oluyor.
+
+`offline_track_v1` JSON'unda değişen kareler artık
+`change_reason: "offline_harmonic_path"` ile işaretlenir.
+
+Doğrulama: `zsh scripts/test_core.sh` geçti, Python paketi `115 passed`,
+`scripts/quick_pitch_check.py` regresyon yok.
+
+
+## YIN v1 oktav terfisine tek-harmonik doluluk koşulu — 26 Ağustos 2026
+
+`yin_candidates` içindeki oktav kurtarma geçişi, bir adayın `2x` frekansında
+`8x` spektral baskınlık görürse o frekansı `0,99999` güvenle aday listesine
+ekler ve `causal_yin_choice` onu kısa devre ile doğrudan seçer. Geçiş, CMND'nin
+gerçek bir tiz temeli kendi `f/2` alt-periyodu olarak okuduğu durumu kurtarmak
+için var.
+
+Klarnette ham `2x` baskınlık tek başına yetmiyor: çalgı kapalı silindir olduğu
+için çift kısmi sesler fizik gereği zayıf, dolayısıyla ince bir karede gerçek
+bir temel de `2x`te baskınlanmış görünebiliyor. Ölçüm: kullanıcı hükümlerinde
+YIN v1'in işaretli 13 oktav hatasının **12'si** bu geçişten geliyordu ve hepsi
+`800 Hz` üzerindeydi.
+
+Eklenen koşul: üst çizgi, terfi edilmeden önce **tek-harmonik doluluğu** da
+kazanmalı — `E(3f)+E(5f)` karşılaştırması. Gerçek bir temel `3f` ve `5f`'ine
+sahiptir; hayalet bir alt-harmonikte o konumlar gerçek notanın kısmileri arasına,
+boşluğa düşer.
+
+| Motor | Etiketli kusur | Tur öncesi | Tur sonrası | Oktav öncesi | Oktav sonrası |
+|---|---:|---:|---:|---:|---:|
+| YIN v1 | 38 | 35 | **27** | 14 | **6** |
+| Pitch Engine v2 | 24 | 24 | 24 | 3 | 3 |
+| VPM-benzeri | 46 | 46 | **37** | 18 | **9** |
+| Harmonik-Faz (HAPT) | 50 | 45 | **44** | 12 | 11 |
+
+Dört motorda toplam oktav hatası `47 -> 29`. Hiçbir motor kötüleşmedi; "sorun
+yok" denen hücrelerde YIN `1 -> 0`, VPM `9 -> 7`, HAPT `3 -> 2`.
+
+Elenen alternatifler: kurtarma geçişini tamamen kapatmak `-12` verirdi fakat
+tasarlanmış güvenliği kaldırır; `causal_yin_choice` kısa devresini kaldırmak tek
+başına yalnız `-2`, tek-harmonik testiyle birlikte ek kazanç `0`.
+
+Regresyon testi `core/tests/analysis_engine_tests.cpp` içinde: güçlü `3f`/`5f`,
+zayıf `2f` taşıyan sentetik klarnet tonu `480 Hz`te bulunmalı ve `960 Hz`te
+**hiç** kare yayınlanmamalı. Test, düzeltme geri alındığında kırılıyor.
+
+Doğrulama: `zsh scripts/test_core.sh` geçti, Python paketi `115 passed`,
+`scripts/quick_pitch_check.py` regresyon yok.
+
+Kalan `29` oktav hatasının yapısı: `+3x` (on ikili, klarnetin gerçek aşırı
+üfleme aralığı) ve `120–160 Hz` bandındaki aşağı yönlü hatalar. İkincisi için
+tabanı `145 Hz`e çekmek `7` hata daha alırdı; sol klarnetin en pes sesini
+(`~123,5 Hz`) kestiği için yapılmadı.
+
+
+## Üretim oturumu perde tabanı 80 -> 120 Hz — 26 Ağustos 2026
+
+`AnalysisEngineConfig::minimum_frequency_hz` 80 Hz'den 120 Hz'e çıkarıldı. Bu bir
+görüntüleme tercihi değil: değer öz-ilinti gecikme aramasını
+(`rate / minimum_frequency_hz`) sınırlar ve fazla geniş bir gecikme aralığı,
+ACF'nin gerçek periyodun katına kilitlenip alt-harmonik yayınlamasına yol açar.
+
+Kanıt: Şükrü Tunar kaydı için kullanıcının dinleyerek verdiği hükümler
+(`data/annotations/sukru-tunar-ussak-taksim.verdicts.v1.json`, 85 aralık, 8,7 sn).
+İşaretlenen aşağı yönlü oktav hatalarının tamamı `83–160 Hz` arasına iniyordu;
+motorların uzlaştığı hiçbir kare `146 Hz`in altında değil. Taban seçimi Türk
+sol klarnetinin en pes duyulan sesini (`~123,5 Hz`) korumak üzere 120 Hz'dir;
+daha dar bir taban burada biraz daha kazandırırdı fakat o çalgıda gerçek pes
+notaları keserdi.
+
+| Motor | Etiketli kusur | Önce duruyor | Sonra duruyor | Oktav önce | Oktav sonra |
+|---|---:|---:|---:|---:|---:|
+| YIN v1 | 38 | 35 | 35 | 14 | 14 |
+| Pitch Engine v2 | 24 | 24 | 24 | 3 | 3 |
+| VPM-benzeri | 46 | 46 | **37** | 18 | **9** |
+| Harmonik-Faz (HAPT) | 50 | 45 | **44** | 12 | 11 |
+
+"Sorun yok" denen hücrelerde yeni kusur da azaldı: YIN `1 -> 0`, VPM `9 -> 7`,
+HAPT `3 -> 2`, V2 `0 -> 0`. Hiçbir motor kötüleşmedi.
+
+Elenen alternatifler (aynı ölçüm kümesinde): VPM `minimum_absolute_spectral_amplitude`
+`0,005 -> 0,010/0,020/0,040` yalnız `-2` kazandırdı ve platoya oturdu;
+`maximum_period_multiple` `6 -> 3` ve `-> 2` **hiçbir etki yapmadı**. İkincisi,
+aşağı yönlü hataların spektral alt-harmonik düzeltmesinden değil doğrudan ACF
+aday üretiminden geldiğini kanıtlar.
+
+Bağımsız estimator'lar (`VPMLikeConfig`, `HAPTConfig`) kendi 80 Hz
+varsayılanlarını korur; yalnız üretim oturumu daralır, bu yüzden çekirdek
+aralık testleri (ör. VPM 110 Hz tonu) etkilenmez.
+
+Yeniden üretim:
+
+```sh
+.venv/bin/python -B scripts/quick_pitch_check.py --baseline outputs/quick-pitch-baseline.json
+```
+
+Doğrulama: `zsh scripts/test_core.sh` geçti, Python paketi `115 passed`.
+Kalan açık iş: YIN/V2'nin yukarı yönlü `+2x`/`+3x` hataları (17 hücre) ve
+kaçak noktalar bu turda ele alınmadı.
+
 # Pitch Test Tabanı
 
 Son güncelleme: 13 Ağustos 2026

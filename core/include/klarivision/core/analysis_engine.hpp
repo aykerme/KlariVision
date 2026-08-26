@@ -13,7 +13,23 @@ enum class PitchEngineId { yin_v1, pitch_engine_v2, vpm_like, hapt_v1 };
 enum class PitchEngineProfile { realtime, offline_track };
 
 struct PitchEngineConfig {
-    double minimum_frequency_hz{80.0};
+    // Lowest pitch the production session may hypothesise.  This is not a
+    // display preference: it caps the autocorrelation lag search
+    // (`rate / minimum_frequency_hz`), and an over-wide lag range is what lets
+    // ACF lock onto a multiple of the true period and report a subharmonic.
+    //
+    // 80 Hz was far below anything the instrument can produce.  Measured on the
+    // Şükrü Tunar verdict set, every downward octave error the listener marked
+    // landed between 83 and 160 Hz, and no frame the engines agreed on fell
+    // below 146 Hz.  Raising the floor to 120 Hz halved VPM-like's octave
+    // errors (18 -> 9) and reduced HAPT's, with no engine getting worse.
+    //
+    // 120 Hz is chosen to clear the Turkish G clarinet ("sol klarnet"), whose
+    // lowest sounding note is about 123.5 Hz -- a tighter floor would gain a
+    // little more accuracy here but would clip real low notes on that
+    // instrument.  The standalone estimators keep their own 80 Hz defaults, so
+    // their range tests are unaffected; only the production session narrows.
+    double minimum_frequency_hz{120.0};
     double maximum_frequency_hz{1500.0};
     double minimum_rms{0.015};
     std::size_t window_size{1536};

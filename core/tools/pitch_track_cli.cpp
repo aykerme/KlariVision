@@ -203,8 +203,16 @@ int main(int argc, char** argv) {
             const auto unchanged = std::any_of(causal.begin(), causal.end(), [&](const auto& item) {
                 return same_frame(item, frames[index]);
             });
+            // A frame the causal pass also produced, but at a different pitch,
+            // was moved by the offline harmonic path refinement.  One that has
+            // no causal counterpart at all came out of the fixed-lag tail.
+            const auto same_time = std::any_of(causal.begin(), causal.end(), [&](const auto& item) {
+                return std::abs(item.time_seconds - frames[index].time_seconds) < 1e-6;
+            });
+            const char* reason = unchanged ? "unchanged"
+                : (same_time ? "offline_harmonic_path" : "fixed_lag_tail_flush");
             output << "    ";
-            write_frame(output, frames[index], unchanged ? "unchanged" : "fixed_lag_tail_flush");
+            write_frame(output, frames[index], reason);
             output << (index + 1 == frames.size() ? "" : ",") << "\n";
         }
         output << "  ],\n  \"causal_baseline\": [\n";

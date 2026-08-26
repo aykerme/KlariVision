@@ -273,13 +273,14 @@ def analyse_upload(source: Path, makam: str, karar: str, engine: str = "vamp") -
             "Önceki pitch analizi kullanıldı." if cache_hit else "Yeni pitch analizi oluşturuldu."
         ),
         validation=validation_for_study(source.name, wav, pitch_json, engine, prepare_display_frames),
+        engine=engine,
     )
     viewer_url = "/" + quote(viewer.relative_to(PROJECT_ROOT).as_posix())
     _store_recent_analysis(source, viewer_url, cache_hit=cache_hit)
     return viewer_url
 
 
-def refresh_existing_viewer(viewer: Path) -> Path:
+def refresh_existing_viewer(viewer: Path, engine: str | None = None) -> Path:
     """Refresh a saved HTML viewer without running pitch analysis again."""
     viewer = viewer.expanduser().resolve()
     if viewer.parent != OUTPUTS_DIR.resolve() or viewer.suffix.lower() != ".html":
@@ -287,27 +288,76 @@ def refresh_existing_viewer(viewer: Path) -> Path:
     if not viewer.is_file():
         raise FileNotFoundError("Kaydedilmiş çalışma bulunamadı.")
 
-    pitch_candidates = sorted(
-        viewer.parent.glob(f"{viewer.stem}.*.json"),
-        key=lambda path: path.stat().st_mtime,
-        reverse=True,
-    )
-    if not pitch_candidates:
-        raise FileNotFoundError("Bu çalışma için pitch verisi bulunamadı.")
     wav = AUDIO_DIR / f"{viewer.stem}.wav"
     if not wav.is_file():
         raise FileNotFoundError("Bu çalışma için ses önbelleği bulunamadı.")
 
     previous_html = viewer.read_text(encoding="utf-8")
+
+    # Determine which engine's pitch file to use
+    selected_engine = engine
+    pitch_json = None
+
+    if selected_engine:
+        # Engine explicitly provided: construct exact filename and verify it exists
+        if selected_engine in CPP_ENGINES:
+            pitch_json = OUTPUTS_DIR / f"{viewer.stem}.{selected_engine}.offline_track_v1.{OFFLINE_TRACK_REVISION}.json"
+        else:
+            pitch_json = OUTPUTS_DIR / f"{viewer.stem}.{selected_engine}.json"
+
+        if not pitch_json.is_file():
+            raise FileNotFoundError(
+                f"Seçilen {selected_engine} motoru için pitch verisi bulunamadı: {pitch_json.name}"
+            )
+    else:
+        # Engine not provided: try to read from HTML meta tag
+        meta_match = re.search(r'<meta\s+name="klarivision-engine"\s+content="([^"]+)"', previous_html, re.IGNORECASE)
+        if meta_match:
+            selected_engine = meta_match.group(1)
+            # Construct filename based on the engine from meta tag
+            if selected_engine in CPP_ENGINES:
+                pitch_json = OUTPUTS_DIR / f"{viewer.stem}.{selected_engine}.offline_track_v1.{OFFLINE_TRACK_REVISION}.json"
+            else:
+                pitch_json = OUTPUTS_DIR / f"{viewer.stem}.{selected_engine}.json"
+
+            if not pitch_json.is_file():
+                # Meta tag references an engine, but file is missing. Fall back to mtime search.
+                pitch_json = None
+
+        if pitch_json is None:
+            # No meta tag or file not found: fall back to mtime behavior
+            pitch_candidates = sorted(
+                viewer.parent.glob(f"{viewer.stem}.*.json"),
+                key=lambda path: path.stat().st_mtime,
+                reverse=True,
+            )
+            if not pitch_candidates:
+                raise FileNotFoundError("Bu çalışma için pitch verisi bulunamadı.")
+            pitch_json = pitch_candidates[0]
+
+            # Extract engine identifier from the filename
+            # Format: {stem}.{engine}.json or {stem}.{engine}.offline_track_v1.{revision}.json
+            filename = pitch_json.name
+            parts = filename.replace(f"{viewer.stem}.", "").replace(".json", "").split(".")
+            if parts:
+                selected_engine = parts[0]
+
     video_match = re.search(r'<video[^>]*\bsrc="([^"]+)"', previous_html, re.IGNORECASE)
     video_relative_path = html.unescape(video_match.group(1)) if video_match else None
+
+    # Build status message with engine information
+    status_msg = "Önceki pitch analizi kullanıldı. Arayüz güncellendi."
+    if engine and selected_engine and selected_engine != engine:
+        status_msg = f"Varsayılan {selected_engine} motoru kullanıldı. Arayüz güncellendi."
+
     build_frequency_viewer(
-        pitch_candidates[0],
+        pitch_json,
         os.path.relpath(wav, start=viewer.parent).replace(os.sep, "/"),
         viewer,
         video_relative_path=video_relative_path,
-        analysis_status="Önceki pitch analizi kullanıldı. Arayüz güncellendi.",
-        validation=validation_for_study(viewer.stem, wav, pitch_candidates[0], "cached", prepare_display_frames),
+        analysis_status=status_msg,
+        validation=validation_for_study(viewer.stem, wav, pitch_json, selected_engine or "cached", prepare_display_frames),
+        engine=selected_engine,
     )
     return viewer
 
@@ -335,6 +385,7 @@ def reanalyse_existing_viewer(viewer: Path, engine: str) -> Path:
         video_relative_path=video_relative_path,
         analysis_status=f"{engine} C++ çalışma eğrisi kullanılıyor.",
         validation=validation_for_study(viewer.stem, wav, pitch_json, engine, prepare_display_frames),
+        engine=engine,
     )
     return viewer
 

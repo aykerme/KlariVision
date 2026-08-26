@@ -29,7 +29,6 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		3B26BD003018B5F90047710D /* frequency_viewer.py */ = {isa = PBXFileReference; lastKnownFileType = text.script.python; path = frequency_viewer.py; sourceTree = "<group>"; };
 		A10000000000000000000010 /* Sources/KlariVisionApp/KlariVisionApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/KlariVisionApp/KlariVisionApp.swift; sourceTree = "<group>"; };
 		A10000000000000000000060 /* AppSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/KlariVisionApp/AppSettings.swift; sourceTree = "<group>"; };
 		A10000000000000000000062 /* StudyModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/KlariVisionApp/StudyModels.swift; sourceTree = "<group>"; };
@@ -88,7 +87,6 @@
 				A10000000000000000000082 /* harmonic_probe.cpp */,
 				A10000000000000000000030 /* canli_pitch_referans_v1.wav */,
 				A10000000000000000000015 /* Products */,
-				3B26BD003018B5F90047710D /* frequency_viewer.py */,
 			);
 			sourceTree = "<group>";
 		};

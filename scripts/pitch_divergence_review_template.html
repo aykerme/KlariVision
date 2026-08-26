@@ -1,0 +1,526 @@
+<!doctype html><html lang="tr"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>KlariVision — Motor eğrisi incelemesi</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+:root{
+  --bg:#F5F7F6;--panel:#FFFFFF;--panel-2:#EEF2F0;--line:#D6DEDB;--line-soft:#E5EBE9;
+  --ink:#141C1A;--ink-2:#3E4A47;--ink-3:#6C7B77;--focus:#0B6F5C;
+  --ok:#0B6F5C;--warn:#CA8A04;--bad:#DC2626;
+  --e-yin:#2563EB;--e-v2:#0D9488;--e-vpm:#D97706;--e-hapt:#DB2777;--e-pyin:#8A9A95;
+  --grid:#E3E9E7;--band:rgba(11,111,92,.13);--sel:rgba(11,111,92,.20);
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0E1413;--panel:#141B19;--panel-2:#1A2321;--line:#2A3633;--line-soft:#222D2B;
+  --ink:#E8EFEC;--ink-2:#B3C0BC;--ink-3:#7E8D89;--focus:#3DD6B4;
+  --ok:#3DD6B4;--warn:#EAB308;--bad:#F87171;
+  --e-yin:#60A5FA;--e-v2:#2DD4BF;--e-vpm:#FBBF24;--e-hapt:#F472B6;--e-pyin:#6B7A76;
+  --grid:#212C29;--band:rgba(61,214,180,.14);--sel:rgba(61,214,180,.22);}}
+:root[data-theme="dark"]{
+  --bg:#0E1413;--panel:#141B19;--panel-2:#1A2321;--line:#2A3633;--line-soft:#222D2B;
+  --ink:#E8EFEC;--ink-2:#B3C0BC;--ink-3:#7E8D89;--focus:#3DD6B4;
+  --ok:#3DD6B4;--warn:#EAB308;--bad:#F87171;
+  --e-yin:#60A5FA;--e-v2:#2DD4BF;--e-vpm:#FBBF24;--e-hapt:#F472B6;--e-pyin:#6B7A76;
+  --grid:#212C29;--band:rgba(61,214,180,.14);--sel:rgba(61,214,180,.22);}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Newsreader",Georgia,serif;
+  font-size:16px;line-height:1.55;-webkit-font-smoothing:antialiased}
+h1,h2,h3,h4,.ui{font-family:"Archivo","Helvetica Neue",Arial,sans-serif}
+.mono,td.num,th.num{font-family:"IBM Plex Mono",ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums}
+.page{max-width:1560px;margin:0 auto;padding:26px 30px 90px}
+@media (max-width:760px){.page{padding:20px 14px 70px}}
+header.top{border-bottom:1px solid var(--line);padding-bottom:18px;margin-bottom:20px}
+.eyebrow{font-family:"Archivo",sans-serif;font-size:11px;letter-spacing:.15em;text-transform:uppercase;
+  color:var(--ink-3);font-weight:600;margin:0 0 8px}
+h1{font-size:clamp(23px,3vw,32px);line-height:1.12;margin:0 0 9px;font-weight:700;letter-spacing:-.022em;text-wrap:balance}
+.sub{margin:0;color:var(--ink-2);font-size:15.5px;max-width:76ch}
+.sub em{font-style:italic;color:var(--ink)}
+h2{font-size:12.5px;letter-spacing:.11em;text-transform:uppercase;color:var(--ink-3);font-weight:600;margin:0 0 4px}
+.lede{margin:0 0 12px;color:var(--ink-2);font-size:14.5px;max-width:80ch}
+section{margin-top:26px}
+.card{background:var(--panel);border:1px solid var(--line-soft);border-radius:3px}
+.bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 13px;border-bottom:1px solid var(--line-soft)}
+.bar.b2{border-bottom:0;border-top:1px solid var(--line-soft)}
+.lbl{font-family:"Archivo",sans-serif;font-size:11.5px;color:var(--ink-3);font-weight:600;
+  letter-spacing:.06em;text-transform:uppercase}
+button,select,input[type=text],input[type=number]{font-family:"Archivo",sans-serif;font-size:12.5px;font-weight:600;
+  padding:5px 10px;border-radius:3px;border:1px solid var(--line);background:var(--panel-2);color:var(--ink);cursor:pointer}
+input[type=text]{font-weight:400;cursor:text;font-family:"Newsreader",serif;font-size:14px}
+button:hover,select:hover{border-color:var(--focus);color:var(--focus)}
+button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+button.on{background:var(--focus);border-color:var(--focus);color:var(--panel)}
+button.ghost{background:transparent}
+audio{height:32px;flex:1;min-width:220px;max-width:460px}
+.toggles{display:flex;gap:4px;flex-wrap:wrap;margin-left:auto}
+.tog{display:inline-flex;align-items:center;gap:6px;font-family:"Archivo",sans-serif;font-size:12px;
+  font-weight:600;padding:4px 9px;border-radius:3px;border:1px solid var(--line);cursor:pointer;
+  background:var(--panel-2);color:var(--ink-2)}
+.tog .sw{width:14px;height:3px;border-radius:2px}
+.tog[aria-pressed="false"]{opacity:.4}
+#chart{display:block;width:100%;height:380px;cursor:crosshair;touch-action:none}
+#overview{display:block;width:100%;height:64px;cursor:pointer}
+.hintbar{padding:8px 13px;font-size:13px;color:var(--ink-3);border-top:1px solid var(--line-soft)}
+.hintbar b{color:var(--ink-2);font-weight:500}
+kbd{font-family:"IBM Plex Mono",monospace;font-size:11.5px;background:var(--panel-2);
+  border:1px solid var(--line);border-radius:3px;padding:0 4px}
+.tablewrap{overflow-x:auto;border:1px solid var(--line-soft);border-radius:3px;background:var(--panel)}
+table{border-collapse:collapse;width:100%;font-size:13.5px;min-width:1080px}
+thead th{text-align:left;font-family:"Archivo",sans-serif;font-size:10.5px;letter-spacing:.09em;
+  text-transform:uppercase;color:var(--ink-3);font-weight:600;padding:9px 10px;
+  border-bottom:1px solid var(--line);white-space:nowrap;background:var(--panel)}
+thead th .sw{display:inline-block;width:14px;height:3px;border-radius:2px;margin-right:6px;vertical-align:middle}
+tbody td{padding:7px 10px;border-bottom:1px solid var(--line-soft);vertical-align:middle}
+tbody tr.sel{background:var(--band)}
+tbody tr:hover{background:var(--panel-2)}
+td.time{white-space:nowrap;cursor:pointer;font-family:"IBM Plex Mono",monospace;font-size:12.5px;
+  font-variant-numeric:tabular-nums}
+td.time .d{color:var(--ink-3);font-size:11.5px}
+select.v{width:100%;min-width:130px;font-size:12px;padding:4px 6px;font-weight:500}
+select.v.yok{color:var(--ok);border-color:color-mix(in srgb,var(--ok) 45%,var(--line))}
+select.v.kotu{color:var(--bad);border-color:color-mix(in srgb,var(--bad) 45%,var(--line))}
+select.v.orta{color:var(--warn);border-color:color-mix(in srgb,var(--warn) 45%,var(--line))}
+select.v.bos{color:var(--ink-3)}
+input.note{width:100%;min-width:150px;padding:4px 7px;background:transparent;border:1px solid transparent}
+input.note:hover{border-color:var(--line)}
+input.note:focus{border-color:var(--focus);background:var(--panel-2)}
+.del{padding:3px 8px;font-size:12px;color:var(--ink-3);border-color:transparent;background:transparent}
+.del:hover{color:var(--bad);border-color:var(--bad)}
+.empty{padding:26px 16px;text-align:center;color:var(--ink-3);font-size:14.5px}
+.exportbar{display:flex;gap:8px;align-items:center;margin-top:12px;flex-wrap:wrap}
+.exportbar .note2{font-size:13px;color:var(--ink-3)}
+.pill{font-family:"IBM Plex Mono",monospace;font-size:11px;padding:1px 7px;border-radius:9px;
+  border:1px solid var(--line);color:var(--ink-3)}
+footer{margin-top:36px;padding-top:16px;border-top:1px solid var(--line);color:var(--ink-3);font-size:13.5px;max-width:84ch}
+footer code{font-family:"IBM Plex Mono",monospace;font-size:12.5px;color:var(--ink-2)}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style></head><body>
+<div class="page">
+<header class="top">
+  <p class="eyebrow">KlariVision · motor eğrisi incelemesi</p>
+  <h1>Aralığı sen seç, hükmü sen ver</h1>
+  <p class="sub" id="intro"></p>
+</header>
+
+<section>
+  <h2>Perde eğrileri</h2>
+  <p class="lede">Dört motor ve pYIN üst üste. Grafikte <b>sürükleyerek</b> bir zaman aralığı seç — o aralık
+  aşağıda bir inceleme satırı olarak açılır ve ses o aralıkta döngüye girer.</p>
+  <div class="card">
+    <div class="bar">
+      <span class="lbl">Ses</span>
+      <span id="playerslot"></span>
+      <button id="loop" type="button" class="on">Döngü: açık</button>
+      <span class="toggles" id="toggles"></span>
+    </div>
+    <canvas id="chart"></canvas>
+    <div class="bar b2">
+      <span class="lbl">Pencere</span>
+      <span class="pill mono" id="winlabel">—</span>
+      <button id="zoomOut" type="button" class="ghost">− Uzaklaş</button>
+      <button id="zoomIn" type="button" class="ghost">+ Yaklaş</button>
+      <button id="fitAll" type="button" class="ghost">Tüm dosya</button>
+      <button id="fitSel" type="button" class="ghost">Seçime yaklaş</button>
+      <span class="toggles"><button id="seedAuto" type="button" class="ghost">Otomatik bulunanları satır yap</button></span>
+    </div>
+    <canvas id="overview"></canvas>
+    <p class="hintbar"><b>Sürükle</b> aralık seç · <b>Tekerlek</b> yakınlaş/uzaklaş · <b>Shift+sürükle</b> kaydır ·
+    <kbd>Boşluk</kbd> oynat/durdur · <kbd>←</kbd><kbd>→</kbd> pencereyi kaydır.
+    Alt şeritteki renkli işaretler otomatik bulunan ayrışmalardır — nereye bakacağını gösterir, hüküm vermez.</p>
+  </div>
+</section>
+
+<section>
+  <h2>İnceleme satırları <span class="mono" id="rowCount" style="color:var(--ink-3);font-size:12px"></span></h2>
+  <p class="lede">Her satır senin seçtiğin bir zaman aralığı. Her motor için o aralıkta gördüğün sorunu seç;
+  sorun yoksa <b>Sorun yok</b> de. Nota istediğini yazabilirsin.</p>
+  <div class="tablewrap"><table>
+    <thead><tr>
+      <th>Zaman</th>
+      <th><span class="sw" style="background:var(--e-yin)"></span>YIN v1</th>
+      <th><span class="sw" style="background:var(--e-v2)"></span>Pitch Engine v2</th>
+      <th><span class="sw" style="background:var(--e-vpm)"></span>VPM-benzeri</th>
+      <th><span class="sw" style="background:var(--e-hapt)"></span>Harmonik-Faz</th>
+      <th>Not</th><th></th>
+    </tr></thead>
+    <tbody id="tbody"></tbody>
+  </table></div>
+  <div class="exportbar">
+    <button id="copy" type="button">Hükümleri JSON olarak kopyala</button>
+    <button id="clear" type="button" class="ghost">Satırları sıfırla</button>
+    <span class="note2" id="copynote"></span>
+  </div>
+</section>
+
+<footer><p><b>Neden hüküm sende?</b> Bu kayıtta gerçek-değer yok. pYIN kararlı bir referanstır ama kesin doğru
+değildir, dört motorun medyanı da değildir. Alt şeritteki otomatik işaretler yalnız <em>nereye bakılacağını</em>
+söyler. Senin satırların <code>data/annotations/</code> altına gerçek-değer olarak yazılacak ve motor eşikleri
+bundan sonra buna göre ölçülecek. Bir uyarı: 32&nbsp;ms'lik analiz penceresi hızlı perde geçişinde zaten
+onlarca sentlik bulanıklık üretir — geçiş anındaki küçük farkları motor hatası saymadan önce iki kez dinle.</p></footer>
+</div>
+
+<script id="data" type="application/json">__DATA__</script>
+<script>
+const D=JSON.parse(document.getElementById('data').textContent);
+const ENG=D.engines, DUR=D.duration;
+const ELAB={yin_v1:'YIN v1',pitch_engine_v2:'Pitch Engine v2',vpm_like:'VPM-benzeri',hapt_v1:'Harmonik-Faz (HAPT)'};
+const EVAR={yin_v1:'--e-yin',pitch_engine_v2:'--e-v2',vpm_like:'--e-vpm',hapt_v1:'--e-hapt'};
+const KCOL={harmonik:'--bad',buyuk:'--bad',sapma:'--warn',gecis:'--warn',
+            kacak:'--e-yin',bosluk:'--e-hapt',ortak:'--ink-3'};
+const VERDICTS=[
+ ['','—','bos'],
+ ['yok','Sorun yok','yok'],
+ ['oktav','Oktav / on ikili sıçraması','kotu'],
+ ['kayma','Perde kayması','kotu'],
+ ['kacak','Olmayan ses (kaçak nokta)','kotu'],
+ ['bosluk','Eksik ses (boşluk)','kotu'],
+ ['titrek','Kararsız / titrek eğri','orta'],
+ ['gecikme','Geç kalıyor','orta'],
+ ['belirsiz','Emin değilim','orta'],
+];
+const VCLASS=Object.fromEntries(VERDICTS.map(v=>[v[0],v[2]]));
+const cssv=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+
+const KEY='klarivision-review-'+(D.fingerprint||'x').slice(0,16);
+let ROWS=[];try{ROWS=JSON.parse(localStorage.getItem(KEY)||'[]')}catch(e){ROWS=[]}
+const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(ROWS))}catch(e){}};
+let sel=-1;
+let view={a:0,b:DUR};
+let show=Object.fromEntries([...ENG.map(e=>[e,true]),['pyin',true]]);
+let loopOn=true;
+
+/* ---------- audio ---------- */
+let audio=null;
+(function(){
+  const slot=document.getElementById('playerslot');
+  if(!D.audio){slot.innerHTML='<span class="lbl" style="text-transform:none;letter-spacing:0">'+
+    'Bu kopyada ses yok — projedeki <code>outputs/…divergence-review.html</code> kopyasını kullan.</span>';return;}
+  slot.innerHTML='<audio id="au" controls preload="metadata" src="'+D.audio+'"></audio>';
+  audio=document.getElementById('au');
+  audio.addEventListener('timeupdate',()=>{
+    const r=ROWS[sel];
+    if(loopOn&&r&&audio.currentTime>r.end+0.3){audio.currentTime=Math.max(0,r.start-0.3);}
+    drawChart();drawOverview();
+  });
+  audio.addEventListener('error',()=>{slot.innerHTML=
+    '<span class="lbl" style="text-transform:none;letter-spacing:0">Ses yüklenemedi — sayfayı proje kökünden servis et.</span>';});
+})();
+function playRange(r){if(!audio||!r)return;audio.currentTime=Math.max(0,r.start-0.3);audio.play().catch(()=>{});}
+
+/* ---------- curve helpers ---------- */
+const CUR={};ENG.forEach(e=>CUR[e]=D.curves[e]||[]);CUR.pyin=D.curves.pyin||[];
+const TS={};Object.keys(CUR).forEach(k=>TS[k]=CUR[k].map(p=>p[0]));
+function lower(arr,x){let lo=0,hi=arr.length;while(lo<hi){const m=(lo+hi)>>1;arr[m]<x?lo=m+1:hi=m}return lo}
+// Pencereyi çizilebilir sayıda noktaya indirir.  Seyreltme yapılırken gerçek
+// sessizlik boşlukları kaybolmamalı: atlanan ham kareler arasında 50 ms'den
+// uzun bir boşluk varsa, tutulan nokta "önünde kopukluk var" diye işaretlenir.
+// (Bu işaret olmadan seyreltilmiş her adım boşluk sanılıyor ve eğri hiç
+// çizilmiyordu.)
+const GAP_SECONDS=0.05;
+function windowPoints(key,a,b,maxPts){
+  const t=TS[key],c=CUR[key];
+  const i=Math.max(0,lower(t,a)-1), j=Math.min(c.length,lower(t,b)+1);
+  const n=j-i;if(n<=0)return [];
+  const step=maxPts&&n>maxPts?Math.ceil(n/maxPts):1;
+  const out=[];let last=-1;
+  const push=k=>{
+    let broken=false;
+    if(last>=0){for(let m=last+1;m<=k;m++){if(c[m][0]-c[m-1][0]>GAP_SECONDS){broken=true;break}}}
+    out.push([c[k][0],c[k][1],broken]);last=k;
+  };
+  for(let k=i;k<j;k+=step)push(k);
+  if(step>1&&last!==j-1)push(j-1);
+  return out;
+}
+function rangeOf(a,b){
+  let lo=1e9,hi=-1e9;
+  Object.keys(CUR).forEach(k=>{if(!show[k])return;
+    for(const p of windowPoints(k,a,b)){if(p[1]<lo)lo=p[1];if(p[1]>hi)hi=p[1]}});
+  if(lo>hi){lo=-1200;hi=1200}
+  const span=Math.max(200,(hi-lo)*1.14),mid=(hi+lo)/2;
+  return [mid-span/2,mid+span/2];
+}
+
+/* ---------- chart ---------- */
+const chart=document.getElementById('chart');
+let drag=null, hoverSel=null;
+const PAD={l:56,r:14,t:18,b:26};
+function chartX(t,W){return PAD.l+(t-view.a)/(view.b-view.a)*(W-PAD.l-PAD.r)}
+function chartT(px,W){return view.a+(px-PAD.l)/(W-PAD.l-PAD.r)*(view.b-view.a)}
+function drawChart(){
+  const dpr=devicePixelRatio||1,W=chart.clientWidth,H=chart.clientHeight;
+  chart.width=W*dpr;chart.height=H*dpr;const g=chart.getContext('2d');g.setTransform(dpr,0,0,dpr,0,0);
+  g.clearRect(0,0,W,H);
+  const [lo,hi]=rangeOf(view.a,view.b);
+  const Y=c=>PAD.t+(hi-c)/(hi-lo)*(H-PAD.t-PAD.b);
+  const X=t=>chartX(t,W);
+  const span=hi-lo;
+  g.font='400 9.5px "IBM Plex Mono",monospace';g.textBaseline='middle';
+  const step=span>2400?600:span>1200?300:span>600?200:100;
+  for(let c=Math.ceil(lo/step)*step;c<=hi;c+=step){
+    const y=Math.round(Y(c))+.5;
+    g.strokeStyle=cssv(c===0?'--line':'--grid');g.lineWidth=1;
+    g.beginPath();g.moveTo(PAD.l,y);g.lineTo(W-PAD.r,y);g.stroke();
+    g.fillStyle=cssv('--ink-3');g.textAlign='right';
+    g.fillText((c>0?'+':'')+c,PAD.l-7,y);}
+  g.textAlign='left';g.fillText('sent',6,PAD.t+4);
+  // time ruler
+  const dur=view.b-view.a;
+  const tick=dur>120?20:dur>40?10:dur>12?2:dur>4?1:dur>1.6?0.5:0.2;
+  g.textAlign='center';
+  for(let t=Math.ceil(view.a/tick)*tick;t<=view.b;t+=tick){
+    const x=Math.round(X(t))+.5;
+    g.strokeStyle=cssv('--line-soft');g.beginPath();g.moveTo(x,H-PAD.b+2);g.lineTo(x,H-PAD.b+7);g.stroke();
+    g.fillStyle=cssv('--ink-3');g.fillText(dur>12?t.toFixed(0)+'s':t.toFixed(2),x,H-9);}
+  // saved rows
+  ROWS.forEach((r,i)=>{
+    if(r.end<view.a||r.start>view.b)return;
+    const x0=X(Math.max(r.start,view.a)),x1=X(Math.min(r.end,view.b));
+    g.fillStyle=i===sel?cssv('--sel'):cssv('--band');
+    g.fillRect(x0,PAD.t,Math.max(2,x1-x0),H-PAD.t-PAD.b);
+    g.strokeStyle=cssv('--focus');g.globalAlpha=i===sel?.9:.35;g.lineWidth=1;
+    g.beginPath();g.moveTo(x0+.5,PAD.t);g.lineTo(x0+.5,H-PAD.b);
+    g.moveTo(x1-.5,PAD.t);g.lineTo(x1-.5,H-PAD.b);g.stroke();g.globalAlpha=1;
+    if(x1-x0>26){g.fillStyle=cssv('--focus');g.font='600 10px "Archivo",sans-serif';g.textAlign='left';
+      g.fillText('#'+(i+1),x0+4,PAD.t+9);}
+  });
+  // curves
+  const maxPts=Math.round((W-PAD.l-PAD.r)*2);
+  const line=(key,col,w,dash)=>{
+    if(!show[key])return;
+    const pts=windowPoints(key,view.a,view.b,maxPts);if(pts.length<2)return;
+    g.strokeStyle=col;g.lineWidth=w;g.setLineDash(dash||[]);g.lineJoin='round';
+    g.beginPath();let pen=false;
+    for(let i=0;i<pts.length;i++){const p=pts[i];
+      if(i&&p[2])pen=false;
+      const x=X(p[0]),y=Y(p[1]);
+      if(!pen){g.moveTo(x,y);pen=true}else g.lineTo(x,y);}
+    g.stroke();g.setLineDash([]);};
+  line('pyin',cssv('--e-pyin'),1.3,[3,3]);
+  ENG.forEach(e=>line(e,cssv(EVAR[e]),dur<25?1.9:1.3));
+  // brush preview
+  if(drag&&drag.mode==='brush'&&Math.abs(drag.x1-drag.x0)>2){
+    const x0=Math.min(drag.x0,drag.x1),x1=Math.max(drag.x0,drag.x1);
+    g.fillStyle=cssv('--sel');g.fillRect(x0,PAD.t,x1-x0,H-PAD.t-PAD.b);
+    g.strokeStyle=cssv('--focus');g.lineWidth=1;g.strokeRect(x0+.5,PAD.t+.5,x1-x0-1,H-PAD.t-PAD.b-1);
+    g.fillStyle=cssv('--focus');g.font='600 10.5px "Archivo",sans-serif';g.textAlign='center';
+    g.fillText(((chartT(x1,W)-chartT(x0,W))*1000).toFixed(0)+' ms',(x0+x1)/2,PAD.t-5);
+  }
+  // playhead
+  if(audio&&audio.currentTime>=view.a&&audio.currentTime<=view.b){
+    const x=Math.round(X(audio.currentTime))+.5;
+    g.strokeStyle=cssv('--focus');g.lineWidth=1.2;
+    g.beginPath();g.moveTo(x,PAD.t);g.lineTo(x,H-PAD.b);g.stroke();}
+  // legend
+  g.textAlign='left';g.font='600 10.5px "Archivo",sans-serif';let lx=PAD.l+4;
+  [...ENG.map(e=>[ELAB[e],cssv(EVAR[e]),e]),['pYIN',cssv('--e-pyin'),'pyin']].forEach(([l,c,k])=>{
+    if(!show[k])return;
+    g.fillStyle=c;g.fillRect(lx,PAD.t-11,10,2.5);g.fillText(l,lx+14,PAD.t-9);
+    lx+=g.measureText(l).width+30;});
+  document.getElementById('winlabel').textContent=
+    view.a.toFixed(2)+' – '+view.b.toFixed(2)+' s  ('+(view.b-view.a).toFixed(2)+' s)';
+}
+
+/* ---------- overview ---------- */
+const ov=document.getElementById('overview');
+function drawOverview(){
+  const dpr=devicePixelRatio||1,W=ov.clientWidth,H=ov.clientHeight;
+  ov.width=W*dpr;ov.height=H*dpr;const g=ov.getContext('2d');g.setTransform(dpr,0,0,dpr,0,0);
+  g.clearRect(0,0,W,H);
+  const rowH=(H-14)/ENG.length;
+  g.font='500 9px "IBM Plex Mono",monospace';g.textBaseline='middle';
+  ENG.forEach((e,i)=>{
+    const y=2+i*rowH+rowH/2;
+    g.strokeStyle=cssv('--line-soft');g.lineWidth=1;
+    g.beginPath();g.moveTo(0,Math.round(y)+.5);g.lineTo(W,Math.round(y)+.5);g.stroke();
+    (D.events[e]||[]).forEach(v=>{
+      const x=v.time_seconds/DUR*W;
+      g.fillStyle=cssv(KCOL[v.kind]||'--ink-3');g.globalAlpha=.85;
+      g.fillRect(x-.6,y-rowH/2+1.5,1.2,rowH-3);g.globalAlpha=1;});
+    g.fillStyle=cssv('--ink-3');g.fillText(e.replace('_v1','').replace('pitch_engine_','v'),4,y-rowH/2+5);
+  });
+  // saved rows
+  ROWS.forEach((r,i)=>{const x0=r.start/DUR*W,x1=Math.max(x0+1.5,r.end/DUR*W);
+    g.fillStyle=i===sel?cssv('--focus'):cssv('--ink-3');g.globalAlpha=i===sel?.9:.5;
+    g.fillRect(x0,H-11,x1-x0,3);g.globalAlpha=1;});
+  // window box
+  const wx0=view.a/DUR*W,wx1=view.b/DUR*W;
+  g.fillStyle=cssv('--band');g.fillRect(wx0,0,Math.max(2,wx1-wx0),H-13);
+  g.strokeStyle=cssv('--focus');g.lineWidth=1;g.strokeRect(wx0+.5,.5,Math.max(2,wx1-wx0)-1,H-14);
+  g.fillStyle=cssv('--ink-3');g.textAlign='right';g.fillText('tüm dosya '+DUR.toFixed(0)+' s',W-4,H-5);
+  g.textAlign='left';
+}
+function ovJump(clientX){
+  const r=ov.getBoundingClientRect();
+  const t=(clientX-r.left)/r.width*DUR, w=view.b-view.a;
+  view.a=Math.max(0,Math.min(DUR-w,t-w/2));view.b=view.a+w;redrawCanvases();
+}
+ov.addEventListener('pointerdown',e=>{ovJump(e.clientX);ov.setPointerCapture(e.pointerId);
+  ov.onpointermove=m=>ovJump(m.clientX);});
+ov.addEventListener('pointerup',()=>{ov.onpointermove=null});
+
+/* ---------- interaction ---------- */
+chart.addEventListener('pointerdown',e=>{
+  const r=chart.getBoundingClientRect(),x=e.clientX-r.left;
+  if(x<PAD.l||x>chart.clientWidth-PAD.r)return;
+  drag={mode:e.shiftKey?'pan':'brush',x0:x,x1:x,t0:chartT(x,chart.clientWidth)};
+  chart.setPointerCapture(e.pointerId);
+});
+chart.addEventListener('pointermove',e=>{
+  if(!drag)return;
+  const r=chart.getBoundingClientRect();
+  drag.x1=Math.max(PAD.l,Math.min(chart.clientWidth-PAD.r,e.clientX-r.left));
+  if(drag.mode==='pan'){
+    const W=chart.clientWidth,dt=(drag.x0-drag.x1)/(W-PAD.l-PAD.r)*(view.b-view.a);
+    let a=view.a+dt,b=view.b+dt;
+    if(a<0){b-=a;a=0}if(b>DUR){a-=b-DUR;b=DUR;if(a<0)a=0}
+    view.a=a;view.b=b;drag.x0=drag.x1;
+  }
+  redrawCanvases();
+});
+chart.addEventListener('pointerup',()=>{
+  if(!drag)return;
+  const W=chart.clientWidth;
+  if(drag.mode==='brush'&&Math.abs(drag.x1-drag.x0)>3){
+    const a=chartT(Math.min(drag.x0,drag.x1),W),b=chartT(Math.max(drag.x0,drag.x1),W);
+    addRow(Math.max(0,a),Math.min(DUR,b));
+  }
+  drag=null;redrawCanvases();
+});
+chart.addEventListener('pointercancel',()=>{drag=null;redrawCanvases()});
+chart.addEventListener('wheel',e=>{
+  e.preventDefault();
+  const W=chart.clientWidth,r=chart.getBoundingClientRect();
+  const t=chartT(Math.max(PAD.l,Math.min(W-PAD.r,e.clientX-r.left)),W);
+  zoomAt(t,e.deltaY>0?1.25:0.8);
+},{passive:false});
+function zoomAt(t,factor){
+  let w=(view.b-view.a)*factor;
+  w=Math.max(0.25,Math.min(DUR,w));
+  const frac=(t-view.a)/(view.b-view.a);
+  let a=t-frac*w,b=a+w;
+  if(a<0){b-=a;a=0}if(b>DUR){a-=b-DUR;b=DUR;if(a<0)a=0}
+  view.a=a;view.b=b;redrawCanvases();
+}
+document.getElementById('zoomIn').onclick=()=>zoomAt((view.a+view.b)/2,0.6);
+document.getElementById('zoomOut').onclick=()=>zoomAt((view.a+view.b)/2,1.7);
+document.getElementById('fitAll').onclick=()=>{view={a:0,b:DUR};redrawCanvases()};
+document.getElementById('fitSel').onclick=()=>{const r=ROWS[sel];if(r)focusRow(r)};
+const loopBtn=document.getElementById('loop');
+loopBtn.onclick=()=>{loopOn=!loopOn;loopBtn.textContent='Döngü: '+(loopOn?'açık':'kapalı');loopBtn.classList.toggle('on',loopOn)};
+
+function focusRow(r){
+  const w=Math.max(0.6,(r.end-r.start)*3.2);
+  const c=(r.start+r.end)/2;
+  let a=c-w/2,b=c+w/2;
+  if(a<0){b-=a;a=0}if(b>DUR){a-=b-DUR;b=DUR;if(a<0)a=0}
+  view.a=a;view.b=b;redrawCanvases();
+}
+
+/* ---------- rows ---------- */
+function addRow(a,b){
+  const row={id:'r'+Date.now().toString(36)+Math.random().toString(36).slice(2,6),
+    start:+a.toFixed(3),end:+b.toFixed(3),
+    verdicts:Object.fromEntries(ENG.map(e=>[e,{code:'',note:''}])),note:'',
+    created_at:new Date().toISOString()};
+  ROWS.push(row);ROWS.sort((x,y)=>x.start-y.start);
+  sel=ROWS.indexOf(row);save();renderRows();redrawCanvases();
+  const tr=document.querySelector(`tr[data-i="${sel}"]`);
+  if(tr){tr.scrollIntoView({block:'center'});const s=tr.querySelector('select.v');if(s)s.focus();}
+  playRange(row);
+}
+function renderRows(){
+  const tb=document.getElementById('tbody');
+  document.getElementById('rowCount').textContent=ROWS.length?`(${ROWS.length})`:'';
+  if(!ROWS.length){
+    tb.innerHTML=`<tr><td colspan="7" class="empty">Henüz satır yok — grafikte bir aralık sürükle,
+      ya da <b>Otomatik bulunanları satır yap</b> ile ölçümün işaretlediği yerlerden başla.</td></tr>`;
+    return;}
+  tb.innerHTML=ROWS.map((r,i)=>{
+    const cells=ENG.map(e=>{
+      const v=r.verdicts[e]||{code:'',note:''};
+      return `<td><select class="v ${VCLASS[v.code]||'bos'}" data-i="${i}" data-e="${e}">`+
+        VERDICTS.map(([c,l])=>`<option value="${c}" ${v.code===c?'selected':''}>${l}</option>`).join('')+
+        `</select></td>`;}).join('');
+    return `<tr data-i="${i}" class="${i===sel?'sel':''}">
+      <td class="time" data-goto="${i}">${r.start.toFixed(2)}–${r.end.toFixed(2)} s
+        <span class="d">${((r.end-r.start)*1000).toFixed(0)} ms</span></td>
+      ${cells}
+      <td><input class="note" type="text" data-note="${i}" value="${(r.note||'').replace(/"/g,'&quot;')}"
+        placeholder="serbest not"></td>
+      <td><button class="del" type="button" data-del="${i}" title="Satırı sil">sil</button></td></tr>`;
+  }).join('');
+  tb.querySelectorAll('select.v').forEach(s=>s.onchange=()=>{
+    const r=ROWS[+s.dataset.i];r.verdicts[s.dataset.e]={code:s.value,note:r.verdicts[s.dataset.e]?.note||''};
+    save();s.className='v '+(VCLASS[s.value]||'bos');});
+  tb.querySelectorAll('[data-note]').forEach(inp=>inp.oninput=()=>{
+    ROWS[+inp.dataset.note].note=inp.value;save();});
+  tb.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{
+    const i=+b.dataset.del;ROWS.splice(i,1);if(sel>=ROWS.length)sel=ROWS.length-1;
+    save();renderRows();redrawCanvases();});
+  tb.querySelectorAll('[data-goto]').forEach(td=>td.onclick=()=>{
+    sel=+td.dataset.goto;focusRow(ROWS[sel]);playRange(ROWS[sel]);renderRows();});
+}
+document.getElementById('seedAuto').onclick=()=>{
+  const eps=[];ENG.forEach(e=>(D.episodes[e]||[]).forEach(ep=>{
+    if(ep.kind==='gecis'||ep.kind==='ortak')return;eps.push(ep)}));
+  if(!eps.length){document.getElementById('copynote').textContent='Otomatik bulunan uygun epizot yok.';return;}
+  // merge overlapping episodes from different engines into one shared row
+  eps.sort((a,b)=>a.start_seconds-b.start_seconds);
+  const merged=[];
+  eps.forEach(ep=>{
+    const last=merged[merged.length-1];
+    if(last&&ep.start_seconds-last.end<=0.15){last.end=Math.max(last.end,ep.end_seconds);}
+    else merged.push({start:ep.start_seconds,end:ep.end_seconds});});
+  let added=0;
+  merged.forEach(m=>{
+    if(ROWS.some(r=>Math.abs(r.start-m.start)<0.05&&Math.abs(r.end-m.end)<0.05))return;
+    ROWS.push({id:'a'+added+'-'+m.start.toFixed(3),start:+m.start.toFixed(3),end:+m.end.toFixed(3),
+      verdicts:Object.fromEntries(ENG.map(e=>[e,{code:'',note:''}])),note:'',source:'otomatik',
+      created_at:new Date().toISOString()});added++;});
+  ROWS.sort((x,y)=>x.start-y.start);save();renderRows();redrawCanvases();
+  document.getElementById('copynote').textContent=`${added} satır eklendi (geçiş ve ortak ayrışmalar hariç).`;
+};
+document.getElementById('copy').onclick=async()=>{
+  const payload={schema:'klarivision-pitch-review-rows-v1',source:D.source,
+    map_fingerprint:D.fingerprint,engines:ENG,row_count:ROWS.length,rows:ROWS};
+  const text=JSON.stringify(payload,null,2);
+  const note=document.getElementById('copynote');
+  try{await navigator.clipboard.writeText(text);note.textContent=`${ROWS.length} satır panoya kopyalandı.`}
+  catch(e){const ta=document.createElement('textarea');ta.value=text;document.body.appendChild(ta);ta.select();
+    document.execCommand('copy');ta.remove();note.textContent='Kopyalandı.'}
+};
+document.getElementById('clear').onclick=()=>{
+  if(!confirm('Bütün inceleme satırları silinsin mi?'))return;
+  ROWS=[];sel=-1;save();renderRows();redrawCanvases();
+  document.getElementById('copynote').textContent='Satırlar sıfırlandı.';};
+
+/* ---------- toggles / keys ---------- */
+function buildToggles(){
+  document.getElementById('toggles').innerHTML=
+    [...ENG.map(e=>[e,ELAB[e],EVAR[e]]),['pyin','pYIN','--e-pyin']].map(([k,l,v])=>
+      `<button class="tog" type="button" data-tog="${k}" aria-pressed="${show[k]}">
+        <span class="sw" style="background:var(${v})"></span>${l}</button>`).join('');
+  document.querySelectorAll('[data-tog]').forEach(b=>b.onclick=()=>{
+    const k=b.dataset.tog;show[k]=!show[k];b.setAttribute('aria-pressed',show[k]);redrawCanvases();});
+}
+addEventListener('keydown',e=>{
+  if(/^(INPUT|SELECT|TEXTAREA)$/.test(e.target.tagName))return;
+  const w=view.b-view.a;
+  if(e.key===' '){if(audio){audio.paused?audio.play():audio.pause()}e.preventDefault()}
+  else if(e.key==='ArrowRight'){view.a=Math.min(DUR-w,view.a+w*0.3);view.b=view.a+w;redrawCanvases();e.preventDefault()}
+  else if(e.key==='ArrowLeft'){view.a=Math.max(0,view.a-w*0.3);view.b=view.a+w;redrawCanvases();e.preventDefault()}
+});
+function redrawCanvases(){drawChart();drawOverview()}
+addEventListener('resize',redrawCanvases);
+matchMedia('(prefers-color-scheme:dark)').addEventListener('change',()=>setTimeout(redrawCanvases,30));
+new MutationObserver(()=>setTimeout(redrawCanvases,30)).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
+document.getElementById('intro').innerHTML=
+  `<em>${D.source}</em> — ${DUR.toFixed(1)} saniye, dört motor. Gerçek-değer yok: hangi motorun yanıldığına
+   <em>dinleyerek sen</em> karar veriyorsun. Ölçümün otomatik bulduğu ayrışmalar alt şeritte işaretli;
+   sen kendi aralığını seçmekte serbestsin.`;
+buildToggles();renderRows();
+if(document.fonts&&document.fonts.ready)document.fonts.ready.then(redrawCanvases);
+redrawCanvases();
+</script></body></html>
