@@ -1,5 +1,23 @@
 # KlariVision Test Tabanı
 
+## Çevrimdışı iz revizyonu `r5 -> offline-harmonic-path-r6` — 26 Ağustos 2026
+
+`OFFLINE_TRACK_REVISION` yükseltildi. Bu sayı `offline_track_v1` JSON
+sözleşmesini değil, **önbellek kimliğini** taşır: `analyse_upload` dosya adında
+bu revizyonu kullanır ve dosya varsa yeniden analiz yapmaz. Revizyon
+yükseltilmeden, davranışı değişmiş motorların eski çıktıları sessizce yeniden
+kullanılırdı — kullanıcı Xcode'dan çalıştırdığında hâlâ eski eğriyi görürdü.
+
+Aynı sayı üç yerde tutuluyordu; artık testler sabit metin yerine
+`OFFLINE_TRACK_REVISION` sabitini okuyor, `pitch_track_cli.cpp` ise aynı değeri
+`implementation_revision` alanına yazıyor.
+
+**Yan düzeltme:** `pitch_track_cli --contract` çıktısı satır sonu yerine düz
+`\n` metni basıyordu, dolayısıyla `cpp_engine.contract()` gerçek ikiliyi hiç
+ayrıştıramıyordu (testler monkeypatch'li olduğu için görünmüyordu). Düzeltildi;
+`contract()` artık gerçek CLI'ya karşı çalışıyor.
+
+
 ## Çevrimdışı kaçak nokta elemesi — 26 Ağustos 2026
 
 Çevrimdışı yola ikinci bir aşama eklendi: kısa, iki yanı sessiz ve yalnız düşük

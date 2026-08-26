@@ -174,11 +174,11 @@ int main(int argc, char** argv) {
                   << ",\"sample_rate_hz\":" << contract.sample_rate_hz
                   << ",\"window_size\":" << contract.window_size
                   << ",\"hop_size\":" << contract.hop_size
-                  << ",\"engines\":[\"yin_v1\",\"pitch_engine_v2\",\"vpm_like\",\"hapt_v1\"]}\\n";
+                  << ",\"engines\":[\"yin_v1\",\"pitch_engine_v2\",\"vpm_like\",\"hapt_v1\"]}\n";
         return 0;
     }
     if((argc != 6 && argc != 8) || std::string(argv[2]) != "--engine" || std::string(argv[4]) != "--output" ||
-       (argc == 8 && std::string(argv[6]) != "--diagnostic")) { std::cerr << "Kullanım: pitch_track_cli INPUT.wav --engine yin_v1|pitch_engine_v2|vpm_like|hapt_v1 --output OUTPUT.json [--diagnostic DIAG.json]\\n"; return 2; }
+       (argc == 8 && std::string(argv[6]) != "--diagnostic")) { std::cerr << "Kullanım: pitch_track_cli INPUT.wav --engine yin_v1|pitch_engine_v2|vpm_like|hapt_v1 --output OUTPUT.json [--diagnostic DIAG.json]\n"; return 2; }
     try {
         const auto wav = read_wav(argv[1]);
         const auto samples = resample(wav);
@@ -197,7 +197,7 @@ int main(int argc, char** argv) {
         output << std::fixed << std::setprecision(6)
                << "{\n  \"engine\": \"" << argv[3]
                << "\",\n  \"profile\": \"offline_track_v1\","
-               << "\n  \"implementation_revision\": \"shared-production-session-r5\","
+               << "\n  \"implementation_revision\": \"offline-harmonic-path-r6\","
                << "\n  \"frames\": [\n";
         for (std::size_t index = 0; index < frames.size(); ++index) {
             const auto unchanged = std::any_of(causal.begin(), causal.end(), [&](const auto& item) {

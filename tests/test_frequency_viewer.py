@@ -1,5 +1,6 @@
 import json
 
+from klarivision.pitch.cpp_engine import OFFLINE_TRACK_REVISION
 from klarivision.frequency_viewer import build_frequency_viewer, prepare_display_frames
 
 
@@ -221,7 +222,7 @@ def test_frequency_viewer_includes_engine_identity_in_title_and_meta(tmp_path) -
     html = output.read_text(encoding="utf-8")
     assert '<title>KlariVision v0.6 Beta 1 — VPM-benzeri · Pitch konturu</title>' in html
     assert '<meta name="klarivision-engine" content="vpm_like">' in html
-    assert '<meta name="klarivision-offline-revision" content="shared-production-session-r5">' in html
+    assert '<meta name="klarivision-offline-revision" content="' + OFFLINE_TRACK_REVISION + '">' in html
     assert 'Motor: VPM-benzeri' in html
 
 

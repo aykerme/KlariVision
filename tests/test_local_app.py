@@ -238,8 +238,8 @@ def test_refresh_existing_viewer_selects_correct_engine_by_meta_tag(tmp_path, mo
     outputs = tmp_path / "outputs"
     viewer = outputs / "ornek.html"
     audio = tmp_path / "data" / "audio" / "ornek.wav"
-    pitch_vpm = outputs / "ornek.vpm_like.offline_track_v1.shared-production-session-r5.json"
-    pitch_yin = outputs / "ornek.yin_v1.offline_track_v1.shared-production-session-r5.json"
+    pitch_vpm = outputs / f"ornek.vpm_like.offline_track_v1.{OFFLINE_TRACK_REVISION}.json"
+    pitch_yin = outputs / f"ornek.yin_v1.offline_track_v1.{OFFLINE_TRACK_REVISION}.json"
     outputs.mkdir(parents=True)
     audio.parent.mkdir(parents=True)
     audio.write_bytes(b"wav")
@@ -276,8 +276,8 @@ def test_refresh_existing_viewer_with_explicit_engine(tmp_path, monkeypatch) -> 
     outputs = tmp_path / "outputs"
     viewer = outputs / "ornek.html"
     audio = tmp_path / "data" / "audio" / "ornek.wav"
-    pitch_vpm = outputs / "ornek.vpm_like.offline_track_v1.shared-production-session-r5.json"
-    pitch_yin = outputs / "ornek.yin_v1.offline_track_v1.shared-production-session-r5.json"
+    pitch_vpm = outputs / f"ornek.vpm_like.offline_track_v1.{OFFLINE_TRACK_REVISION}.json"
+    pitch_yin = outputs / f"ornek.yin_v1.offline_track_v1.{OFFLINE_TRACK_REVISION}.json"
     outputs.mkdir(parents=True)
     audio.parent.mkdir(parents=True)
     audio.write_bytes(b"wav")
@@ -330,7 +330,7 @@ def test_refresh_existing_viewer_falls_back_to_mtime_for_old_pages(tmp_path, mon
     viewer = outputs / "ornek.html"
     audio = tmp_path / "data" / "audio" / "ornek.wav"
     pitch_vamp = outputs / "ornek.vamp.json"
-    pitch_yin = outputs / "ornek.yin_v1.offline_track_v1.shared-production-session-r5.json"
+    pitch_yin = outputs / f"ornek.yin_v1.offline_track_v1.{OFFLINE_TRACK_REVISION}.json"
     outputs.mkdir(parents=True)
     audio.parent.mkdir(parents=True)
     audio.write_bytes(b"wav")
