@@ -1,0 +1,1147 @@
+<!DOCTYPE html>
+<!--
+  KlariVision Perde Motorları — PDF kaynağı.
+
+  Bu dosya docs/perde-motorlari-nasil-calisir.pdf'in tek kaynağıdır.
+  Dışa bağımlılığı yoktur (CSS gömülü, resim/font yok).
+
+  PDF'i yeniden üretmek için:
+
+    wkhtmltopdf --encoding utf-8 \
+      --footer-font-size 7 --footer-font-name Helvetica \
+      --footer-center "[page] / [topage]" --footer-spacing 5 \
+      --margin-top 20mm --margin-bottom 18mm \
+      --margin-left 18mm --margin-right 18mm \
+      docs/perde-motorlari-nasil-calisir.html \
+      docs/perde-motorlari-nasil-calisir.pdf
+
+  Belge 37585a4 kod sürümüne göre yazıldı. Alıntılardaki satır numaraları
+  o commit'e aittir; kod değiştikçe kayarlar. Kalıcı çapa, her alıntının
+  yanındaki fonksiyon/sabit adıdır.
+
+  Bölümler: <div class="chapter"> ile başlar.
+-->
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<title>KlariVision Perde Motorları — Nasıl Çalışıyorlar</title>
+<style>
+  @page { margin: 20mm 18mm 18mm 18mm; }
+  body {
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-size: 10.5pt; line-height: 1.55; color: #1a1a1a; margin: 0;
+  }
+  h1 { font-size: 20pt; margin: 0 0 4px 0; letter-spacing: -0.4px; }
+  h2 {
+    font-size: 15pt; margin: 30px 0 10px 0; padding-bottom: 5px;
+    border-bottom: 2px solid #1f3a5f; color: #1f3a5f; page-break-after: avoid;
+  }
+  h3 { font-size: 12pt; margin: 20px 0 6px 0; color: #24486f; page-break-after: avoid; }
+  h4 { font-size: 10.5pt; margin: 14px 0 4px 0; color: #3a3a3a; page-break-after: avoid; }
+  p { margin: 7px 0; text-align: justify; }
+  code {
+    font-family: "SF Mono", Menlo, Consolas, monospace; font-size: 8.8pt;
+    background: #f1f3f6; padding: 1px 4px; border-radius: 3px; color: #24486f;
+  }
+  pre {
+    font-family: "SF Mono", Menlo, Consolas, monospace; font-size: 8.2pt;
+    line-height: 1.42; background: #f7f8fa; border: 1px solid #dfe3ea;
+    border-left: 3px solid #1f3a5f; padding: 8px 10px; margin: 8px 0;
+    white-space: pre-wrap; word-wrap: break-word; page-break-inside: avoid;
+  }
+  pre code { background: none; padding: 0; color: #1a1a1a; }
+  .src {
+    font-family: "SF Mono", Menlo, Consolas, monospace; font-size: 7.8pt;
+    color: #6b7280; margin: -6px 0 12px 0; display: block;
+  }
+  .formula {
+    font-family: Palatino, "Palatino Linotype", "Times New Roman", serif;
+    font-size: 12pt; text-align: center; margin: 12px 0; padding: 9px 6px;
+    background: #fbfbfd; border-top: 1px solid #e5e7eb; border-bottom: 1px solid #e5e7eb;
+    page-break-inside: avoid;
+  }
+  .formula .note { display: block; font-family: "Helvetica Neue", Helvetica, sans-serif;
+    font-size: 8.5pt; color: #6b7280; margin-top: 5px; }
+  .inline-m { font-family: Palatino, "Times New Roman", serif; font-size: 11pt; }
+  table { border-collapse: collapse; width: 100%; margin: 10px 0; font-size: 9pt;
+    page-break-inside: avoid; }
+  th { background: #1f3a5f; color: #fff; text-align: left; padding: 5px 7px; font-weight: 600; }
+  td { border-bottom: 1px solid #e5e7eb; padding: 5px 7px; vertical-align: top; }
+  tr:nth-child(even) td { background: #f8f9fb; }
+  .box {
+    background: #fff8e6; border: 1px solid #f0d99b; border-left: 3px solid #d99e2b;
+    padding: 9px 11px; margin: 11px 0; page-break-inside: avoid; font-size: 9.6pt;
+  }
+  .box .t { font-weight: 700; color: #8a6516; display: block; margin-bottom: 3px; }
+  .box.blue { background: #eef4fb; border-color: #b9d0ea; border-left-color: #2f6cb5; }
+  .box.blue .t { color: #1f4f8f; }
+  .box.red { background: #fdf0ef; border-color: #f2c4c0; border-left-color: #c0392b; }
+  .box.red .t { color: #96271b; }
+  .cover { text-align: center; padding-top: 190px; page-break-after: always; }
+  .cover .main { font-size: 30pt; font-weight: 700; letter-spacing: -1px; color: #1f3a5f; line-height:1.15; }
+  .cover .sub { font-size: 13pt; color: #4b5563; margin-top: 14px; }
+  .cover .meta { font-size: 9.5pt; color: #6b7280; margin-top: 60px; line-height: 1.9; }
+  .toc { page-break-after: always; }
+  .toc ol { padding-left: 20px; }
+  .toc li { margin: 4px 0; }
+  .toc .lvl2 { list-style: none; font-size: 9.5pt; color: #4b5563; margin-left: -8px; }
+  .chapter { page-break-before: always; }
+  ul, ol { margin: 7px 0; padding-left: 22px; }
+  li { margin: 3px 0; }
+  .lead { font-size: 10.5pt; color: #374151; font-style: italic;
+    border-left: 3px solid #cbd5e1; padding-left: 11px; margin: 10px 0 16px 0; }
+  .flow { font-family: "SF Mono", Menlo, Consolas, monospace; font-size: 8pt;
+    background: #f7f8fa; border: 1px solid #dfe3ea; padding: 10px; white-space: pre;
+    line-height: 1.5; page-break-inside: avoid; overflow: hidden; }
+  .kv { font-size: 9pt; }
+  .small { font-size: 9pt; color: #4b5563; }
+</style>
+</head>
+<body>
+
+<div class="cover">
+  <div class="main">KlariVision<br>Perde Motorları</div>
+  <div class="sub">Dört algoritma, sıfırdan anlatım</div>
+  <div class="meta">
+    YIN v1 &nbsp;·&nbsp; Pitch Engine V2 &nbsp;·&nbsp; VPM-like &nbsp;·&nbsp; HAPT v1<br>
+    ve çevrimdışı referans pYIN<br><br>
+    Her adımın matematiği, gerekçesi ve kod karşılığı<br>
+    Yazılıma ve sinyal işlemeye yeni başlayanlar için<br><br>
+    26 Ağustos 2026 &nbsp;·&nbsp; kod sürümü <code>37585a4</code>
+  </div>
+</div>
+
+<div class="toc">
+<h1>İçindekiler</h1>
+<ol>
+  <li><b>Ortak temeller</b> — her motorun paylaştığı fikirler
+    <ul class="toc">
+      <li class="lvl2">Ses nedir, perde nedir · Çerçeveleme · RMS kapısı · Lag ve frekans · Sent · Üç aile: CMND, ACF, NSDF · Spektral prob</li>
+    </ul>
+  </li>
+  <li><b>YIN v1</b> — fark fonksiyonu ve kümülatif normalizasyon</li>
+  <li><b>Pitch Engine V2</b> — dört tahminci, SWIPE′ desteği, sabit gecikmeli Viterbi</li>
+  <li><b>VPM-like</b> — normalize otokorelasyon, katlardan periyot rafinesi, spektral düzeltme</li>
+  <li><b>HAPT v1</b> — NSDF, harmonikler-arası veto, faz kilitli frekans</li>
+  <li><b>pYIN</b> — çevrimdışı olasılıksal referans</li>
+  <li><b>Çevrimdışı iyileştirme katmanı</b> — <code>offline_track</code> profili</li>
+  <li><b>Karşılaştırma</b> — hangi motor neyi iyi yapıyor, nerede yanılıyor</li>
+  <li><b>Ek A</b> — parametre tabloları</li>
+  <li><b>Ek B</b> — dosya haritası</li>
+</ol>
+</div>
+<div class="chapter">
+<h1>1. Ortak temeller</h1>
+<p class="lead">Dört motor da aynı sorunu çözüyor ve aynı yapı taşlarını kullanıyor. Bu bölümü bir kez okursanız, sonraki dört bölüm sadece "bu motor bu taşları nasıl diziyor" sorusunun cevabı olur.</p>
+
+<h2>1.1 Ses nedir, perde nedir</h2>
+<p>Mikrofon size saniyede 44.100 (veya 22.050, 48.000) tane sayı verir. Her sayı, o andaki hava basıncıdır. Elimizde şöyle bir dizi olur:</p>
+<div class="formula">x[0], x[1], x[2], …, x[N−1]</div>
+<p>Klarnetten çıkan bir nota, bu dizide <b>kendini tekrar eden bir desendir</b>. Desen saniyede 440 kez tekrarlanıyorsa buna 440 Hz deriz ve "La" diye adlandırırız. Yani perde bulmak, şu tek soruyu cevaplamaktır:</p>
+<div class="box blue"><span class="t">Temel soru</span>Bu sayı dizisi kaç örnek sonra kendini tekrarlıyor?</div>
+<p>O "kaç örnek" sayısına <b>lag</b> (gecikme) veya <b>periyot</b> denir; matematikte τ (tau) harfiyle gösterilir. Frekansa çevirmek tek bir bölme işlemidir:</p>
+<div class="formula">f<sub>0</sub> = f<sub>s</sub> / τ
+<span class="note">f<sub>s</sub>: örnekleme hızı (Hz) &nbsp;·&nbsp; τ: periyot (örnek sayısı) &nbsp;·&nbsp; f<sub>0</sub>: temel frekans (Hz)</span></div>
+<p>Örnek: 44.100 Hz'de τ = 100 örnek ise → 44100 / 100 = 441 Hz. Dört motorun tamamı, doğru τ'yu bulmanın farklı yollarıdır. Farkları <i>hangi kanıta baktıkları</i> ve <i>ne zaman "bilmiyorum" dedikleridir</i>.</p>
+
+<h2>1.2 Çerçeveleme: sesi dilimlere bölmek</h2>
+<p>Perde zamanla değişir; tüm kaydı tek seferde analiz edemezsiniz. Ses kısa dilimlere (çerçeve / <i>frame</i> / pencere) bölünür ve her dilim için ayrı bir cevap üretilir.</p>
+<ul>
+  <li><b>Pencere boyu (window)</b>: bir dilimde kaç örnek var. Uzun pencere → frekans daha kesin ölçülür, ama hızlı değişimler (süsleme, vibrato tepesi) bulanıklaşır.</li>
+  <li><b>Adım (hop)</b>: bir sonraki dilime kaç örnek ilerlenir. Küçük adım → zamanda daha sık ölçüm; pencereler üst üste biner.</li>
+</ul>
+<p>Üretimdeki değerler tüm motorlar için ortaktır: pencere 1536 örnek, adım 512 örnek. 44.1 kHz'de bu, 34,8 ms uzunluğunda bir pencere ve saniyede ~86 ölçüm demektir.</p>
+<pre><code>std::size_t window_size{1536};
+std::size_t hop_size{512};</code></pre>
+<span class="src">core/include/klarivision/core/analysis_engine.hpp:35–36</span>
+<p>Bir dilimin zaman damgası pencerenin <b>ortasıdır</b>, başı değil — ölçüm o pencerenin tamamını temsil eder:</p>
+<pre><code>const double time = (static_cast&lt;double&gt;(start) + config_.window_size / 2.0) / rate;</code></pre>
+<span class="src">core/src/analysis_engine.cpp:1190 — <code>PitchEngine::analyse_causal</code></span>
+
+<h2>1.3 RMS kapısı: sessizlikte perde aramamak</h2>
+<p>Sessiz bir pencerede perde aramanın anlamı yoktur; gürültüde rastgele bir "periyot" bulunur. Bu yüzden her motor önce yüksekliğe bakar. RMS (kök ortalama kare) sinyalin enerji ölçüsüdür:</p>
+<div class="formula">RMS = √( (1/N) · Σ<sub>n=0</sub><sup>N−1</sup> (x[n] − x̄)² )
+<span class="note">x̄ ortalama (DC ofseti); önce çıkarılır, çünkü sabit bir kayma her otokorelasyonu şişirir</span></div>
+<pre><code>double centered_rms(std::span&lt;const float&gt; samples) {
+    const double mean = std::accumulate(...) / samples.size();  // DC offset
+    double sum = 0;
+    for (const float sample : samples) { const double x = sample - mean; sum += x * x; }
+    return std::sqrt(sum / samples.size());
+}</code></pre>
+<span class="src">core/src/analysis_engine.cpp:29–37</span>
+<p>Üretim eşiği <code>minimum_rms = 0.015</code>. Bunun altındaki pencereler hiçbir motor tarafından analiz edilmez.</p>
+
+<h2>1.4 Sent: müzikal mesafe birimi</h2>
+<p>İki frekansın "ne kadar uzak" olduğunu Hz cinsinden ölçmek yanıltıcıdır: 100 Hz ile 110 Hz arası kulakta büyük, 1000 Hz ile 1010 Hz arası neredeyse duyulmaz bir farktır. Müzikte mesafe logaritmiktir. Birimi <b>sent</b>tir; bir oktav 1200 senttir, bir yarım ses 100 senttir.</p>
+<div class="formula">cents(a, b) = 1200 · log<sub>2</sub>(a / b)</div>
+<pre><code>double cents_distance(double a, double b) { return std::abs(1200.0 * std::log2(a / b)); }</code></pre>
+<span class="src">core/src/analysis_engine.cpp:66</span>
+<p>Bu fonksiyon dört motorda da vardır ve şu üç yerde kullanılır: süreklilik cezası, oktav sıçraması tespiti, "aynı notaya döndük mü" kontrolü.</p>
+
+<h2>1.5 Üç akraba fonksiyon: CMND, ACF, NSDF</h2>
+<p>Motorların üçü periyodu zaman düzleminde arar ve hepsi aynı temel hamleyi yapar: <b>sinyali kendisinin τ kadar kaydırılmış hâliyle karşılaştır.</b> Sadece karşılaştırma biçimleri farklıdır.</p>
+
+<h3>a) Ham otokorelasyon (ACF) — "ne kadar benziyor?"</h3>
+<div class="formula">r(τ) = Σ<sub>j</sub> x[j] · x[j+τ]</div>
+<p>Sinyal kendine benzediğinde çarpımlar aynı işaretli olur ve toplam büyür. <b>Tepe</b> ararsınız. Sorunu: sonuç ses seviyesine bağlıdır, gür çalınca büyür. Bu yüzden hiçbir motor ham ACF kullanmaz, normalize eder.</p>
+
+<h3>b) YIN'in fark fonksiyonu ve CMND — "ne kadar farklı?"</h3>
+<div class="formula">d(τ) = Σ<sub>j</sub> ( x[j] − x[j+τ] )²</div>
+<p>Farkın karesi. Doğru periyotta sıfıra yaklaşır; <b>dip</b> ararsınız. Genlikten görece bağımsızdır. YIN v1 ve V2'nin YIN üreteci bunu kullanır (Bölüm 2).</p>
+
+<h3>c) NSDF (McLeod) — "iki uçtan normalize edilmiş benzerlik"</h3>
+<div class="formula">n(τ) = 2 · Σ<sub>j</sub> x[j]·x[j+τ] &nbsp;/&nbsp; Σ<sub>j</sub> ( x[j]² + x[j+τ]² )</div>
+<p>Pay ACF'nin kendisi, payda ise karşılaştırılan iki pencerenin toplam enerjisi. Sonuç [−1, 1] aralığına oturur: 1,0 "mükemmel tekrar" demektir. Genlikten tamamen bağımsızdır ve doğrudan bir güven skoru gibi okunabilir. MPM ve HAPT bunu kullanır.</p>
+<pre><code>if (normalisation &gt; 1e-12) {
+    nsdf[lag] = 2.0 * correlation / normalisation;  // McLeod's NSDF normalisation
+}</code></pre>
+<span class="src">core/src/mpm.cpp:74 &nbsp;·&nbsp; aynısı core/src/hapt.cpp:110</span>
+
+<div class="box"><span class="t">Hepsinin ortak zaafı</span>Bir sinyal τ periyoduyla tekrarlıyorsa, 2τ, 3τ, 4τ ile de tekrarlar — iki tur da bir tekrardır. Bu yüzden her üç fonksiyon da doğru periyodun <b>katlarında</b> da güçlü sinyal verir. Motorların karmaşıklığının büyük kısmı bu tek belirsizliği çözmek içindir: buna <b>oktav hatası</b> (veya alt-harmonik / hayalet) denir.</div>
+
+<h2>1.6 Parabolik interpolasyon: tam sayıdan kurtulmak</h2>
+<p>τ örnek sayısıdır, yani tam sayıdır. Ama gerçek periyot 100 değil 100,37 örnek olabilir. Bu fark müzikal olarak büyüktür: 44.1 kHz'de τ=100 → 441,0 Hz, τ=101 → 436,6 Hz; arada 17 sent var, kulakla duyulur.</p>
+<p>Çözüm: tepenin (veya dibin) etrafındaki üç noktadan bir parabol geçirip <b>parabolün</b> tepe noktasını bulmak. Türev sıfırlanınca:</p>
+<div class="formula">δ = ½ · ( y<sub>τ−1</sub> − y<sub>τ+1</sub> ) / ( y<sub>τ−1</sub> − 2y<sub>τ</sub> + y<sub>τ+1</sub> ) &nbsp;,&nbsp; τ* = τ + δ
+<span class="note">pay: dibin sola mı sağa mı kaçık olduğu &nbsp;·&nbsp; payda: eğrilik (ikinci türev)</span></div>
+<p>Dört motor da bunu aynı biçimde, δ'yı ±0,5'e kırparak uygular (düz bir eğride payda sıfıra yaklaşır ve δ patlayabilir):</p>
+<pre><code>const auto correction = std::abs(denominator) &gt; 1e-9
+    ? std::clamp(0.5 * (previous - next) / denominator, -0.5, 0.5)
+    : 0.0;
+const auto refined_lag = static_cast&lt;double&gt;(lag) + correction;</code></pre>
+<span class="src">core/src/mpm.cpp:101–104 &nbsp;·&nbsp; eşleri: analysis_engine.cpp:124–127, vpm_like.cpp:40, hapt.cpp:33</span>
+
+<h2>1.7 Spektral prob: tek frekansta "orada ses var mı?"</h2>
+<p>Zaman düzlemi periyodu bulur ama <i>hangi harmoniğin gerçekten çaldığını</i> bilmez. Bunu öğrenmek için frekans düzlemine bakmak gerekir. Tam FFT yerine motorlar çoğu zaman <b>tek frekanslık DFT</b> kullanır: sinyali tam olarak sorulan frekanstaki bir sinüs ve kosinüsle çarpıp toplarlar.</p>
+<div class="formula">
+X(f) = Σ<sub>n</sub> w[n]·x[n]·cos(2πfn/f<sub>s</sub>) &nbsp;−&nbsp; i·Σ<sub>n</sub> w[n]·x[n]·sin(2πfn/f<sub>s</sub>)<br>
+w[n] = 0,5 − 0,5·cos(2πn/(N−1)) &nbsp; <span style="font-size:9pt">(Hann penceresi)</span>
+<span class="note">E(f) = |X(f)|² enerji, |X(f)| genlik, arg(X(f)) faz</span></div>
+<p>Neden tam FFT değil? Çünkü aday frekanslar (441,3 Hz gibi) FFT'nin bin merkezlerine denk gelmez; tek frekanslık DFT <b>tam istenen frekansta</b> ölçüm verir. Hann penceresi ise pencerenin kenarlarını yumuşatarak spektral sızıntıyı azaltır.</p>
+<pre><code>std::complex&lt;double&gt; hann_windowed_probe(std::span&lt;const float&gt; samples, double sample_rate, double frequency_hz)</code></pre>
+<span class="src">core/src/harmonic_probe.cpp:8–36 — ortak yardımcı; her motorun kendi kopyası da var</span>
+<p>Bu probun <b>faz</b> bilgisi yalnız HAPT tarafından kullanılır (Bölüm 5); diğerleri sadece genliğe/enerjiye bakar.</p>
+
+<h3>Pencerenin çözünürlük sınırı</h3>
+<p>Bir pencere ne kadar kısaysa, spektrumda o kadar yakın iki frekansı ayırt edemez. Hann penceresinin ana lobu 4 DFT bini genişliğindedir:</p>
+<div class="formula">yarı genişlik = 2 · f<sub>s</sub> / N</div>
+<pre><code>return 2.0 * sample_rate / static_cast&lt;double&gt;(sample_count);</code></pre>
+<span class="src">core/src/harmonic_probe.cpp:45</span>
+<p>1536 örnek @44,1 kHz için bu ≈ 57 Hz. HAPT bu sayıyı doğrudan bir karar olarak kullanır: "bu frekans için doğrudan spektral prob güvenilir mi, yoksa zaman düzlemine mi düşeyim?" (Bölüm 5.3).</p>
+
+<h2>1.8 Klarnetin fiziği: neden bu iş zor</h2>
+<p>Bu belgedeki karmaşıklığın büyük kısmı tek bir fiziksel gerçekten doğuyor.</p>
+<div class="box red"><span class="t">Klarnet kapalı bir borudur</span>
+Bir ucu kamışla kapalı, silindirik bir boru yalnızca <b>tek sayılı harmonikleri</b> güçlü üretir: f, 3f, 5f… Çift harmonikler (2f, 4f) fizik gereği zayıftır. Üstelik 3. harmonik çoğu zaman temel frekanstan <b>daha gürdür</b>.<br><br>
+Sonuç: otokorelasyon ailesinin tamamı, temel frekansı zayıf gördüğü için sürekli olarak yanlış katlara kilitlenmeye eğilimlidir. Klarnet ayrıca oktavdan (2×) değil <b>onikiliden (3×) aşırı üfler</b>, yani register değişimi de 3× oranındadır.</div>
+<p>Bu yüzden dört motorda da aynı üç savunma tekrar tekrar karşınıza çıkacak:</p>
+<ol>
+  <li><b>Tek harmonik doluluğu</b>: gerçek bir temel frekans f, 3f ve 5f'te enerji bırakır; sahte bir alt-harmonik bırakmaz.</li>
+  <li><b>Aşağı sıçrama histerezisi</b>: ani ve büyük bir <i>aşağı</i> sıçrama, birkaç kare boyunca onaylanmadan yayınlanmaz.</li>
+  <li><b>Bırakış (release) tespiti</b>: notanın bitişi, müzikal bir kısılmadan farklıdır; RMS çok daha hızlı düşer.</li>
+</ol>
+</div>
+<div class="chapter">
+<h1>2. YIN v1</h1>
+<p class="lead">Projedeki en eski motor. Adındaki "v1" geriye dönük uyumluluk içindir, kalite sıralaması değil. Fikri tek cümleyle: <b>sinyali kendisiyle karşılaştırıp farkın en küçük olduğu gecikmeyi bul, ama farkı adil kıyaslanabilir hâle getirmek için normalize et.</b></p>
+
+<table>
+<tr><th style="width:22%">Nerede</th><th style="width:40%">Dosya</th><th>Ne işe yarıyor</th></tr>
+<tr><td>Referans sürüm</td><td><code>src/klarivision/pitch/yin.py</code></td><td>Saf NumPy, 108 satır. Algoritmanın ders kitabı hâli.</td></tr>
+<tr><td>Üretim (C++)</td><td><code>core/src/analysis_engine.cpp:86</code></td><td><code>yin_candidates</code> + karar katmanı. JSON çıktılardaki <code>yin_v1</code> budur.</td></tr>
+<tr><td>Canlı (Swift)</td><td><code>LivePitchAnalyzer.swift:3772</code></td><td>vDSP hızlandırmalı kopya, aynı formül.</td></tr>
+</table>
+
+<h2>2.1 Fark fonksiyonu d(τ)</h2>
+<p>Fikir basit: sinyali τ kadar kaydırılmış hâliyle karşılaştır. τ gerçek periyotsa kaydırılmış hâli orijinaline çok benzer, fark ≈ 0 olur.</p>
+<div class="formula">d(τ) = Σ<sub>j=0</sub><sup>W−1</sup> ( x[j] − x[j+τ] )²
+<span class="note">de Cheveigné &amp; Kawahara (2002), denklem 6</span></div>
+<p>Python referansında harfi harfine böyle yazılmış:</p>
+<pre><code>difference = np.array(
+    [np.sum((frame[:-lag] - frame[lag:]) ** 2) for lag in lags],
+    dtype=np.float64,
+)</code></pre>
+<span class="src">src/klarivision/pitch/yin.py:76–79</span>
+
+<h3>Neden fark, neden otokorelasyon değil?</h3>
+<p>Ham otokorelasyon (Bölüm 1.5a) ses seviyesine bağlıdır: gür çalınca büyür. YIN farkın karesini alır ve minimum arar — genlikten görece bağımsız, sıfıra yaklaşan temiz bir gösterge olur.</p>
+
+<h3>Üretimdeki hızlandırma: aynı formül, farklı hesap</h3>
+<p>Parantezi cebirsel olarak açarsanız:</p>
+<div class="formula">d(τ) = Σ<sub>j</sub> x[j]² &nbsp;+&nbsp; Σ<sub>j</sub> x[j+τ]² &nbsp;−&nbsp; 2·Σ<sub>j</sub> x[j]·x[j+τ]
+<span class="note">ön enerji &nbsp;+&nbsp; kaydırılmış enerji &nbsp;−&nbsp; 2 × korelasyon</span></div>
+<p>İlk iki terim, önceden hesaplanan <b>kümülatif enerji tablosundan</b> O(1) sürede okunur; üçüncü terim tek bir nokta çarpımıdır ve Apple'ın vektör donanımında (<code>vDSP_dotpr</code>) koşar.</p>
+<pre><code>std::vector&lt;float&gt; energy(samples.size() + 1, 0);
+for (std::size_t index = 0; index &lt; samples.size(); ++index) {
+    energy[index + 1] = energy[index] + samples[index] * samples[index];
+}
+...
+const float correlation = float_dot(samples.data(), samples.data() + lag, count);
+difference[lag] = std::max(0.0F,
+    energy[count] + (energy[samples.size()] - energy[lag]) - 2.0F * correlation);</code></pre>
+<span class="src">core/src/analysis_engine.cpp:91–106</span>
+<p><code>std::max(0.0F, …)</code> şunun içindir: matematiksel olarak d(τ) negatif olamaz, ama float aritmetiğinde iki büyük sayının farkı −0,0000001 çıkabilir; kırpılır.</p>
+<p>Swift'teki karşılığı satır satır aynıdır (<code>LivePitchAnalyzer.swift:3794–3804</code>); yorumu neden böyle yapıldığını da söylüyor: eski Double/ArraySlice sürümü canlı yakalamayı ~9 Hz'e düşürüyormuş.</p>
+
+<h3>Aranan τ aralığı</h3>
+<div class="formula">τ<sub>min</sub> = f<sub>s</sub> / f<sub>max</sub> &nbsp;,&nbsp; τ<sub>max</sub> = min( f<sub>s</sub> / f<sub>min</sub> , W/2 )</div>
+<p>W/2 sınırı önemli: pencerenin yarısından uzun bir periyodu ölçmek için yeterli tekrar yoktur.</p>
+<div class="box blue"><span class="t">Dün değişti: alt sınır 80 → 120 Hz</span>
+Üretim <code>minimum_frequency_hz</code> değeri 120 Hz'e çekildi. Bu bir görüntüleme tercihi değil: doğrudan τ<sub>max</sub>'ı, yani otokorelasyonun arayabileceği en uzun periyodu kısıtlıyor. Fazla geniş bir lag aralığı, ACF'nin gerçek periyodun katına kilitlenmesine izin veren şeyin ta kendisi. Şükrü Tunar kaydında dinleyicinin işaretlediği her aşağı oktav hatası 83–160 Hz arasına düşmüş, motorların hemfikir olduğu hiçbir kare 146 Hz'in altına inmemiş. 120 Hz, sol klarnetin en pes sesini (~123,5 Hz) açıkta bırakıyor.
+<span class="src" style="margin-top:6px">core/include/klarivision/core/analysis_engine.hpp:16–32</span></div>
+
+<h2>2.2 CMND: kümülatif ortalama normalize edilmiş fark</h2>
+<p>Ham d(τ) tek başına kullanılamaz, iki tuzağı var:</p>
+<ol>
+  <li>d(0) = 0'dır (sinyal kendisiyle birebir aynıdır). En küçüğü körü körüne ararsanız hep 0'ı bulursunuz.</li>
+  <li>τ büyüdükçe d(τ) genelde büyür; bu karşılaştırmayı adaletsiz kılar.</li>
+</ol>
+<p>YIN'in çözümü: her d(τ)'yu, o noktaya kadarki <b>ortalama</b> d değerine böl.</p>
+<div class="formula">d′(τ) = d(τ) &nbsp;/&nbsp; [ (1/τ) · Σ<sub>j=1</sub><sup>τ</sup> d(j) ] &nbsp;=&nbsp; d(τ) · τ / Σ<sub>j=1</sub><sup>τ</sup> d(j)
+<span class="note">denklem 8; d′(0) = 1 tanımlanır</span></div>
+<p>Payda bir ortalamadır, dolayısıyla d′ birimsizdir ve tipik değeri 1 civarındadır. Gerçek periyotta d(τ) ortalamanın çok altına düştüğü için d′ <b>sıfıra çakılır</b>. Artık τ'lar adil kıyaslanabilir ve 0,15 / 0,50 gibi mutlak eşikler anlam kazanır.</p>
+<pre><code>total += difference[lag];
+if (total &gt; 0) cumulative[lag] = difference[lag] * static_cast&lt;float&gt;(lag) / total;</code></pre>
+<span class="src">core/src/analysis_engine.cpp:112–116 &nbsp;·&nbsp; Python: yin.py:80</span>
+
+<div class="box"><span class="t">Üretimde ders kitabından bir sapma</span>
+C++ ve Swift'te <code>difference</code> dizisi yalnız [τ<sub>min</sub>, τ<sub>max</sub>] aralığında doldurulur, altındaki girdiler 0 kalır. Ama τ çarpanı hâlâ 1'den sayar. Yani payda gerçekte Σ<sub>j=τmin</sub><sup>τ</sup> d(j) iken çarpan τ'dur; bu, ortalamayı τ/(τ−τ<sub>min</sub>+1) katı küçültür ve d′ olduğundan <b>büyük</b> çıkar.<br><br>
+Etkisi en küçük τ'larda serttir: tam τ = τ<sub>min</sub> noktasında d′ = τ<sub>min</sub> olur (44,1 kHz / 1500 Hz için 29) — eşik 0,50'nin çok üstünde, yani en tiz birkaç lag pratikte hiç seçilemez. τ büyüdükçe çarpan 1'e yaklaşır ve fark kaybolur. Python referansı tüm lag'leri doldurduğu için bu sapmayı taşımaz.</div>
+
+<h2>2.3 Aday seçimi</h2>
+<h3>Python referansı: mutlak eşik (klasik YIN)</h3>
+<p>Eşiğin altına düşen <b>ilk</b> τ alınır — en küçüğü değil, ilki. Sebebi kritiktir: gerçek periyot τ ise 2τ ve 3τ da dip yapar. En derin dibi seçerseniz oktav aşağı kayarsınız; ilk dibi seçmek doğru olanı verir.</p>
+<pre><code>below_threshold = np.flatnonzero(candidate_values &lt; settings.threshold)
+if len(below_threshold):
+    candidate_index = int(below_threshold[0] + minimum_lag - 1)
+    while (candidate_index &lt; len(cumulative_mean) - 1
+           and cumulative_mean[candidate_index + 1] &lt;= cumulative_mean[candidate_index]):
+        candidate_index += 1
+else:
+    candidate_index = int(np.argmin(candidate_values) + minimum_lag - 1)</code></pre>
+<span class="src">src/klarivision/pitch/yin.py:82–93</span>
+<p><code>while</code> döngüsü şunu yapar: eşiği geçtiğiniz nokta dibin yamacı olabilir, iniş sürdükçe kaydırıp dibin tabanına inersiniz.</p>
+
+<h3>Üretim: tüm yerel minimumları topla</h3>
+<p>C++/Swift eşiği 0,50'ye gevşetir ve <b>tek bir cevap seçmez</b> — en fazla 12 aday döndürür, kararı üst katmana bırakır.</p>
+<pre><code>if (!(cumulative[lag] &lt;= cumulative[lag - 1] &&
+      cumulative[lag] &lt;  cumulative[lag + 1] &&
+      cumulative[lag] &lt;  0.50)) continue;</code></pre>
+<span class="src">core/src/analysis_engine.cpp:122</span>
+<p>Üç koşul birlikte "yerel minimum" tanımıdır. Zayıf minimumların da tutulma sebebi Swift yorumunda açık: süreklilik puanlayıcısı, gür harmoniği yerine <i>sessiz temel frekansı</i> kurtarabilsin diye.</p>
+
+<h2>2.4 Frekans ve güven</h2>
+<div class="formula">f<sub>0</sub> = f<sub>s</sub> / τ* &nbsp;,&nbsp; güven = clip( 1 − d′(τ) , 0 , 1 )</div>
+<p>Sezgi doğrudan: d′ ne kadar sıfıra yakınsa sinyal o kadar temiz periyodiktir. d′ = 0,05 → güven 0,95 (kristal netliğinde nota). d′ = 0,45 → güven 0,55 (şüpheli; gürültü ya da iki nota arası geçiş).</p>
+<p><b>Klasik YIN burada biter.</b> Kalan her şey, bu ham tahmini klarnette kullanılabilir kılan <code>yin_v1</code>'e özel karar katmanıdır.</p>
+
+<h2>2.5 Oktav kurtarma — ve dün eklenen tek-harmonik koşulu</h2>
+<p>Her aday için 2× frekansına bakılır. Oradaki spektral enerji 8 kattan fazlaysa, gerçek temel bir oktav yukarıda olabilir; o frekans neredeyse tam güvenle listeye eklenir.</p>
+<div class="box red"><span class="t">Bu pas tek başına 13 oktav hatasının 12'sini üretiyordu</span>
+Ham 2× baskınlığı, <b>gerçek temel frekansları</b> yukarı terfi ettiriyordu. Sebebi Bölüm 1.8: kapalı silindirde çift kısmiller zayıftır, dolayısıyla gerçek bir temel frekans da "baskılanmış" görünebilir. Ayırt edici test <b>tek harmonik doluluğu</b>dur: gerçek bir temel f, 3f ve 5f'te enerji bırakır; f'te hayalet olan (gerçek nota 2f olan) bir aday için 3f ve 5f, gerçek notanın kısmilleri arasında boşluğa denk gelir.</div>
+<pre><code>const auto odd_support = [&amp;](const double frequency) {
+    double total = 0;
+    for (const double multiple : {3.0, 5.0}) {
+        const double probe = frequency * multiple;
+        if (probe &lt; rate / 2) total += spectral_energy(samples, rate, probe);
+    }
+    return total;
+};
+...
+if (spectral_energy(samples, rate, upper) &lt;=
+    spectral_energy(samples, rate, result[index].frequency) * 8) continue;   // 2x baskın mı?
+if (odd_support(upper) &lt;= odd_support(result[index].frequency)) continue;    // tek harmonikler de üst hatta mı?
+result.push_back({upper, 0.99999, std::log(0.99999)});</code></pre>
+<span class="src">core/src/analysis_engine.cpp:148–171</span>
+
+<h2>2.6 Hayalet alt-harmonik cezası</h2>
+<p>Tersi durum: YIN gerçekte var olmayan bir alt-periyoda kilitlenebilir. Adayın kendi frekansında spektrumda neredeyse hiç enerji yokken 2×/3× katı baskınsa, bu bir <b>otokorelasyon hayaletidir</b>.</p>
+<div class="formula">ceza = 0,15 · clip( (r − 6) / 20 , 0 , 1 )
+<span class="note">r = en baskın katın genliği / adayın kendi genliği</span></div>
+<pre><code>const double severity = std::clamp((existence.dominant_multiple_ratio - 6.0) / 20.0, 0.0, 1.0);
+return 0.15 * severity;</code></pre>
+<span class="src">core/src/analysis_engine.cpp:185–191 &nbsp;·&nbsp; eşik 6,0: core/src/harmonic_arbitration.cpp:70–77</span>
+<p>6,0 eşiği ölçümle seçilmiş: zayıf ama gerçek bir klarnet temel frekansı kendi üçüncü harmoniğinin ~3 katı gerisinde kalabiliyor; gerçek bir hayalet ise en belirsiz karesinde bile ~8 katına, temiz sürdürülen hâlinde 24–27 katına ulaşıyor. Eşik iki kümenin arasına, gerçek-ama-zayıf tarafa yakın konmuş.</p>
+<p>Ceza <b>kademelidir, sert ret değildir</b> — kod yorumu gerekçeyi söylüyor: sürekliliği ve gerçekten belirsiz adayları adil biçimde yenmeli, ezip geçmemeli.</p>
+
+<h2>2.7 Süreklilik puanlaması</h2>
+<p>Müzik sıçramaz. Bir önceki karede 440 Hz duyduysanız, bu karede 880 Hz'den çok 442 Hz olması muhtemeldir.</p>
+<div class="formula">skor = güven − hayalet_cezası − 0,30 · min( sent_uzaklık / 700 , 1 )</div>
+<pre><code>if (candidate.confidence &lt; .55) continue;              // kendi başına çok zayıf
+double score = adjusted_score(candidate);
+if (previous) {
+    const double distance = cents_distance(candidate.frequency, previous-&gt;frequency);
+    score -= .30 * std::min(distance / 700.0, 1.0);
+}</code></pre>
+<span class="src">core/src/analysis_engine.cpp:249–255</span>
+<p>Önceki kare yoksa (nota başlangıcı, artikülasyon boşluğu sonrası) süreklilik dayanağı da yoktur; orada baraj 0,76'ya yükselir (<code>analysis_engine.cpp:240</code>). Canlı Swift'in basit yolu da aynı 0,76'yı kullanır.</p>
+<p>Seçilen aday yine de hayalet olarak işaretliyse, hiçbir şey yayınlanmaz. Gerekçe kodda yazılı: bir hayaletin temel frekans olarak yayınlanmaya <i>periyot düzleminde hiçbir hakkı yoktur</i>; sessiz kalmak, boşluk köprülemesinin kareyi çevresinden kurtarmasına izin verir.</p>
+
+<h2>2.8 Aşağı sıçrama histerezisi</h2>
+<p>Son yayınlanan perdenin 900 sentten fazla <b>altına</b> düşen bir aday tek karede kabul edilmez; 3 ardışık kare onaylamalıdır (her biri bekleyen adayın 360 senti içinde).</p>
+<pre><code>if (impl_-&gt;pending_yin_confirmations &lt; 3) return {};  // henüz yeterince onaylanmadı</code></pre>
+<span class="src">core/src/analysis_engine.cpp:565</span>
+
+<h2>2.9 Bırakış tespiti ve yayın kapısı</h2>
+<p>Bir notanın bitişi müzikal bir <i>decrescendo</i>'dan farklıdır: RMS çok daha hızlı düşer. İki ardışık %20'lik düşüş bırakışı tetikler ve süreklilik durumu sıfırlanır.</p>
+<pre><code>if (impl_-&gt;previous_yin_rms &gt; 0 && rms &lt; impl_-&gt;previous_yin_rms * .80) ++impl_-&gt;yin_release_falls;
+...
+if (impl_-&gt;yin_release_falls &gt;= 2) impl_-&gt;yin_release_active = true;</code></pre>
+<span class="src">core/src/analysis_engine.cpp:462–470</span>
+<p>İki ayrı RMS tepesi tutulur: hızlı sönen (<code>× 0,85</code>, yavaş-fade kapısı için) ve yavaş sönen (<code>× 0,995</code>, toparlanma eşiği için).</p>
+<p>Son kapı: güveni 0,90'ın altında <b>ve</b> RMS'i kendi son tepesinin %35'inin altında olan bir aday yayınlanmaz — "sönen reverb kuyruğu, gerçek nota değil".</p>
+<pre><code>if (choice && !impl_-&gt;yin_release_active && !(choice-&gt;confidence &lt; .90 &&
+    rms &lt; impl_-&gt;recent_yin_rms_peak * .35)) {
+    publication = EngineFrame{source_time, choice-&gt;frequency, choice-&gt;confidence};</code></pre>
+<span class="src">core/src/analysis_engine.cpp:582–584</span>
+
+<h2>2.10 Boşluk köprüleme</h2>
+<p>Kısa kopmalar (en fazla 7 kare) son bilinen perde tekrarlanarak doldurulur — ama <b>sadece</b> boşluğun iki ucu da yeterince güvenliyse ve birbirine 90 sentten yakınsa. Yani köprü "aynı notaya geri döndük" kanıtıyla açılır.</p>
+<pre><code>std::max(last-&gt;confidence, frame-&gt;confidence) &gt;= minimum_endpoint_confidence &&
+std::min(last-&gt;confidence, frame-&gt;confidence) &gt;= weaker_floor &&
+cents_distance(*last-&gt;frequency_hz, *frame-&gt;frequency_hz) &lt;= 90</code></pre>
+<span class="src">core/src/analysis_engine.cpp:301–305 — <code>append_bridged</code>, yin_v1 ve hapt_v1 ortak</span>
+<p><code>yin_v1</code> için güven tabanı 0,55'tir. 30 kare boyunca hiç yayın olmazsa süreklilik durumu tamamen sıfırlanır.</p>
+
+<h2>2.11 Bir karenin tam yolculuğu</h2>
+<div class="flow">1536 örnek
+  ↓  RMS &lt; 0,015 ?  →  sessizlik, çık                      analysis_engine.cpp:29
+  ↓  DC çıkar
+  ↓  d(τ) = Σ(x[j] − x[j+τ])²   her τ ∈ [τmin, τmax]        analysis_engine.cpp:102
+  ↓  d′(τ) = d(τ)·τ / Σd(j)                                 analysis_engine.cpp:116
+  ↓  yerel minimumlar, d′ &lt; 0,50   (≤12 aday)               analysis_engine.cpp:122
+  ↓  parabolik düzeltme δ                                   analysis_engine.cpp:124
+  ↓  f₀ = fs/(τ+δ),  güven = 1 − d′(τ)                      analysis_engine.cpp:130
+  ↓  oktav kurtarma (2× enerji 8× + tek harmonik doluluğu)  analysis_engine.cpp:148
+  ↓  hayalet cezası − süreklilik cezası                     analysis_engine.cpp:185, 253
+  ↓  aşağı sıçrama: 3 kare onay                             analysis_engine.cpp:558
+  ↓  bırakış / yavaş-fade kapısı                            analysis_engine.cpp:582
+  ↓  boşluk köprüleme (≤7 kare, ≤90 sent)                   analysis_engine.cpp:274
+EngineFrame{ zaman, frekans, güven }</div>
+<div class="box blue"><span class="t">Elle takip etmek isterseniz</span>
+En iyi başlangıç <code>src/klarivision/pitch/yin.py</code> — 108 satır, dallanma yok. <code>_estimate_frame</code> fonksiyonuna tek bir pencere verip ara dizileri yazdırarak d(τ) ve d′(τ) eğrilerini gözle görebilirsiniz.</div>
+</div>
+<div class="chapter">
+<h1>3. Pitch Engine V2</h1>
+<p class="lead">YIN v1'in temel varsayımı şudur: "bir tahminci çalıştır, kararı hemen ver." V2 bu varsayımın ikisini de reddeder. <b>Dört bağımsız tahminci</b> çalıştırır, hiçbirinin kararını erken kabul etmez, ve son kararı <b>beş kare geriden</b>, geleceğe bakarak verir.</p>
+
+<h2>3.1 Temel fikir: kanıtı erken çökertme</h2>
+<p>YIN v1'de her karede tek bir cevap seçilir ve o cevap sonraki karenin süreklilik dayanağı olur. Bir kare yanlış giderse, hata sürekliliğe sinip yayılabilir.</p>
+<p>V2 bunun yerine her karede bir <b>aday listesi</b> tutar ve her adayın nereden geldiğini (<code>CandidateSource</code>) hatırlar:</p>
+<pre><code>enum class CandidateSource { yin, autocorrelation, mpm, spectral };</code></pre>
+<span class="src">core/include/klarivision/core/pitch_engine_v2.hpp:11–16 — "V2 keeps this provenance instead of collapsing every observation into one early YIN decision"</span>
+<p>Karar, adaylar arasından değil, <b>kare dizisi üzerinden bir yol</b> olarak verilir (3.5).</p>
+
+<h2>3.2 Dört aday kaynağı</h2>
+
+<h3>a) YIN üreteci</h3>
+<p>Bölüm 2'deki CMND algoritmasının aynısı. Farkı: periyodikliği 0,50'nin altındaki adaylar baştan atılır.</p>
+<pre><code>candidates.erase(std::remove_if(candidates.begin(), candidates.end(), [](const auto&amp; item) {
+    return item.periodicity &lt; 0.50;
+}), candidates.end());</code></pre>
+<span class="src">core/src/pitch_engine_v2_session.cpp:311–314</span>
+
+<h3>b) Normalize otokorelasyon</h3>
+<p>Klasik ACF, ama enerjiyle normalize edilmiş ve <b>tek</b> bir aday döndürür. Seçim stratejisi Bölüm 4'teki VPM-like ile aynıdır: en güçlü tepeyi değil, en güçlüye "yeterince yakın" olan <b>en kısa lag</b>'i seç — böylece oktav-aşağı hayaletlerden kaçınılır.</p>
+<span class="src">core/src/pitch_engine_v2_session.cpp:146–208 — <code>autocorrelation_candidate</code></span>
+
+<h3>c) MPM (McLeod Pitch Method) — NSDF</h3>
+<p>Bölüm 1.5c'deki NSDF. Her yerel maksimum bir adaydır ve hepsi döndürülür (en fazla 12).</p>
+<div class="formula">n(τ) = 2·Σ x[j]·x[j+τ] / Σ ( x[j]² + x[j+τ]² )</div>
+<span class="src">core/src/mpm.cpp:9–133 (referans) · core/src/pitch_engine_v2_session.cpp:215 (vDSP'li eş sürüm)</span>
+
+<h3>d) Spektral oktav adayı</h3>
+<p>Mevcut adayların 2× frekansında enerji 8 kat baskınsa, o frekans <code>spectral</code> kaynaklı yeni bir aday olarak eklenir — mevcut adayın üzerine yazılmaz, yanına konur.</p>
+<pre><code>if (spectral_energy(samples, sample_rate, upper) &gt;
+    spectral_energy(samples, sample_rate, candidates[index].frequency_hz) * 8) {
+    candidates.push_back(PitchCandidate{
+        upper, std::max(0.92, candidates[index].periodicity), 0, CandidateSource::spectral,
+    });
+}</code></pre>
+<span class="src">core/src/pitch_engine_v2_session.cpp:344–350</span>
+
+<h2>3.3 SWIPE′ harmonik desteği</h2>
+<p>Her aday, tam FFT üzerinden hesaplanan <b>SWIPE′ benzeri spektral çekirdek</b> ile sınanır. Bu, V2'nin diğer motorlarda olmayan en özgün parçasıdır.</p>
+<p>Fikir: gerçek bir temel frekans f ise, spektrumda f, 2f, 3f… noktalarında <b>tepeler</b>, aralarında <b>çukurlar</b> olmalıdır. SWIPE′ bunu bir "iç çarpım" olarak ölçer:</p>
+<div class="formula">
+skor(f) = Σ<sub>k</sub> w<sub>k</sub> · [ S(kf) − ½( S((k−½)f) + S((k+½)f) ) ] &nbsp;/&nbsp; √( Σw<sub>k</sub>² · ΣS(kf)² )<br>
+w<sub>k</sub> = 1/√k
+<span class="note">S(·): Hann pencereli FFT'nin karekök-genlik spektrumu, binler arası doğrusal interpolasyonla okunur</span></div>
+<p>Üç tasarım kararı önemli:</p>
+<ul>
+  <li><b>Tepe eksi komşu çukurlar.</b> Yalnız tepe yüksekliğine bakmak, gürültülü/yassı bir spektrum bölgesini de yüksek puanlardı. Fark almak, dar ve gerçek bir harmonik tepesini ödüllendirir.</li>
+  <li><b>Sadece 1. ve <i>asal</i> harmonikler pozitif kanıt sayılır.</b> Sebep: asal olmayan bir harmonik (4f, 6f, 9f…) aynı zamanda <i>başka</i>, daha pes bir temel frekansın da harmoniğidir; asal olanlar bu karışıklığa çok daha az düşer.</li>
+  <li><b>Payda tüm harmonikleri sayar.</b> Böylece daha gür veya daha kalabalık bir spektrum otomatik olarak yüksek puan almaz — skor bir kosinüs benzerliği gibi [0, 1] aralığında kalır.</li>
+</ul>
+<pre><code>if (harmonic != 1 &amp;&amp; !is_prime(harmonic)) {
+    continue;  // only the fundamental (harmonic 1) and prime harmonics contribute positive evidence
+}
+const auto weight = 1.0 / std::sqrt(static_cast&lt;double&gt;(harmonic));
+...
+inner_product += weight * (peak - 0.5 * (left_valley + right_valley));</code></pre>
+<span class="src">core/src/swipe_prime.cpp:142–151 &nbsp;·&nbsp; asallık testi: swipe_prime.cpp:15–25</span>
+<p>Bütün adaylar tek bir FFT çağrısında toplu olarak puanlanır (<code>swipe_prime_harmonic_supports</code>); FFT, dosya içinde yazılmış radix-2 Cooley–Tukey uygulamasıdır (<code>swipe_prime.cpp:44–100</code>).</p>
+
+<h2>3.4 Aday puanı: üç kanıtın harmanı</h2>
+<p>Her aday üç bağımsız kanıtla puanlanır.</p>
+<div class="formula">emisyon = 0,40 · periyodiklik &nbsp;+&nbsp; 0,20 · uzlaşma &nbsp;+&nbsp; 0,40 · SWIPE′_desteği
+<span class="note">uzlaşma = 1,0 (başka bir tahminci 55 sent içinde aynı frekansı söylediyse), aksi hâlde 0,25</span></div>
+<p><b>Uzlaşma</b> (agreement) terimi V2'nin kalbidir: birbirinden bağımsız iki tahmincinin neredeyse aynı frekansı söylemesi, tek bir tahmincinin yüksek özgüveninden daha güçlü kanıttır.</p>
+<pre><code>for (std::size_t other = 0; other &lt; candidates.size(); ++other) {
+    if (candidates[other].source != candidates[index].source &&
+        cents(candidates[other].frequency_hz, candidates[index].frequency_hz) &lt;= 55) {
+        agrees = true; break;
+    }
+}
+const double agreement = agrees ? 1.0 : 0.25;
+double score = 0.40 * candidates[index].periodicity + 0.20 * agreement + 0.40 * supports[index];</code></pre>
+<span class="src">core/src/pitch_engine_v2_session.cpp:370–380</span>
+<p>Spektral kaynaklı aday için puan 0,90'a <b>taban</b>lanır: o aday zaten yalnızca 8× doğrudan spektral kanıtla var olduğu için, periyot düzlemindeki tahmincilerin alt harmonikte anlaşması onu ezmemelidir.</p>
+
+<h3>Yüksek register barajı</h3>
+<p>900 Hz'in üstündeki bir adaya güvenmek için ya tahminciler arası uzlaşma, ya da kendi başına yüksek periyodiklik <b>ve</b> spektral destek gerekir:</p>
+<pre><code>return candidate.agreement_support || (candidate.frequency_hz &gt; 900 &&
+    candidate.periodicity &gt;= 0.80 && candidate.harmonic_support &gt;= 0.75);</code></pre>
+<span class="src">core/src/pitch_engine_v2_session.cpp:399–400</span>
+
+<h2>3.5 Sabit gecikmeli Viterbi izleyici</h2>
+<p>Burası V2'yi diğer üç motordan gerçekten ayıran yerdir. Diğerleri <b>tamamen nedenseldir</b> (causal): her kareyi görür görmez karar verirler. V2 kararı <b>5 kare geciktirir</b> ve o beş karenin kanıtını da hesaba katarak geriye dönük en iyi yolu seçer.</p>
+
+<h3>Viterbi nedir?</h3>
+<p>Elinizde her kare için birkaç aday var. Bir "yol", her kareden bir aday seçmektir. Her yolun puanı iki parçadan oluşur:</p>
+<div class="formula">yol_puanı = Σ<sub>kare</sub> emisyon(seçilen aday) &nbsp;+&nbsp; Σ<sub>kare</sub> geçiş(önceki aday → bu aday)</div>
+<p><b>Emisyon</b> "bu aday kendi başına ne kadar inandırıcı" (3.4), <b>geçiş</b> ise "bu sıçrama müzikal olarak ne kadar makul" demektir. Viterbi, tüm olası yollar arasından en yüksek puanlıyı, kombinatoryal patlama olmadan, dinamik programlamayla bulur.</p>
+<div class="formula">
+geçiş(a → b) = −0,18 · min( |cents(a,b)| / 700 , 1 ) &nbsp;−&nbsp; 0,12 &nbsp;[eğer |cents| ≥ 850]
+<span class="note">ikinci terim: bir karelik oktav/onikili sıçramasına ek ücret</span></div>
+<pre><code>auto penalty = 0.18 * std::min(cents / std::max(1.0, width_cents), 1.0);
+if (cents &gt;= 850.0) {
+    penalty += 0.12;  // extra surcharge for a near-octave-or-larger jump
+}
+return -penalty;</code></pre>
+<span class="src">core/src/fixed_lag_tracker.cpp:25–33</span>
+<p>Ek ücretin kasten <b>ölçülü</b> tutulduğunu kod yorumu söylüyor: sürdürülen bir register değişimi, sonraki beş karenin emisyon kanıtıyla yine de kazanabilmeli.</p>
+
+<h3>Neden "sabit gecikmeli"?</h3>
+<p>Tam Viterbi tüm kaydı görmeyi gerektirir; canlı çalarken bu imkânsızdır. V2 uzlaşmayı şurada bulur: yalnız <b>5 kare</b> ileri bakar. 512 örneklik adımda 48 kHz'de bu ≈ 53 ms sabit gecikme demektir — algılanabilir sınırın hemen altında.</p>
+<pre><code>if (frames_.size() &lt;= lag_frames_) {
+    return std::nullopt;   // henüz yeterli ileri-bakış yok
+}
+return resolve_front();    // tampon dolu: en eski kareyi şimdi karara bağla</code></pre>
+<span class="src">core/src/fixed_lag_tracker.cpp:51–57</span>
+<p>Önemli bir ayrıntı: <b>sessizlik yolu keser.</b> Dinamik program yalnız en öndeki kareden başlayan kesintisiz seslendirilmiş bloğu kullanır; araya giren bir sessizlik müzikal sürekliliği kopardığı için ileri-bakış orada durur.</p>
+<pre><code>std::size_t voiced_count = 0;
+while (voiced_count &lt; frames_.size() &amp;&amp; !frames_[voiced_count].candidates.empty()) {
+    ++voiced_count;
+}</code></pre>
+<span class="src">core/src/fixed_lag_tracker.cpp:77–80</span>
+<p>Yol çözüldükten sonra geri-işaretçiler (back-pointers) geriye doğru yürünür ve <b>yalnız en eski karenin</b> kararı yayınlanır; kalan dört kare tamponda kalıp bir sonraki turda daha çok ileri-bakışla yeniden değerlendirilir.</p>
+
+<h2>3.6 Yayın kapıları</h2>
+<p>Viterbi bir aday seçtikten sonra bile yayın garanti değildir. Sırayla:</p>
+<table>
+<tr><th style="width:30%">Kapı</th><th>Kural</th></tr>
+<tr><td>RMS kapısı</td><td>Kare sessizse yayın yok.</td></tr>
+<tr><td>Bırakış (release)</td><td>Kare bırakış anında yakalandıysa yayın yok. Karar 5 kare geciktiği için, <b>kararın ait olduğu karenin</b> bırakış durumu ayrı kuyruklarda saklanır — geç çözüm asla başka bir pencerenin kapısını uygulamaz.</td></tr>
+<tr><td>Yüksek register</td><td>900 Hz üstü için 3.4'teki ek kanıt barajı.</td></tr>
+<tr><td>Güven barajı</td><td>0,70 — <i>ama</i> son yayınlanan perdenin 90 senti içindeki bir kare 0,55'e düşebilir ("stable weak contour"): sürekliliğin kendisi de kanıttır.</td></tr>
+<tr><td>Harmonik histerezis</td><td>Aşağı harmonik sıçraması için onay gecikmesi (<code>harmonic_filter</code>).</td></tr>
+</table>
+<pre><code>const bool stable_weak_contour = last_published_ &amp;&amp; tentative-&gt;confidence &gt;= 0.55 &amp;&amp;
+    cents(tentative-&gt;frequency_hz, last_published_-&gt;frequency_hz) &lt;= 90;
+if (tentative-&gt;confidence &gt;= 0.70 || stable_weak_contour) {
+    publication = harmonic_filter(*tentative);
+}</code></pre>
+<span class="src">core/src/pitch_engine_v2_session.cpp:490–495</span>
+
+<h3>Başlangıç köprüsü (<code>bridge_startup</code>)</h3>
+<p>Zarif bir ayrıntı: bir notanın atağı çoğu zaman biraz belirsiz başlar, periyodiklik ancak birkaç kare sonra oturur. Bu kareler atılırsa notanın başlangıç zamanı geç görünür. V2 bunun yerine ilk gerçek yayına kadar olan zayıf kareleri <b>tamponlar</b>; gerçek yayın gelip aynı perdeye yakın çıkarsa, tamponlanan koşu geriye dönük olarak serbest bırakılır.</p>
+<span class="src">core/src/pitch_engine_v2_session.cpp:579–612</span>
+
+<h2>3.7 Bir karenin tam yolculuğu</h2>
+<div class="flow">1536 örnek
+  ↓  RMS kapısı + bırakış tespiti                          v2_session.cpp:423–460
+  ↓  YIN adayları (periyodiklik ≥ 0,50)                    v2_session.cpp:62
+  ↓  + ACF adayı (tek)                                     v2_session.cpp:146
+  ↓  + MPM/NSDF adayları (≤12)                             v2_session.cpp:215
+  ↓  + spektral oktav adayı (2× enerji 8×)                 v2_session.cpp:344
+  ↓  SWIPE′ desteği (tek toplu FFT)                        swipe_prime.cpp:167
+  ↓  emisyon = 0,40·per + 0,20·uzlaşma + 0,40·SWIPE′       v2_session.cpp:379
+  ↓  ── 5 kare tampon ──
+  ↓  Viterbi: emisyon + geçiş cezası, en iyi yol           fixed_lag_tracker.cpp:83–125
+  ↓  yayın kapıları (RMS · bırakış · 900 Hz · 0,70/0,55)   v2_session.cpp:479–499
+  ↓  başlangıç köprüsü + boşluk köprüleme                  v2_session.cpp:579, 613
+PublishedPitchFrame{ zaman, frekans, güven }</div>
+
+<div class="box blue"><span class="t">V2'nin ödünleşimi</span>
+<b>Kazandığı:</b> tek karelik hatalar yola oturmaz; dört bağımsız kanıt birbirini denetler; 900 Hz üstünde disiplinli.<br>
+<b>Ödediği:</b> ~53 ms sabit gecikme, ve kare başına belirgin biçimde daha çok hesap (dört tahminci + FFT). Çevrimdışı iyileştirme katmanında V2'ye daha <i>gevşek</i> bir geçiş genişliği verilmesinin sebebi de budur: zaten kendi Viterbi'si var (Bölüm 7).</div>
+</div>
+<div class="chapter">
+<h1>4. VPM-like</h1>
+<p class="lead">Tadao Yamaoka'nın <i>Vocal Pitch Monitor</i> için anlattığı yöntemin bağımsız uygulaması. Uygulamanın kendi eşikleri yayınlanmadığı için bu bir kopya değil, "VPM-benzeri" bir yeniden inşadır. Üç aşaması var: <b>normalize otokorelasyon</b>, <b>katlardan periyot rafinesi</b>, <b>spektrumla harmonik düzeltme</b>.</p>
+<span class="src">core/include/klarivision/core/vpm_like.hpp:10–15 · core/src/vpm_like.cpp</span>
+
+<h2>4.1 Normalize otokorelasyon (ACF)</h2>
+<p>Ham ACF ses seviyesine bağlıdır (Bölüm 1.5a). VPM-like bunu, karşılaştırılan iki alt pencerenin enerjilerinin <b>geometrik ortalamasına</b> bölerek çözer:</p>
+<div class="formula">
+r(τ) = Σ<sub>j</sub> x[j]·x[j+τ] &nbsp;/&nbsp; √( E<sub>ön</sub> · E<sub>gecikmeli</sub> )<br>
+E<sub>ön</sub> = Σ<sub>j=0</sub><sup>N−τ</sup> x[j]² &nbsp;,&nbsp; E<sub>gecikmeli</sub> = Σ<sub>j=τ</sub><sup>N</sup> x[j]²
+<span class="note">sonuç ≈ 1,0 → dalga biçimi τ örnek sonra kendini tekrarlıyor</span></div>
+<p>İki enerji terimi de önceden hesaplanan bir <b>ön-ek toplam tablosundan</b> O(1) sürede okunur — YIN'in kullandığı hilenin aynısı.</p>
+<pre><code>const auto leading = energy[count];                          // [0, count) alt penceresinin enerjisi
+const auto delayed = energy[centered.size()] - energy[lag];  // [lag, size) alt penceresinin enerjisi
+const auto normalization = std::sqrt(std::max(1e-18, leading * delayed));
+double dot = 0.0;
+for (int index = 0; index &lt; count; ++index) dot += centered[index] * centered[index + lag];
+correlation[lag] = dot / normalization;</code></pre>
+<span class="src">core/src/vpm_like.cpp:234–241</span>
+
+<h3>Tepe seçimi: en güçlüyü değil, en kısayı</h3>
+<p>Burada VPM-like'ın karakteristik hamlesi geliyor. En yüksek ACF tepesini almak, oktav-aşağı hayaletine kilitlenmenin en kolay yoludur (çünkü 2τ da neredeyse aynı kadar güçlüdür). Bunun yerine:</p>
+<div class="formula">kabul_eşiği = max( 0,38 &nbsp;,&nbsp; r(τ<sub>en güçlü</sub>) · 0,90 )
+<span class="note">bu eşiği geçen <b>en kısa lag</b> seçilir — yani en yüksek frekans</span></div>
+<pre><code>const auto acceptance = std::max(
+    config.minimum_periodicity,
+    correlation[strongest] * config.near_strongest_ratio
+);
+auto selected = strongest;
+for (const auto peak : peaks) {
+    if (correlation[peak] &gt;= acceptance) { selected = peak; break; }
+}</code></pre>
+<span class="src">core/src/vpm_like.cpp:277–286</span>
+<p>Tepeler artan lag sırasında bulunduğu için, döngüde eşiği geçen <b>ilk</b> tepe otomatik olarak en kısa lag'dir. Basit ama etkili: "neredeyse eşit güçteyse, daha tiz olanı seç."</p>
+
+<h2>4.2 Katlardan periyot rafinesi</h2>
+<p>ACF'nin lag kuantizasyonu (tam sayı örnek sınırı) en çok tiz seslerde göze batar. Parabolik interpolasyon (Bölüm 1.6) yardım eder ama yeterli değildir. Yamaoka'nın çözümü zarif:</p>
+<div class="box blue"><span class="t">Fikir</span>
+ACF'nin 2τ, 3τ, 4τ… civarında da tepeleri vardır. Bu tepelerin her biri, <b>katına bölündüğünde</b>, aynı τ periyodunun <i>bağımsız bir yeniden ölçümüdür</i>. Üstelik daha uzun bir aralık üzerinden ölçüldükleri için tek-örnek kuantizasyon hatasına daha az duyarlıdırlar. Hepsinin ağırlıklı ortalamasını almak, tek bir tepedeki parabolik interpolasyondan daha keskin bir sonuç verir.</div>
+<div class="formula">
+τ<sub>rafine</sub> = Σ<sub>m=1</sub><sup>6</sup> ( τ<sub>m</sub>* / m ) · w<sub>m</sub> &nbsp;/&nbsp; Σ<sub>m</sub> w<sub>m</sub> &nbsp;,&nbsp; w<sub>m</sub> = r(τ<sub>m</sub>) · m
+<span class="note">τ<sub>m</sub>*: m·τ civarında bulunan tepenin parabolik olarak rafine edilmiş konumu</span></div>
+<p>Ağırlık hem tepenin gücüne hem de katın büyüklüğüne orantılıdır: daha yüksek kat = daha uzun ölçüm aralığı = daha güvenilir.</p>
+<pre><code>for (int multiple = 2; multiple &lt;= config.maximum_period_multiple; ++multiple) {
+    const auto expected = selected * multiple;
+    const auto radius = std::max(2, selected / 6);        // kayma payı
+    ...
+    if (correlation[local] &lt; config.minimum_periodicity * 0.8) continue;  // inandırıcı tepe yok
+    const auto weight = correlation[local] * static_cast&lt;double&gt;(multiple);
+    weighted_period += parabolic_peak(correlation, local) / static_cast&lt;double&gt;(multiple) * weight;
+    weight_sum += weight;
+}
+const auto refined_period = weighted_period / std::max(1e-12, weight_sum);</code></pre>
+<span class="src">core/src/vpm_like.cpp:319–341</span>
+
+<h2>4.3 Spektrumla harmonik düzeltme</h2>
+<p>ACF <i>periyodikliği</i> bulur ama hangi harmoniğin gerçekten temel olduğunu bilmez. Bu aşama ACF'nin kararını gerçek spektrumla sınar: adayın kendisi ve 1/3×, 1/2×, 2×, 3× akrabaları tek tek ölçülür ve <b>en pes makul olanı</b> seçilir.</p>
+<p>Neden en pes? Çünkü asıl hata modu "eksik/zayıf temel frekans, güçlü harmonikler"dir — tersi çok daha nadirdir.</p>
+<p>Bir aday "makul" sayılmak için üç testi birden geçmeli:</p>
+<table>
+<tr><th style="width:26%">Test</th><th>Kural</th><th style="width:16%">Eşik</th></tr>
+<tr><td>Yerel spektral tepe</td><td>Genliği, her iki yanındaki komşu ölçümlerden açıkça büyük olmalı</td><td>≥ %103</td></tr>
+<tr><td>Mutlak destek</td><td>Genliği mutlak olarak yeterince gür olmalı</td><td>≥ 0,005</td></tr>
+<tr><td>Göreli destek</td><td>ACF'nin kendi frekansındaki genliğin makul bir kesri olmalı</td><td>≥ %8</td></tr>
+</table>
+<pre><code>const auto side_offset = std::max(sample_rate / samples.size(), frequency * 0.012);
+const auto left  = spectral_amplitude(samples, sample_rate, frequency - side_offset);
+const auto right = spectral_amplitude(samples, sample_rate, frequency + side_offset);
+const auto is_local_peak = amplitude &gt;= left * 1.03 &amp;&amp; amplitude &gt;= right * 1.03;
+const auto is_absolute  = amplitude &gt;= config.minimum_absolute_spectral_amplitude;
+const auto is_relative  = base_amplitude &lt;= 1e-12 ||
+    amplitude &gt;= base_amplitude * config.minimum_relative_spectral_amplitude;</code></pre>
+<span class="src">core/src/vpm_like.cpp:387–393</span>
+
+<h3>İki kritik kısıt</h3>
+<p>Bu düzeltme pası tek yönlüdür ve iki yerde kilitlenmiştir:</p>
+<div class="box red"><span class="t">1. Yukarı terfi yasak</span>
+Parlak bir üst harmonik, güçlü bir ACF temel frekansını 2×/3×'e <b>terfi ettiremez</b>. Düzeltme yalnız aşağı yönlüdür (eksik temeli onarmak için). Bu, projedeki D-011 kararının gereğidir.
+<pre style="background:#fff;margin-top:6px"><code>const auto does_not_promote = config.allow_spectral_promotion ||
+    frequency &lt;= autocorrelation_frequency * (1.0 + 1e-12);</code></pre>
+</div>
+<div class="box red"><span class="t">2. ACF zaten en güçlüyü seçtiyse, aşağı düzeltme yok</span>
+Aşağı doğru spektral düzeltme, <i>daha erken ve neredeyse-güçlü</i> bir ACF tepesini onarmak için vardır. Seçilen tepe zaten global en güçlü tepeyse, onu f/2 veya f/3 ile ezmek kısa alt-harmonik adacıkları üretiyordu (aleyhte holdout kaydında ölçüldü).
+<pre style="background:#fff;margin-top:6px"><code>const auto does_not_override_strongest_acf =
+    frequency &gt;= autocorrelation_frequency * (1.0 - 1e-12) || selected != strongest;</code></pre>
+</div>
+<span class="src">core/src/vpm_like.cpp:398–406</span>
+<p>Çıkış güveni, seçilen ACF tepesinin yüksekliğidir ve <b>0,80</b>'in altındaysa hiçbir şey yayınlanmaz — bu, dört motor içindeki en yüksek kare-içi güven barajıdır.</p>
+
+<h2>4.4 VPMLikeTracker: aşağı harmonik sıçraması muhafızı</h2>
+<p>Kare tahmincisi kasten <b>durumsuzdur</b> (stateless). Kareler arası hafıza ayrı bir sınıfta durur ve tek bir işi vardır: şüpheli bir <b>aşağı</b> sıçramayı geciktirmek. Sıradan perde hareketini asla yumuşatmaz.</p>
+<p>"Şüpheli" tanımı iki koşulun birleşimidir:</p>
+<div class="formula">|cents(yeni, eski)| ≥ 650 &nbsp;<b>ve</b>&nbsp; yeni/eski oranı ∈ { 1/3, 1/2, 2/3 } ± 110 sent</div>
+<pre><code>bool is_downward_harmonic_jump(const double previous, const double current) {
+    if (current &gt;= previous || std::abs(cents_between(current, previous)) &lt; 650.0) return false;
+    for (const auto ratio : {1.0 / 3.0, 0.5, 2.0 / 3.0}) {
+        if (std::abs(cents_between(current / previous, ratio)) &lt;= 110.0) return true;
+    }
+    return false;
+}</code></pre>
+<span class="src">core/src/vpm_like.cpp:23–33</span>
+<p>Yani büyük ama "harmonik oranı"na benzemeyen bir düşüş (gerçek bir müzikal atlama) anında kabul edilir; sadece tam 1/2 veya 1/3 gibi oranlar beklemeye alınır. Bu ayrım motorun zekâsının özüdür.</p>
+
+<h3>Üç sonuçlu karar</h3>
+<table>
+<tr><th style="width:34%">Durum</th><th>Sonuç</th></tr>
+<tr><td>Eski (üst) hat hâlâ en az <b>2,5×</b> daha gür</td><td><b>Doğrudan veto.</b> Eski perde yayınlanmaya devam eder, güven 0,55'e kırpılır.</td></tr>
+<tr><td>Rakip üst hat kanıtı hiç yok</td><td>Yeni pes tahmin <b>anında</b> kabul edilir (veto edilecek bir şey yok).</td></tr>
+<tr><td>Üst hat hâlâ gerçek bir spektral tepe</td><td><b>3 ardışık kare onayı</b> beklenir (her biri 180 sent içinde); onaya kadar eski perde tekrarlanır.</td></tr>
+</table>
+<span class="src">core/src/vpm_like.cpp:120–163</span>
+<p>Kod yorumu bunun bir <b>veto</b> olduğunu, spektral terfi olmadığını özellikle vurguluyor: gerçek bir pes atak, eski üst hattı zaten kaybeder ve normal onay yolundan geçer — geleceğe bakmaya gerek kalmadan.</p>
+
+<h2>4.5 Oturum katmanı: bırakış, boşluk, atak bekleme</h2>
+<p>Üretimde VPM-like, <code>analysis_engine.cpp</code> içinde kendine ait, diğer motorlardan daha ayrıntılı bir durum makinesiyle sarılır. Ana durumlar:</p>
+<table>
+<tr><th style="width:30%">Durum</th><th>Anlamı ve çıkış koşulu</th></tr>
+<tr><td><code>waiting_for_attack</code></td><td>Bir bırakış veya süresi dolmuş boşluktan sonra: <b>hem</b> güvenli bir tahmin <b>hem</b> zarfın son tepesinin %40'ına tırmanması gerekir. İkisi birden olmadan çıkılmaz.</td></tr>
+<tr><td><code>release_suspected</code></td><td>Yalnız iki sonuç mümkündür: zarf <i>aynı</i> kontura döner (yanlış alarm → tamponlanan boşluk serbest bırakılır), veya <i>farklı</i> bir kontura döner (gerçek yeni atak → eski kontur temizlenir).</td></tr>
+<tr><td><code>weak_contour_hold</code></td><td>Güvenli tahmin yok ama zayıf bir tahmin izlenen kontura katılıyor: gürültülü zayıf tahmini takip etmek yerine <b>konturun kendi frekansı</b> yeniden yayınlanır.</td></tr>
+</table>
+<span class="src">core/src/analysis_engine.cpp:600–920</span>
+<p>Bu ayrıntı seviyesi tesadüf değil: VPM-like, dinleyici hakemliğinde <b>sessiz kalması gerektiğinde sessiz kalan</b> motor olarak ölçüldü. Çevrimdışı katmandaki "başıboş nokta" temizleyicisi bile eşiğini (0,80) doğrudan VPM-like'ın kendi yayın barajından alır (Bölüm 7.3).</p>
+
+<h2>4.6 Bir karenin tam yolculuğu</h2>
+<div class="flow">1536 örnek (double'a çevrilir)
+  ↓  DC çıkar + RMS kapısı                                 vpm_like.cpp:184–201
+  ↓  normalize ACF, her τ ∈ [τmin, τmax]                   vpm_like.cpp:234
+  ↓  yerel maksimumlar → tepe listesi                      vpm_like.cpp:246
+  ↓  en güçlüye %90 yakın en kısa lag seçilir              vpm_like.cpp:277
+  ↓  2τ..6τ tepelerinden ağırlıklı periyot rafinesi        vpm_like.cpp:319
+  ↓  spektral akrabalar: 1/3, 1/2, 1, 2, 3 ×               vpm_like.cpp:361
+  ↓  en pes "makul" olan seçilir (3 test + 2 kısıt)        vpm_like.cpp:387
+  ↓  güven = ACF tepe yüksekliği,  &lt; 0,80 ise yayın yok    vpm_like.cpp:459
+  ↓  VPMLikeTracker: aşağı harmonik sıçraması muhafızı     vpm_like.cpp:96
+  ↓  oturum durum makinesi (atak / bırakış / boşluk)       analysis_engine.cpp:600
+EngineFrame{ zaman, frekans, güven }</div>
+</div>
+<div class="chapter">
+<h1>5. HAPT v1</h1>
+<p class="lead">"Harmonik-Adaptif Faz-kilitli İzleyici". Diğer üçünün eşiti, dördüncü bağımsız motor. İki fikri kendine özgüdür: <b>çözünürlük-farkında harmonikler-arası veto</b> ve <b>faz kilitli anlık frekans rafinesi</b>. Birincisi klarnetin fiziğini doğrudan bir karar kuralına çeviriyor; ikincisi kareler arası hiçbir hafıza kullanmadan alt-sent doğruluk üretiyor.</p>
+<span class="src">core/include/klarivision/core/hapt.hpp:10–31 · core/src/hapt.cpp · docs/HAPTPitchEngine.md</span>
+
+<h2>5.1 Temel: NSDF</h2>
+<p>HAPT, McLeod'un NSDF'sini kullanır (Bölüm 1.5c) — VPM-like'ın ACF'si gibi normalize, ama iki uçlu:</p>
+<div class="formula">n(τ) = 2 · Σ<sub>j</sub> x[j]·x[j+τ] &nbsp;/&nbsp; Σ<sub>j</sub> ( x[j]² + x[j+τ]² )</div>
+<pre><code>table.values[lag] = 2.0 * correlation / normalisation;  // McLeod's NSDF normalisation</code></pre>
+<span class="src">core/src/hapt.cpp:110</span>
+<p>Küçük ama düşünülmüş bir ayrıntı: tablonun iki ucuna birer sıfır dolgu konur, böylece <b>tam τ<sub>min</sub></b>'deki bir tepe de tepe sayılabilir. Bunsuz, f<sub>max</sub>'a çok yakın gerçek bir temel frekans hiç aday olamazdı.</p>
+<pre><code>// One padding zero at each end ... lets the peak search treat the two lag
+// boundaries like any interior point instead of silently excluding them.
+table.values.assign(static_cast&lt;std::size_t&gt;(maximum_lag + 2), 0.0);</code></pre>
+<span class="src">core/src/hapt.cpp:92–98</span>
+<p>0,05'in üstündeki her yerel maksimum bir adaydır. Şimdi asıl iş başlıyor: bu adaylar arasından hangisinin <i>gerçek</i> temel frekans olduğunu seçmek.</p>
+
+<h2>5.2 Fikir 1: harmonikler-arası veto</h2>
+<p>NSDF, gerçek periyodu katlarından ayıramaz — 2τ, 3τ, k·τ hepsi neredeyse aynı derecede periyodik görünür (Bölüm 1.5 kutusu). HAPT'ın çözümü şunu sormaktır:</p>
+<div class="box blue"><span class="t">Sorulan soru</span>
+"Bu aday gerçekten bir oktav (veya bir onikili) <b>fazla pes</b> olsaydı, spektrumda <b>başka nerede</b> enerji olurdu? Orada enerji var mı?"</div>
+<p>Aday frekansı f olsun. Eğer f gerçek temelse, enerji f, 2f, 3f… noktalarında olur. Ama gerçek temel 2f ise (yani f bir oktav fazla pesse), o zaman <b>f'in tek katları arasındaki</b> ara noktalarda — yani "yarım ızgara" (k−½)·f konumlarında — hiç enerji olmaması gerekir. Orada enerji varsa, aday f gerçekten f'tir; yoksa aday muhtemelen 2f'in hayaletidir.</p>
+<div class="formula">
+yarım_veto = E<sub>yarım ızgara</sub> / ( E<sub>yarım ızgara</sub> + E<sub>kendi harmonikleri</sub> )<br>
+üçte_bir_veto: aynısı (k−⅓)·f ve (k−⅔)·f probları için
+<span class="note">0 = veto yok; 1'e yakın = "bu aday muhtemelen bir kat fazla pes"</span></div>
+<pre><code>for (int k = 1; k &lt;= harmonic_count; ++k) {
+    harmonic_multiples.push_back(k);              // adayın kendi k. harmoniği
+    half_multiples.push_back(k - 0.5);            // "yarım ızgara" probu
+    third_multiples.push_back(k - 1.0 / 3.0);     // "üçte bir ızgara" probları
+    third_multiples.push_back(k - 2.0 / 3.0);
+}</code></pre>
+<span class="src">core/src/hapt.cpp:241–246</span>
+
+<h3>Çözünürlük farkındalığı</h3>
+<p>Burada HAPT'ı özel kılan ikinci katman var. Yarım-ızgara probu, ancak pencere o frekans aralığını <b>çözebiliyorsa</b> anlamlıdır. Pencere kısaysa, prob komşu harmoniğin sızıntısını ölçer ve saçmalar. HAPT bunu Hann ana lobu genişliğinden (Bölüm 1.7) hesaplar:</p>
+<div class="formula">yarım ızgara tabanı = 3 · (2f<sub>s</sub>/N) &nbsp;,&nbsp; üçte bir ızgara tabanı = 4,5 · (2f<sub>s</sub>/N)</div>
+<pre><code>const auto half_width = hann_main_lobe_half_width_hz(samples.size(), sample_rate);
+const auto half_grid_floor_hz  = 3.0 * half_width;
+const auto third_grid_floor_hz = 4.5 * half_width;</code></pre>
+<span class="src">core/src/hapt.cpp:185–187</span>
+<p>Aday bu tabanın <b>üstündeyse</b> doğrudan spektral prob kullanılır. <b>Altındaysa</b> — yani pencere o kadar ince ayrım yapamıyorsa — zaman düzlemine düşülür ve NSDF'nin katındaki değeri kıyaslanır:</p>
+<div class="formula">yarım_veto = clip( n(2τ) / n(τ) − 1 , 0 , 1 )
+<span class="note">oktav-aşağı tepe kendi tepemizden ne kadar güçlüyse o kadar şüphe</span></div>
+<pre><code>const auto lower = nsdf_at_lag(*table, static_cast&lt;int&gt;(std::lround(2.0 * refined_lag)));
+if (lower &gt;= 0.0 &amp;&amp; periodicity &gt; 1e-9) {
+    half_veto = clamp01(lower / periodicity - 1.0);
+}</code></pre>
+<span class="src">core/src/hapt.cpp:262–265</span>
+<p>Bu "elimdeki pencereyle hangi kanıtı ölçebilirim?" refleksi, diğer üç motorda yok.</p>
+
+<h3>Tek harmonik doluluğu — ve neden çift harmonikler serbest bırakılır</h3>
+<p>Klarnet kapalı silindirdir: tek kısmiller (1., 3., 5.) tonu taşır, çiftler fizik gereği zayıftır (Bölüm 1.8). HAPT bunu doğrudan bir ölçüye çevirir ve <b>yalnız {1, 3, 5}'e bakar</b> — çiftlere hiç kısıt koymaz.</p>
+<div class="formula">doluluk = (mevcut olan tek harmonik sayısı) / (ölçülebilen tek harmonik sayısı)
+<span class="note">"mevcut" = genliği, en gür harmoniğin en az %10'u</span></div>
+<div class="box"><span class="t">Neden çiftlere bakılmıyor?</span>
+Çünkü tam da o, iki durumu birbirine karıştıran testtir. "Çift harmonikleri zayıf" olmak, klarnette hem <b>gerçek bir temel frekansın</b> hem de <b>periyodu ikiye katlanmış bir hayaletin</b> imzasıdır. Ayırt eden şey çiftlerin zayıflığı değil, <b>teklerin varlığıdır</b>.</div>
+
+<h3>Anlamlılık ağırlığı: iki geçişli puanlama</h3>
+<p>İnce bir tuzak var: gerçek hiçbir spektral içeriğe denk gelmeyen bir aday (örneğin gerçek tondan çok pes bir alt-harmonik) için 1., 3., 5. harmoniklerin hepsi sadece pencere sızıntısı gürültüsüdür — <i>hepsi birbirine benzer</i>, dolayısıyla doluluk oranı sahte biçimde "%100 dolu" çıkabilir.</p>
+<p>HAPT bunu iki geçişle çözer. Birinci geçişte her adayın <b>mutlak</b> harmonik enerjisi de ölçülür; ikinci geçişte doluluk terimi, adayın karedeki en güçlü harmonik enerjisinden ne kadar pay aldığına göre ağırlıklandırılır:</p>
+<div class="formula">
+anlamlılık = clip( E<sub>aday</sub> / E<sub>en güçlü aday</sub> , 0 , 1 )<br>
+doluluk_çarpanı = 0,35 + 0,65 · doluluk<br>
+etkin_çarpan = 1 − anlamlılık · (1 − doluluk_çarpanı)
+<span class="note">anlamlılık ≈ 0 → çarpan 1'e (nötr) gider &nbsp;·&nbsp; anlamlılık ≈ 1 → tam klarnet biçimli modülasyon</span></div>
+
+<h3>Nihai puan</h3>
+<div class="formula">
+puan = clip[ periyodiklik · etkin_doluluk_çarpanı · (0,10 + 0,90·anlamlılık)<br>
+&nbsp;&nbsp;&nbsp;&nbsp; · (1 − 0,9·yarım_veto) · (1 − 0,9·üçte_bir_veto) &nbsp;+&nbsp; süreklilik_bonusu ]
+<span class="note">süreklilik bonusu: 700 sente kadar doğrusal azalarak +0,10'a kadar</span></div>
+<pre><code>const auto score = clamp01(
+    candidate.periodicity * effective_occupancy_factor * significance_factor *
+    (1.0 - 0.9 * candidate.half_veto) * (1.0 - 0.9 * candidate.third_veto) + continuity_bonus
+);</code></pre>
+<span class="src">core/src/hapt.cpp:367–370</span>
+<p>Her veto puanı en fazla %90 kesebilir — yani hiçbiri tek başına mutlak ret değildir, hepsi çarpan olarak yarışır.</p>
+
+<h2>5.3 Fikir 2: faz kilitli anlık frekans</h2>
+<p>Parabolik interpolasyon (Bölüm 1.6) periyodu alt-örnek doğrulukla verir, ama bu hâlâ bir <i>tahmindir</i>. HAPT son bir rafine daha yapar ve bunun için <b>fazı</b> kullanır — bu bilgiyi kullanan tek motor odur.</p>
+<div class="box blue"><span class="t">Fikir</span>
+Aynı 1536 örneklik pencerenin içinden, 512 örnek kaydırılmış <b>iki alt pencere</b> (her biri 1024 örnek) alın. Aynı frekansta prob atın. Eğer prob frekansı gerçek frekansa tam eşitse, iki ölçümün fazı aynı olur. Fark varsa, faz kayması doğrudan frekans sapmasıyla orantılıdır.</div>
+<div class="formula">
+Δφ = arg( X<sub>geç</sub> · conj(X<sub>erken</sub>) )<br>
+df = −Δφ · f<sub>s</sub> / (2π · 512)
+<span class="note">±93,75 Hz belirsizliksiz aralık (docs/HAPTPitchEngine.md:73)</span></div>
+<pre><code>const auto phase_difference = std::arg(chosen_late * std::conj(chosen_early));
+const auto deviation_hz = -phase_difference * sample_rate /
+    (2.0 * std::numbers::pi * static_cast&lt;double&gt;(kIFShiftSamples));
+const auto refined_probe_frequency = chosen_harmonic * frequency_hz + deviation_hz;
+const auto refined_frequency = refined_probe_frequency / chosen_harmonic;</code></pre>
+<span class="src">core/src/hapt.cpp:460–466</span>
+<p>Prob, temel frekansta değil, <b>1., 3. veya 5. harmonikten en güçlüsünde</b> atılır — orası fazın en temiz okunduğu yerdir. Sonuç katına bölünerek temel frekansa geri indirilir; harmonikte ölçmek sapmayı da k katı büyüttüğü için doğruluk artar.</p>
+
+<h3>Üç güvenlik kilidi</h3>
+<table>
+<tr><th style="width:34%">Kilit</th><th>Gerekçe</th></tr>
+<tr><td>Periyodiklik ≥ 0,75</td><td>Fazı okumaya değecek kadar temiz bir ton olmalı.</td></tr>
+<tr><td>İki alt pencere arası genlik farkı ≤ 6 dB</td><td>Atak/geçiş karesinde enerji hızla değişir; faz kayması artık frekansı değil zarfı ölçer.</td></tr>
+<tr><td>Düzeltme ≤ 40 sent</td><td>Daha büyük bir "düzeltme" muhtemelen faz sarması (phase wrap) belirsizliğidir, gerçek rafine değil.</td></tr>
+</table>
+<span class="src">core/src/hapt.cpp:448–470 · eşikler: hapt.hpp:42–44</span>
+<p>Ayrıca rafine yalnız <b>tam ve kurtarılmamış</b> bir pencerede denenir; kurtarma alt penceresinden gelen bir tahmin için hiç çalıştırılmaz.</p>
+
+<h2>5.4 Atak ve sönüm kurtarması</h2>
+<p>Tam pencere yeterince güvenli bir şey bulamadıysa, sebep pencerenin <i>içinde</i> notanın başlıyor veya bitiyor olması olabilir — periyodiklik tüm pencereye yayıldığı için sulanmıştır. HAPT iki kurtarma denemesi yapar:</p>
+<ol>
+  <li><b>Atak varsayımı:</b> yalnız pencerenin <b>son</b> 768 örneğini yeniden analiz et (sinyal yeni periyodikleşti).</li>
+  <li><b>Sönüm varsayımı:</b> yalnız pencerenin <b>ilk</b> 768 örneğini analiz et (sinyal periyodikti, şimdi ölüyor).</li>
+</ol>
+<p>Başarılı bir kurtarma, kanıtın yalnız bir kısmını gördüğü için puanı %15 kırpılır.</p>
+<span class="src">core/src/hapt.cpp:517–562</span>
+
+<h2>5.5 İki eşikli histerezis</h2>
+<p>HAPT'ın "eksik seslendirilmiş kare" sorununa (diğer üç motorun ortak zaafı) cevabı budur: <b>tek bir eşik yerine iki eşik.</b></p>
+<div class="formula">
+izlenen kontura ≤ 180 sent uzaklıkta → eşik 0,32 &nbsp;(<i>sustain</i>)<br>
+taze veya uzak bir aday → eşik 0,55 &nbsp;(<i>onset</i>)</div>
+<pre><code>double onset_periodicity_threshold{0.55};
+double sustain_periodicity_threshold{0.32};
+double sustain_max_cents_from_contour{180.0};</code></pre>
+<span class="src">core/include/klarivision/core/hapt.hpp:50–52</span>
+<p>Yani sürmekte olan bir nota, zayıflasa bile takip edilmeye devam eder; yeni ve farklı bir perde ise çok daha yüksek kanıt ister. Süreklilik burada da kanıt sayılır — V2'nin "stable weak contour" kuralının HAPT'taki karşılığı.</p>
+
+<h2>5.6 HAPTTracker: bırakış tespiti ve sıçrama muhafızı</h2>
+<p>Sustain eşiğinin kasten gevşek tutulmasının bir bedeli var: sönen bir reverb kuyruğu da o eşiği geçebilir. Bu yüzden HAPT'ın bırakış tespiti diğerlerinden bir adım daha ileridir ve <b>iki</b> tetikleyicisi vardır:</p>
+<table>
+<tr><th style="width:38%">Tetikleyici</th><th>Yakaladığı durum</th></tr>
+<tr><td>2 ardışık %20 keskin düşüş</td><td>Sıradan nota bitişi (release)</td></tr>
+<tr><td>RMS, son tepesinin %35'inin altına indi</td><td>Yumuşakça sönen oda reverb kuyruğu</td></tr>
+</table>
+<p>Kurtulma koşulu: zarfın son tepenin %40'ına geri tırmanması.</p>
+<pre><code>if (release_falls_ &gt;= 2 || decayed_below_recent_peak) release_active_ = true;
+if (release_active_ &amp;&amp; rms &gt;= release_rms_peak_ * config_.release_recovery_ratio) {
+    release_active_ = false; release_falls_ = 0;
+}</code></pre>
+<span class="src">core/src/hapt.cpp:653–659</span>
+<p>Kritik sıra: bırakış tespiti <b>tahminciden önce ve ondan bağımsız</b> çalışır. Yani hâlâ sönmekte olan bir kuyruk, tahmincinin "yeterince gür ve periyodik" dediği bir karede bile bastırılır.</p>
+<p>Aşağı harmonik sıçraması muhafızı VPM-like'ınkiyle aynı desendir; farkları: yalnız 1/3 ve 1/2 oranlarına bakar (2/3 yok), oran toleransı 30 senttir (110 değil) ve <b>2</b> onay ister (3 değil).</p>
+<span class="src">core/src/hapt.cpp:52–66 ve 683–708</span>
+
+<h2>5.7 Bir karenin tam yolculuğu</h2>
+<div class="flow">1536 örnek
+  ↓  DC çıkar + RMS kapısı                                 hapt.cpp:492
+  ↓  NSDF tablosu (kenar dolgulu)                          hapt.cpp:76
+  ↓  yerel maksimumlar ≥ 0,05  →  hipotez listesi          hapt.cpp:172
+  ↓  1. geçiş: yarım/üçte-bir veto + tek doluluk + enerji  hapt.cpp:190
+  ↓  2. geçiş: anlamlılık ağırlığı + nihai puan            hapt.cpp:327
+  ↓  atak / sönüm kurtarması (768 örneklik alt pencere)    hapt.cpp:517
+  ↓  iki eşikli histerezis (0,55 onset / 0,32 sustain)     hapt.cpp:564
+  ↓  faz kilitli anlık frekans rafinesi (≤40 sent)         hapt.cpp:404
+  ↓  HAPTTracker: bırakış tespiti + sıçrama muhafızı       hapt.cpp:637
+  ↓  boşluk köprüleme (yin_v1 ile ortak; taban 0,60/0,30)  analysis_engine.cpp:274
+EngineFrame{ zaman, frekans, güven }</div>
+<div class="box"><span class="t">HAPT'ın gevşetilmiş köprü ucu</span>
+Ortak <code>append_bridged</code> çağrısında yalnız HAPT için <b>asimetrik</b> bir eşik verilir: güçlü uç 0,60'ı geçmeli ama <i>zayıf</i> uç için taban 0,30'a indirilir. Gerekçe kodda yazılı: bir kopmanın çıkış kenarı, tam da motorun kendi güveninin kesinti tarafından en çok bozulduğu yerdir; iki ucun da aynı barajı geçmesini istemek gerçek kısa boşlukları eksik köprüler.
+<span class="src" style="margin-top:6px">core/src/analysis_engine.cpp:281–288, 933–934</span></div>
+</div>
+<div class="chapter">
+<h1>6. pYIN — çevrimdışı referans</h1>
+<p class="lead">pYIN, uygulamada kullanıcıya sunulan dört motordan biri değildir; <b>çevrimdışı referans eğrisi</b> olarak kullanılır. Kendi uygulamamız değil, librosa'nın uygulamasıdır — ama neden bu kadar iyi olduğunu bilmek, dört motorun tasarım kararlarını anlamak için gereklidir.</p>
+<span class="src">src/klarivision/pitch/pyin.py — librosa.pyin adaptörü</span>
+
+<h2>6.1 YIN'den farkı: tek eşik yerine olasılık dağılımı</h2>
+<p>Klasik YIN'de tek bir kritik karar vardır: "CMND eğrisinde 0,15 eşiğinin altına düşen ilk dip". Bu eşik <b>keyfîdir</b> ve tek bir yanlış seçim tüm kareyi mahveder.</p>
+<p>pYIN'in birinci fikri: <b>eşiği seçme, hepsini dene.</b> Farklı eşik değerleri üzerinde bir olasılık dağılımı (beta dağılımı) tanımlanır ve her eşik değerinin verdiği aday, o eşiğin olasılığıyla ağırlıklandırılır. Sonuç, tek bir frekans değil, kare başına <b>ağırlıklı bir aday kümesidir</b>.</p>
+
+<h2>6.2 İkinci ve asıl fikir: tüm kayıt üzerinde Viterbi</h2>
+<p>Aday kümeleri sonra bir <b>gizli Markov modeline</b> (HMM) verilir ve tüm kayıt boyunca en olası yol çözülür.</p>
+<div class="box blue"><span class="t">Neden pYIN oktav hatası yapmıyor</span>
+Yalıtılmış bir 1200 sentlik sapma, <b>küresel</b> bir yol arayışında geçiş maliyetini asla geri ödeyemez. Bir kare "oktav aşağı" demek için, o kareye girmenin ve o kareden çıkmanın maliyetini birlikte ödemek zorundadır. Nedensel bir motor bunu göremez, çünkü çıkış maliyetini henüz bilmez.</div>
+<p>Ölçüm bunu doğruluyor: Şükrü Tunar hakemlik kümesinde işaretlenen 47 oktav hatasının <b>33'ü yalnız 1–3 kare sürüyor</b> (medyan 2, en uzunu 9) ve doğru izlemenin tam ortasında oturuyor. pYIN bu tür hataları yapmıyor; çünkü kararı tek karede vermiyor.</p>
+<p>Bu gözlem, Bölüm 7'deki çevrimdışı iyileştirme katmanının doğrudan gerekçesidir.</p>
+
+<h2>6.3 Kullanım biçimi ve maliyeti</h2>
+<pre><code>frequencies, voiced, probability = librosa.pyin(
+    samples[analysis_start:analysis_end],
+    fmin=settings.minimum_frequency_hz, fmax=settings.maximum_frequency_hz,
+    sr=sample_rate, frame_length=settings.frame_length, hop_length=settings.hop_length,
+    resolution=settings.resolution_cents / 100, center=False, fill_na=np.nan,
+)</code></pre>
+<span class="src">src/klarivision/pitch/pyin.py:67–77</span>
+<table>
+<tr><th style="width:34%">Ayar</th><th style="width:20%">Değer</th><th>Not</th></tr>
+<tr><td>frame_length</td><td>2048</td><td>@22,05 kHz = 93 ms</td></tr>
+<tr><td>hop_length</td><td>110</td><td>5 ms — üretim motorlarından ~2 kat sık</td></tr>
+<tr><td>frekans aralığı</td><td>110–2000 Hz</td><td>üretim motorlarından geniş</td></tr>
+<tr><td>resolution</td><td>5 sent</td><td>HMM durum ızgarasının çözünürlüğü</td></tr>
+</table>
+<p>Kayıt 3 saniyelik parçalara bölünerek işlenir; her parça bir çerçeve boyu geriden başlar (<code>overlap</code>) ve yalnız çekirdek bölgesi tutulur — böylece parça sınırlarında kenar etkisi oluşmaz.</p>
+<span class="src">src/klarivision/pitch/pyin.py:64–86</span>
+
+<div class="box red"><span class="t">Neden pYIN canlı modda kullanılmıyor</span>
+Çünkü küresel Viterbi <b>tüm kaydı görmeyi</b> gerektirir. Bu, canlı çalarken tanımı gereği imkânsızdır. Dört üretim motorunun tamamının nedensel (causal) olmasının sebebi budur; V2'nin 5 kareli sabit gecikmesi, bu duvara verilen en yakın uzlaşmadır.</div>
+</div>
+
+<div class="chapter">
+<h1>7. Çevrimdışı iyileştirme katmanı</h1>
+<p class="lead"><code>PitchEngineProfile::offline_track</code> uzun süre yer tutucuydu. Dün doldu: Çalışma (Study) modunda, nedensel izin üzerinde <b>geleceğe bakan</b> iki temizlik pası çalışıyor. Canlı yol hiç değişmedi — <code>analyse_causal</code> ve her <code>ProductionPitchSession</code> gecikme sözleşmesini koruyor.</p>
+
+<h2>7.1 Neden gerekti</h2>
+<p>Bölüm 6.2'deki ölçüm: işaretli 47 oktav hatasının 33'ü yalnız 1–3 kare sürüyor. Nedensel bir motor bunları göremez, çünkü hatanın <i>ne kadar sürdüğünü</i> ancak sonrasını görünce anlarsınız. pYIN görebiliyor. Öyleyse çevrimdışı analizde biz de görebiliriz.</p>
+
+<h2>7.2 Harmonik yol iyileştirmesi</h2>
+<p>Yayınlanmış her kare için, o karenin kendi analiz penceresi bulunur ve <b>harmonik ailesi</b> ölçülür: yayınlanan frekans ve onun ⅓×, ½×, 2×, 3× akrabaları.</p>
+<div class="box blue"><span class="t">Kritik tasarım kararı: spektral kanıt <i>fiyat</i>tır, kapı değil</span>
+Alternatifleri spektral desteğe göre <b>elemek</b> yanlıştı. Onarıma gerçekten muhtaç karelerde doğru temel frekans, ailenin en güçlü üyesinin çoğu zaman %2'sinin altında ölçülüyor — nedensel motorun o kareyi zaten bu yüzden yanlış bilmesinin sebebi tam olarak budur. Dolayısıyla her harmonik alternatif <b>erişilebilir kalır</b>; spektral desteği olmayan sadece <i>daha pahalıya</i> gelir.</div>
+<div class="formula">
+destek = E<sub>üye</sub> / E<sub>ailenin en güçlüsü</sub><br>
+alternatif_puanı = güven · 0,72 · [ 0,30 + 0,70 · clip(destek, 0, 1) ]
+<span class="note">nedensel kararın kendisi her zaman 1,00 katsayısıyla yarışır</span></div>
+<p>0,72 iskontosu şunu garantiler: bir kare <b>yalnız yol sürekliliği</b> talep ettiğinde yer değiştirir, yerel kanıt talep ettiğinde değil.</p>
+<pre><code>const double backing = kOfflineUnsupportedFloor +
+    (1.0 - kOfflineUnsupportedFloor) * std::clamp(support, 0.0, 1.0);
+const double scaled = confidence * kOfflineAlternativeDiscount * backing;
+options.push_back({family[member].frequency, scaled, std::log(std::max(scaled, 1e-6))});</code></pre>
+<span class="src">core/src/analysis_engine.cpp:1123–1126 · sabitler: analysis_engine.cpp:992–1001</span>
+
+<h3>Geçiş maliyeti neden karesel?</h3>
+<div class="formula">geçiş(a → b) = − min( ( cents(a,b) / w )² , 12 )
+<span class="note">w = 150 sent (nedensel motorlar) · 250 sent (V2)</span></div>
+<p>Karesel olması kasıtlıdır: tek bir 1200 sentlik sapma, gerçek bir gezinin çok sayıda küçük adımından <b>çok daha fazlasını</b> öder. Üst sınır (12) ise tek bir çılgın karenin tüm yol puanını domine etmesini engeller.</p>
+<p>V2'ye daha gevşek genişlik verilmesinin sebebi Bölüm 3.5: zaten kendi beş kareli Viterbi'si var, iki kez sıkılaştırmak gerçek hızlı geçkileri bastırıyor.</p>
+<pre><code>double offline_transition_width_cents(const PitchEngineId id) {
+    return id == PitchEngineId::pitch_engine_v2 ? 250.0 : 150.0;
+}</code></pre>
+<span class="src">core/src/analysis_engine.cpp:987–989</span>
+<p>30 ms'den uzun aralıklı kareler ayrı koşular sayılır: bir artikülasyon boşluğu üzerinden süreklilik varsayılmaz. Seslendirme kararı (voiced/unvoiced) bu pasta <b>hiç</b> yeniden ele alınmaz; yalnız frekanslar oynatılır.</p>
+
+<h2>7.3 Başıboş nokta temizliği</h2>
+<p>İkinci pas daha basit bir soruyu sorar: "bu kısa koşu gerçekten bir nota mı, yoksa sessizliğin ortasında kalmış bir kaza mı?"</p>
+<table>
+<tr><th style="width:38%">Koşul</th><th>Değer</th></tr>
+<tr><td>Koşu uzunluğu</td><td>≤ 7 kare</td></tr>
+<tr><td>Her <b>iki</b> yanında sessizlik</td><td>≥ 40 ms</td></tr>
+<tr><td>Koşunun en yüksek güveni</td><td>&lt; 0,80</td></tr>
+</table>
+<p>Üçü birden sağlanırsa koşu atılır.</p>
+<div class="box"><span class="t">İki yandan yalıtılmış olma koşulu neden var?</span>
+Gerçek süslemeleri korumak için. Bir <i>çarpma</i>, süslediği notaya bitişiktir — sessizliğin ortasında yalnız kalmaz. Dolayısıyla bu testi hiçbir zaman geçemez.</div>
+<p>0,80 eşiği uydurulmuş değil: dinleyicinin işaretlediği her başıboş noktada <b>doğru davranıp sessiz kalan motor VPM-like'tı</b>, ve diğerlerinin yayınladığı koşular 0,66–0,81 güven aralığında tepe yapıyordu. Kısa ve yalıtılmış bir koşuyu VPM-like'ın kendi yayın barajına tutmak kuraldır; o karelere uydurulmuş bir sayı değil.</p>
+<span class="src">core/src/analysis_engine.cpp:1009–1020 (gerekçeli sabitler) · 1023–1058 (uygulama)</span>
+
+<h2>7.4 Nerede devreye giriyor</h2>
+<pre><code>std::vector&lt;EngineFrame&gt; PitchEngine::analyse(const std::span&lt;const float&gt; samples, const double rate) {
+    auto baseline = analyse_causal(samples, rate);
+    if (profile_ != PitchEngineProfile::offline_track || baseline.empty()) return baseline;
+
+    return drop_offline_stray_runs(
+        refine_offline_harmonics(baseline, samples, rate, config_, id_)
+    );
+}</code></pre>
+<span class="src">core/src/analysis_engine.cpp:1202–1212</span>
+<p>Yani: <b>Çalma Modu</b> (canlı mikrofon) ham nedensel izi görür; <b>Dinleme/Çalışma Modu</b> (dosya analizi) bu iki pastan geçmiş hâlini görür. İki mod arasındaki fark artık yalnız gecikme değil, kanıt miktarıdır.</p>
+</div>
+<div class="chapter">
+<h1>8. Karşılaştırma</h1>
+<p class="lead">Dördü de aynı soruyu soruyor ama farklı kanıtlara bakıyor. Bu bölüm, her birinin neyi nasıl yaptığını yan yana koyuyor — ve elimizdeki tek gerçek ölçümü.</p>
+
+<h2>8.1 Yapı taşları</h2>
+<table>
+<tr><th style="width:24%"></th><th>YIN v1</th><th>Pitch Engine V2</th><th>VPM-like</th><th>HAPT v1</th></tr>
+<tr><td><b>Çekirdek fonksiyon</b></td><td>CMND (fark)</td><td>YIN + ACF + NSDF + spektral</td><td>Normalize ACF</td><td>NSDF</td></tr>
+<tr><td><b>Aday sayısı</b></td><td>≤ 12</td><td>Dört kaynaktan, hepsi</td><td>1 (seçilmiş tepe)</td><td>Tüm NSDF tepeleri</td></tr>
+<tr><td><b>Spektral kanıt</b></td><td>Tek frekans probu (oktav kurtarma + hayalet)</td><td>SWIPE′ çekirdeği (tam FFT)</td><td>Akraba testi (⅓, ½, 1, 2, 3×)</td><td>Yarım/üçte-bir ızgara + tek doluluk</td></tr>
+<tr><td><b>Faz kullanımı</b></td><td>—</td><td>—</td><td>—</td><td><b>Evet</b> (IF kilidi)</td></tr>
+<tr><td><b>Karar biçimi</b></td><td>Anlık, süreklilik cezalı</td><td><b>5 kare Viterbi</b></td><td>Anlık + veto/histerezis</td><td>Anlık, iki eşikli</td></tr>
+<tr><td><b>Gecikme</b></td><td>0 kare</td><td>5 kare (≈53 ms)</td><td>0 kare</td><td>0 kare</td></tr>
+<tr><td><b>Yayın barajı</b></td><td>0,55 (taze: 0,76)</td><td>0,70 / 0,55</td><td><b>0,80</b></td><td>0,55 / 0,32</td></tr>
+<tr><td><b>Aşağı sıçrama onayı</b></td><td>3 kare (&gt;900 sent)</td><td><code>harmonic_filter</code></td><td>3 kare (+2,5× vetosu)</td><td>2 kare</td></tr>
+<tr><td><b>Hesap yükü</b></td><td>Düşük</td><td><b>Yüksek</b></td><td>Orta</td><td>Orta-yüksek</td></tr>
+</table>
+
+<h2>8.2 Aynı sorunlara verilen farklı cevaplar</h2>
+
+<h3>"Bu aday gerçekten temel frekans mı, yoksa hayalet mi?"</h3>
+<table>
+<tr><td style="width:22%"><b>YIN v1</b></td><td>2× ve 3× katlarının genliğini kendi genliğiyle kıyasla; oran 6'yı geçiyorsa kademeli ceza. Oktav terfisi için ayrıca <b>tek harmonik doluluğu</b> ara.</td></tr>
+<tr><td><b>V2</b></td><td>Dört bağımsız tahminci ne diyor? İkisi 55 sent içinde anlaşıyorsa +0,20. Ayrıca SWIPE′ asal harmonik çekirdeği.</td></tr>
+<tr><td><b>VPM-like</b></td><td>Gerçek spektrumda ⅓, ½, 1, 2, 3× akrabalarını ölç; yerel tepe + mutlak + göreli testleri geçen <b>en pes</b> olanı seç. Ama asla yukarı terfi ettirme.</td></tr>
+<tr><td><b>HAPT</b></td><td>"Bir kat fazla pes olsaydım enerji <b>nerede</b> olurdu?" diye sor. Yarım/üçte-bir ızgarayı ölç. Pencere çözemiyorsa NSDF katlarına düş.</td></tr>
+</table>
+
+<h3>"Nota bitti mi, yoksa sadece kısıldı mı?"</h3>
+<table>
+<tr><td style="width:22%"><b>YIN v1</b></td><td>2 ardışık %20 düşüş → bırakış. İki ayrı RMS tepesi (hızlı/yavaş sönen).</td></tr>
+<tr><td><b>V2</b></td><td>Aynı desen, ama durum <b>kare başına kuyruklanır</b> — 5 kare geciken karar asla başka bir pencerenin kapısını uygulamaz.</td></tr>
+<tr><td><b>VPM-like</b></td><td>Tam durum makinesi: <code>release_suspected</code> → aynı kontura mı döndü, farklı kontura mı? Ayrıca <code>waiting_for_attack</code>.</td></tr>
+<tr><td><b>HAPT</b></td><td>İki tetikleyici: 2 keskin düşüş <b>veya</b> tepenin %35'inin altına inme (reverb kuyruğu). Tahminciden bağımsız çalışır.</td></tr>
+</table>
+
+<h3>"Kısa bir kopma oldu, ne yapmalı?"</h3>
+<p>YIN v1 ve HAPT ortak <code>append_bridged</code>'i kullanır (≤7 kare, iki uç ≤90 sent). V2 ve VPM-like kendi köprüleme mantıklarına sahiptir; V2 ayrıca <b>başlangıç köprüsü</b> ile notanın gerçek atak zamanını geriye dönük kurtarır.</p>
+
+<h2>8.3 Ölçülmüş sonuçlar</h2>
+<div class="box blue"><span class="t">Ölçümün kaynağı</span>
+Şükrü Tunar uşşak taksimi, <b>85 aralık</b>, 8,7 saniye. Yer gerçeği bir <b>dinleyicinin hükmüdür</b> — pYIN değil, motorlar arası medyan değil. Kayıt: <code>data/annotations/sukru-tunar-ussak-taksim.verdicts.v1.json</code>. Aşağıdaki sayılar <code>offline_track</code> profiline aittir.</div>
+<table>
+<tr><th>Motor</th><th style="text-align:right">Etiketli kusur</th><th style="text-align:right">Tur başı</th><th style="text-align:right">Tur sonu</th><th style="text-align:right">Oktav (başlangıç)</th><th style="text-align:right">Oktav (şimdi)</th></tr>
+<tr><td>YIN v1</td><td style="text-align:right">38</td><td style="text-align:right">35</td><td style="text-align:right"><b>23</b></td><td style="text-align:right">14</td><td style="text-align:right"><b>2</b></td></tr>
+<tr><td>Pitch Engine V2</td><td style="text-align:right">24</td><td style="text-align:right">24</td><td style="text-align:right"><b>22</b></td><td style="text-align:right">3</td><td style="text-align:right"><b>1</b></td></tr>
+<tr><td>VPM-benzeri</td><td style="text-align:right">46</td><td style="text-align:right">46</td><td style="text-align:right"><b>33</b></td><td style="text-align:right">18</td><td style="text-align:right"><b>5</b></td></tr>
+<tr><td>Harmonik-Faz (HAPT)</td><td style="text-align:right">50</td><td style="text-align:right">45</td><td style="text-align:right"><b>34</b></td><td style="text-align:right">12</td><td style="text-align:right"><b>1</b></td></tr>
+<tr><td colspan="6" style="background:#eef4fb"><b>Toplam oktav hatası: 47 → 9</b> &nbsp;·&nbsp; hiçbir motor kötüleşmedi</td></tr>
+</table>
+<span class="src">docs/TEST_BASELINE.md:85–98</span>
+<p>Okunacak birkaç şey var:</p>
+<ul>
+  <li><b>V2 zaten en az oktav hatası yapan motordu (3).</b> Viterbi'si olan tek motor o; Bölüm 6.2'nin tezini doğrudan doğruluyor.</li>
+  <li><b>YIN v1'in 14 → 2 düşüşü</b> büyük ölçüde tek-harmonik doluluk koşulundan geliyor: işaretli 13 oktav hatasının 12'si oktav kurtarma pasından kaynaklanıyordu.</li>
+  <li><b>VPM-like'ın 18 → 5 düşüşü</b> büyük ölçüde 120 Hz alt sınırından geliyor (lag arama aralığının daralması).</li>
+  <li>Oktav <b>dışı</b> kusurlar (boşluk, kaçık nokta, zamanlama) hâlâ önemli sayıda — bu ölçüm oktav sorununa odaklıydı.</li>
+</ul>
+<div class="box"><span class="t">Bu tablo bir sıralama değildir</span>
+Tek bir kaydın 85 aralığı üzerinde, tek bir dinleyicinin hükümlerine göre yapılmış bir ölçüm. Farklı bir kayıtta (<code>gercek-klarnet-calm</code>) çevrimdışı iyileştirme dört motorda da tek kare bile değiştirmedi. Uygulamadaki motor seçimi de bir kalite sıralaması değildir; ilk açılıştaki YIN v1 seçimi yalnız geriye uyumluluk içindir.</div>
+
+<h2>8.4 Hangi motor neyi iyi yapıyor</h2>
+<table>
+<tr><th style="width:20%">Motor</th><th style="width:40%">Güçlü yanı</th><th>Bedeli</th></tr>
+<tr><td><b>YIN v1</b></td><td>Basit, hızlı, öngörülebilir. Okunabilir referans uygulaması var. Sıfır gecikme.</td><td>Tek karelik kararlar; kanıtı erken çökertiyor.</td></tr>
+<tr><td><b>Pitch Engine V2</b></td><td>Kanıt çeşitliliği + yol araması. Tek karelik hatalar yola oturmuyor. 900 Hz üstünde disiplinli.</td><td>≈53 ms gecikme, kare başına belirgin hesap (dört tahminci + FFT).</td></tr>
+<tr><td><b>VPM-like</b></td><td><b>Sessiz kalması gerektiğinde sessiz kalıyor.</b> En yüksek yayın barajı (0,80), en ayrıntılı atak/bırakış durum makinesi. Katlardan periyot rafinesi tiz seslerde kesin.</td><td>Muhafazakârlık boşluk kusuru olarak geri dönüyor; en çok etiketli kusur onda.</td></tr>
+<tr><td><b>HAPT v1</b></td><td>Klarnet fiziğini doğrudan karar kuralına çeviriyor. Çözünürlük farkındalığı. Faz kilidiyle alt-sent doğruluk. İki eşikli histerezis "eksik kare" sorununu azaltıyor.</td><td>Gevşek sustain eşiği, sönen kuyrukları yakalamak için ayrı bir bırakış tespiti gerektiriyor.</td></tr>
+</table>
+</div>
+
+<div class="chapter">
+<h1>Ek A — Parametreler</h1>
+
+<h2>A.1 Ortak üretim yapılandırması</h2>
+<span class="src">core/include/klarivision/core/analysis_engine.hpp:15–37</span>
+<table>
+<tr><th style="width:34%">Alan</th><th style="width:16%">Değer</th><th>Anlamı</th></tr>
+<tr><td><code>minimum_frequency_hz</code></td><td>120,0</td><td>En pes hipotez. τ<sub>max</sub>'ı kısıtladığı için doğrudan bir doğruluk parametresidir.</td></tr>
+<tr><td><code>maximum_frequency_hz</code></td><td>1500,0</td><td>En tiz hipotez → τ<sub>min</sub></td></tr>
+<tr><td><code>minimum_rms</code></td><td>0,015</td><td>Sessizlik kapısı (tüm motorlar için ortak)</td></tr>
+<tr><td><code>window_size</code></td><td>1536</td><td>34,8 ms @44,1 kHz</td></tr>
+<tr><td><code>hop_size</code></td><td>512</td><td>11,6 ms → ~86 ölçüm/sn</td></tr>
+</table>
+
+<h2>A.2 Motora özel eşikler</h2>
+<table>
+<tr><th style="width:26%">Eşik</th><th style="width:14%">Değer</th><th>Nerede</th></tr>
+<tr><td colspan="3" style="background:#eef4fb"><b>YIN v1</b></td></tr>
+<tr><td>CMND aday eşiği</td><td>0,50</td><td>analysis_engine.cpp:122</td></tr>
+<tr><td>Taze aday barajı</td><td>0,76</td><td>analysis_engine.cpp:240</td></tr>
+<tr><td>Aday değerlendirme tabanı</td><td>0,55</td><td>analysis_engine.cpp:249</td></tr>
+<tr><td>Süreklilik cezası</td><td>0,30 / 700 sent</td><td>analysis_engine.cpp:253</td></tr>
+<tr><td>Hayalet oran eşiği</td><td>6,0</td><td>harmonic_arbitration.cpp:74</td></tr>
+<tr><td>Oktav kurtarma baskınlığı</td><td>8×, &gt;800 Hz</td><td>analysis_engine.cpp:159–171</td></tr>
+<tr><td>Aşağı sıçrama</td><td>&gt;900 sent, 3 kare</td><td>analysis_engine.cpp:558–573</td></tr>
+<tr><td>Yayın/köprü tabanı</td><td>0,55</td><td>analysis_engine.cpp:933</td></tr>
+<tr><td colspan="3" style="background:#eef4fb"><b>Pitch Engine V2</b></td></tr>
+<tr><td>YIN adayı eleme</td><td>0,50</td><td>v2_session.cpp:313</td></tr>
+<tr><td>Uzlaşma penceresi</td><td>55 sent</td><td>v2_session.cpp:371</td></tr>
+<tr><td>Emisyon ağırlıkları</td><td>0,40 / 0,20 / 0,40</td><td>v2_session.cpp:379</td></tr>
+<tr><td>Spektral aday tabanı</td><td>0,90</td><td>v2_session.cpp:387</td></tr>
+<tr><td>Viterbi gecikmesi</td><td>5 kare</td><td>analysis_engine.cpp:420 (kurucu)</td></tr>
+<tr><td>Geçiş genişliği</td><td>700 sent</td><td>fixed_lag_tracker.hpp:35</td></tr>
+<tr><td>Oktav ek ücreti</td><td>+0,12 (≥850 sent)</td><td>fixed_lag_tracker.cpp:30</td></tr>
+<tr><td>Yayın barajı</td><td>0,70 / 0,55</td><td>v2_session.cpp:490–495</td></tr>
+<tr><td colspan="3" style="background:#eef4fb"><b>VPM-like</b></td></tr>
+<tr><td>En az periyodiklik</td><td>0,38</td><td>vpm_like.hpp:52</td></tr>
+<tr><td>Çıkış güveni</td><td>0,80</td><td>vpm_like.hpp:53</td></tr>
+<tr><td>"En güçlüye yakın" oranı</td><td>0,90</td><td>vpm_like.hpp:54</td></tr>
+<tr><td>Göreli spektral destek</td><td>0,080</td><td>vpm_like.hpp:55</td></tr>
+<tr><td>Mutlak spektral destek</td><td>0,005</td><td>vpm_like.hpp:56</td></tr>
+<tr><td>En yüksek periyot katı</td><td>6</td><td>vpm_like.hpp:57</td></tr>
+<tr><td>Sıçrama tanımı</td><td>≥650 sent, ±110 sent</td><td>vpm_like.cpp:23–33</td></tr>
+<tr><td>Üst hat vetosu</td><td>2,5×</td><td>vpm_like.cpp:124</td></tr>
+<tr><td colspan="3" style="background:#eef4fb"><b>HAPT v1</b></td></tr>
+<tr><td>Harmonik sayısı</td><td>5</td><td>hapt.hpp:38</td></tr>
+<tr><td>Tek harmonik eşiği</td><td>0,10</td><td>hapt.hpp:39</td></tr>
+<tr><td>IF kilidi periyodikliği</td><td>0,75</td><td>hapt.hpp:42</td></tr>
+<tr><td>IF kilidi düzeltme sınırı</td><td>40 sent</td><td>hapt.hpp:43</td></tr>
+<tr><td>IF kilidi genlik sınırı</td><td>6 dB</td><td>hapt.hpp:44</td></tr>
+<tr><td>Onset / sustain eşiği</td><td>0,55 / 0,32</td><td>hapt.hpp:50–51</td></tr>
+<tr><td>Sustain kontur mesafesi</td><td>180 sent</td><td>hapt.hpp:52</td></tr>
+<tr><td>Sıçrama toleransı / onay</td><td>30 sent / 2 kare</td><td>hapt.hpp:55–56</td></tr>
+<tr><td>Bırakış oranları</td><td>0,80 / 0,35 / 0,40</td><td>hapt.hpp:67–69</td></tr>
+<tr><td colspan="3" style="background:#eef4fb"><b>Çevrimdışı katman</b></td></tr>
+<tr><td>Desteksiz alternatif tabanı</td><td>0,30</td><td>analysis_engine.cpp:997</td></tr>
+<tr><td>Alternatif iskontosu</td><td>0,72</td><td>analysis_engine.cpp:1000</td></tr>
+<tr><td>Bölüm boşluğu</td><td>30 ms</td><td>analysis_engine.cpp:1003</td></tr>
+<tr><td>En yüksek geçiş cezası</td><td>12,0</td><td>analysis_engine.cpp:1007</td></tr>
+<tr><td>Geçiş genişliği</td><td>150 / 250 sent</td><td>analysis_engine.cpp:987–989</td></tr>
+<tr><td>Başıboş koşu</td><td>≤7 kare, 40 ms, 0,80</td><td>analysis_engine.cpp:1011–1020</td></tr>
+</table>
+</div>
+
+<div class="chapter">
+<h1>Ek B — Dosya haritası</h1>
+<table>
+<tr><th style="width:44%">Dosya</th><th>İçeriği</th></tr>
+<tr><td colspan="2" style="background:#eef4fb"><b>Ortak / oturum</b></td></tr>
+<tr><td><code>core/src/analysis_engine.cpp</code></td><td>Üretim oturumu. YIN v1'in tamamı, VPM ve HAPT'ın oturum katmanı, köprüleme, çevrimdışı iyileştirme.</td></tr>
+<tr><td><code>core/include/.../analysis_engine.hpp</code></td><td><code>PitchEngineConfig</code>, <code>EngineFrame</code>, motor kimlikleri.</td></tr>
+<tr><td><code>core/src/harmonic_probe.cpp</code></td><td>Hann pencereli tek frekans DFT probu; ana lob genişliği.</td></tr>
+<tr><td><code>core/src/harmonic_arbitration.cpp</code></td><td><code>spectral_existence</code> — hayalet alt-harmonik tespiti.</td></tr>
+<tr><td colspan="2" style="background:#eef4fb"><b>YIN v1</b></td></tr>
+<tr><td><code>src/klarivision/pitch/yin.py</code></td><td>Okunabilir referans uygulaması (108 satır).</td></tr>
+<tr><td><code>core/src/analysis_engine.cpp:86–176</code></td><td><code>yin_candidates</code> — CMND + oktav kurtarma.</td></tr>
+<tr><td><code>core/src/analysis_engine.cpp:194–272</code></td><td><code>causal_yin_choice</code> — hayalet + süreklilik puanlaması.</td></tr>
+<tr><td><code>macos/.../LivePitchAnalyzer.swift:3772</code></td><td>vDSP hızlandırmalı canlı kopya.</td></tr>
+<tr><td colspan="2" style="background:#eef4fb"><b>Pitch Engine V2</b></td></tr>
+<tr><td><code>core/src/pitch_engine_v2_session.cpp</code></td><td>Aday üretimi (4 kaynak), puanlama, yayın kapıları.</td></tr>
+<tr><td><code>core/src/fixed_lag_tracker.cpp</code></td><td>Sabit gecikmeli Viterbi.</td></tr>
+<tr><td><code>core/src/swipe_prime.cpp</code></td><td>FFT + SWIPE′ asal harmonik çekirdeği.</td></tr>
+<tr><td><code>core/src/mpm.cpp</code></td><td>NSDF / McLeod aday üreteci (referans sürüm).</td></tr>
+<tr><td><code>core/src/pitch_engine_v2.cpp</code></td><td>Sade seçim sınırı (<code>select_candidate</code>).</td></tr>
+<tr><td colspan="2" style="background:#eef4fb"><b>VPM-like</b></td></tr>
+<tr><td><code>core/src/vpm_like.cpp</code></td><td>ACF, kat rafinesi, spektral düzeltme, <code>VPMLikeTracker</code>.</td></tr>
+<tr><td><code>core/include/.../vpm_like.hpp</code></td><td>Yapılandırma ve tanı yapıları.</td></tr>
+<tr><td><code>docs/VPMLikePitchEngine.md</code></td><td>Yöntemin türetimi ve kaynakları.</td></tr>
+<tr><td colspan="2" style="background:#eef4fb"><b>HAPT v1</b></td></tr>
+<tr><td><code>core/src/hapt.cpp</code></td><td>NSDF, harmonikler-arası veto, IF kilidi, <code>HAPTTracker</code>.</td></tr>
+<tr><td><code>core/include/.../hapt.hpp</code></td><td>Yapılandırma; her eşiğin gerekçesi yorumda.</td></tr>
+<tr><td><code>docs/HAPTPitchEngine.md</code></td><td>Tam türetim, ±93,75 Hz aralığı, bilinen sınırlar.</td></tr>
+<tr><td colspan="2" style="background:#eef4fb"><b>pYIN ve ölçüm</b></td></tr>
+<tr><td><code>src/klarivision/pitch/pyin.py</code></td><td>librosa.pyin adaptörü (çevrimdışı referans).</td></tr>
+<tr><td><code>scripts/quick_pitch_check.py</code></td><td>Motorları dinleyici hükümlerine karşı ~14 s'de puanlar.</td></tr>
+<tr><td><code>scripts/pitch_engine_divergence_map.py</code></td><td>Motorların ayrıştığı yerleri bulur, inceleme sayfasını üretir.</td></tr>
+<tr><td><code>docs/TEST_BASELINE.md</code></td><td>Ölçüm kayıtları ve gerekçeler.</td></tr>
+</table>
+
+<p style="margin-top:26px" class="small">Bu belge <code>37585a4</code> kod sürümüne göre yazıldı. Satır numaraları o commit'e aittir; kod değiştikçe kaymaları beklenir — her alıntının yanındaki fonksiyon/sabit adı kalıcı çapadır.</p>
+</div>
+</body>
+</html>
