@@ -197,7 +197,7 @@ int main(int argc, char** argv) {
         output << std::fixed << std::setprecision(6)
                << "{\n  \"engine\": \"" << argv[3]
                << "\",\n  \"profile\": \"offline_track_v1\","
-               << "\n  \"implementation_revision\": \"offline-harmonic-path-r6\","
+               << "\n  \"implementation_revision\": \"offline-harmonic-path-r7\","
                << "\n  \"frames\": [\n";
         for (std::size_t index = 0; index < frames.size(); ++index) {
             const auto unchanged = std::any_of(causal.begin(), causal.end(), [&](const auto& item) {

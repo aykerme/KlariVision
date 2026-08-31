@@ -1,5 +1,69 @@
 # KlariVision Test Tabanı
 
+## Çevrimdışı harmonik yol merdiveni `{1/3,1/2,2,3} -> {1/5..5}` — 31 Ağustos 2026
+
+Kullanıcı, YIN v1 simülasyonunda iki oktav hatası bildirdi: `116,379` sn'de
+`604,5 Hz` yerine `121,3 Hz` seçiliyor (spektrumda en güçlü çizgi `604,5`), ve
+`143,589–143,600` sn arasında seçilen frekansın şiddeti olması gerekenden çok
+küçük. İkisi de aynı kök nedene çıktı: kare, gerçek temelin **4. ya da 5.**
+alt-periyodunda yayınlanıyor (`488,60/122,15 = 4,00`, `604,5/121,3 = 5,0`).
+
+`refine_offline_harmonics` alternatiflerini `{1/3, 1/2, 2, 3}` oranlarından
+kuruyordu. `121,25 Hz` yayınlanmış bir kare için bu küme yalnız `242,5` ve
+`363,75` üretiyor — doğru cevap `604,5` **erişilebilir bile değildi**; Viterbi
+yanlış cevaplar arasından seçiyordu. Küme `{1/5, 1/4, 1/3, 1/2, 2, 3, 4, 5}`
+yapıldı.
+
+Neden nedensel katmanda değil: `116,379` sn'de `121,27 Hz`in `5x` baskınlık
+oranı `14,5`, `112,293` sn'de ise **doğru** cevap olan `264,55 Hz`in `2x`
+baskınlık oranı `10,2`. İki durum spektral olarak neredeyse aynı, doğru
+cevapları zıt. Salt spektral hiçbir kural ikisini ayıramaz — ayırt edici olan
+zamansal bağlamdır. Denenip elenen üç ara sürüm:
+
+| Denenen | Oktav | Bozulan koruma hücresi |
+|---|---:|---:|
+| `yin_candidates` oktav kurtarma: eşik `800->500 Hz`, çarpan `2x->2..5x` | `2 -> 4` | `0 -> 20` |
+| `causal_yin_choice`: aday-destekli hayaleti sert eleme | `2 -> 1` | `0 -> 2` |
+| `causal_yin_choice`: yalnız güven tabanı muafiyeti | `2 -> 2` | `0 -> 0` |
+| **`refine_offline_harmonics` merdiveni (alınan)** | **`2 -> 1`** | **`0 -> 0`** |
+
+Sert eleme neden kötüledi: eleme süreklilik cezasından **önce** işliyor, yani
+hiçbir şeye kaybedemiyor; `112,25` sn'de doğru izlenen `267 Hz` kendi `2x`ine
+sürüklendi. Çevrimdışı merdivende bu risk yok, çünkü kararı geçiş maliyeti
+veriyor: `5x` alternatifi ancak komşu kareler zaten oradaysa kendini amorti
+ediyor.
+
+### Sonuç (kullanıcı hükümleri, 85 aralık, dört motor)
+
+| Motor | Etiketli kusur | Duruyor önce | Duruyor sonra | Oktav önce | Oktav sonra | Bozulan koruma |
+|---|---:|---:|---:|---:|---:|---:|
+| YIN v1 | 38 | 22 | **21** | 2 | **1** | 0 |
+| Pitch Engine v2 | 24 | 20 | 20 | 1 | 1 | 0 |
+| VPM-benzeri | 46 | 33 | **32** | 5 | **4** | 0 |
+| Harmonik-Faz (HAPT) | 50 | 33 | 33 | 1 | 1 | 0 |
+
+İki iyileşme (`yin_v1` idx 32 `116,349`; `vpm_like` idx 66 `155,100`), **sıfır
+gerileme** — 85 satırın ve dört motorun tamamında başka hiçbir hücre değişmedi.
+Bildirilen iki kare: `116,3787` `121,25 -> 606,26` (referans `601,47`),
+`143,5893` `122,15 -> 488,60` ve `143,6000` `121,38 -> 485,50` (komşular
+`490,51 / 491,01 / 493,61`).
+
+### Testler
+
+`core/tests/analysis_engine_tests.cpp` içinde merdivenin **riski** kilitleniyor:
+kapalı silindirde `5.` kısmi ses gerçek ve güçlüdür, dolayısıyla zayıf temelli
+(`150 Hz`, baskın `3f`/`5f`) bir ton kendi `4x`/`5x`'ine terfi ettirilmemeli.
+Test boş değil: `kOfflineAlternativeDiscount` savruk bir değere çekildiğinde
+kırılıyor, doğru değerle geçiyor. Onarımın kendisi bu dosyanın önceki
+kayıtlarındaki gerekçeyle sentetikle değil hüküm kümesiyle ölçülüyor.
+
+`OFFLINE_TRACK_REVISION` `r6 -> offline-harmonic-path-r7` yükseltildi; aksi
+hâlde değişen motorun eski çıktıları önbellekten sessizce yeniden kullanılırdı.
+
+Doğrulama: `zsh scripts/test_core.sh` geçti, Python paketi `115 passed`,
+`scripts/quick_pitch_check.py` dört motorda sıfır gerileme.
+
+
 ## Çevrimdışı iz revizyonu `r5 -> offline-harmonic-path-r6` — 26 Ağustos 2026
 
 `OFFLINE_TRACK_REVISION` yükseltildi. Bu sayı `offline_track_v1` JSON

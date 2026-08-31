@@ -1110,7 +1110,19 @@ std::vector<EngineFrame> refine_offline_harmonics(
             // correct answer away exactly in the frames that needed it.
             struct Probe { double frequency; double energy; };
             std::vector<Probe> family{{published, spectral_energy(view, rate, published)}};
-            for (const double ratio : {1.0 / 3.0, 0.5, 2.0, 3.0}) {
+            // 4x/5x complete the ladder a stopped cylinder actually produces.
+            // Without them a frame published on its own 4th or 5th sub-period
+            // has no route back: at 116.379 s the causal pass published
+            // 121.25 Hz between a 695.63 Hz and a 604.50 Hz neighbour, and
+            // the true 604.5 Hz line is 5x of it, so the old {1/3,1/2,2,3}
+            // set could only offer 242.5 and 363.75 -- the path was choosing
+            // among wrong answers. Reaching further is safe *here*, unlike in
+            // the causal ghost checks, because the transition cost decides:
+            // a 5x alternative is only taken when the neighbouring frames
+            // already sit there, so a genuinely low note (112.29 s, where the
+            // correct line is the low one and its own 2x carries ten times
+            // the energy) keeps its published pitch.
+            for (const double ratio : {0.2, 0.25, 1.0 / 3.0, 0.5, 2.0, 3.0, 4.0, 5.0}) {
                 const double alternative = published * ratio;
                 if (alternative < config.minimum_frequency_hz ||
                     alternative > config.maximum_frequency_hz) continue;

@@ -157,6 +157,50 @@ int main() {
         assert(at_octave == 0);
     }
 
+    // The offline harmonic path may reach 4x and 5x, not just 2x/3x: a frame
+    // published on its own 4th or 5th sub-period otherwise has no route back
+    // (measured at 116.379 s and 143.589 s of the Sukru Tunar recording, where
+    // the causal pass published 121 Hz between 695 Hz and 604 Hz neighbours).
+    // The risk that reach creates is the mirror image, and is locked here: on
+    // a stopped cylinder the 5th partial is a strong, genuinely present line,
+    // so a real low fundamental must not be promoted onto it.  What holds the
+    // two apart is the path's transition cost -- a 5x alternative only pays
+    // for itself when the neighbouring frames already sit there -- so a
+    // sustained tone must come back as one stable pitch.
+    {
+        constexpr double fundamental = 150;  // 5x lands on 750 Hz, a strong real partial here
+        std::vector<float> stopped_pipe(48'000);
+        for (std::size_t index = 0; index < stopped_pipe.size(); ++index) {
+            const double t = static_cast<double>(index) / rate;
+            stopped_pipe[index] = static_cast<float>(
+                0.06 * std::sin(2 * std::numbers::pi * fundamental * t) +      // deliberately weak fundamental
+                0.34 * std::sin(2 * std::numbers::pi * fundamental * 3 * t) +  // dominant third
+                0.30 * std::sin(2 * std::numbers::pi * fundamental * 5 * t)    // dominant fifth: the 5x alternative has full spectral backing
+            );
+        }
+        klarivision::core::PitchEngine stopped(
+            klarivision::core::PitchEngineId::yin_v1,
+            klarivision::core::PitchEngineProfile::offline_track
+        );
+        const auto frames = stopped.analyse(stopped_pipe, rate);
+        std::size_t at_fundamental = 0;
+        std::size_t at_fourth = 0;
+        std::size_t at_fifth = 0;
+        std::size_t voiced = 0;
+        for (const auto& frame : frames) {
+            if (!frame.frequency_hz) continue;
+            ++voiced;
+            const double cents = 1200.0 * std::log2(*frame.frequency_hz / fundamental);
+            if (std::abs(cents) < 60) ++at_fundamental;
+            if (std::abs(cents - 1200.0 * std::log2(4.0)) < 60) ++at_fourth;
+            if (std::abs(cents - 1200.0 * std::log2(5.0)) < 60) ++at_fifth;
+        }
+        assert(voiced > 0);
+        assert(at_fundamental * 20 >= voiced * 19);  // the tone stays on its own fundamental
+        assert(at_fourth == 0);                      // never promoted onto 4x
+        assert(at_fifth == 0);                       // ...nor onto its strong 5th partial
+    }
+
     std::vector<float> tone(48'000 * 2);
     for (std::size_t index = 0; index < tone.size(); ++index) tone[index] = static_cast<float>(0.2 * std::sin(2 * std::numbers::pi * 440 * index / rate));
     for (const auto id : {klarivision::core::PitchEngineId::yin_v1, klarivision::core::PitchEngineId::pitch_engine_v2, klarivision::core::PitchEngineId::vpm_like}) {

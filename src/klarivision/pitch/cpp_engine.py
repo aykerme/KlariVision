@@ -14,7 +14,7 @@ ENGINES = frozenset({"yin_v1", "pitch_engine_v2", "vpm_like", "hapt_v1"})
 # Keep the public offline_track_v1 JSON contract stable while preventing a
 # result made by an older decision pipeline from being reused after an engine
 # behaviour change.
-OFFLINE_TRACK_REVISION = "offline-harmonic-path-r6"
+OFFLINE_TRACK_REVISION = "offline-harmonic-path-r7"
 OFFLINE_TRACK_PROFILE = "offline_track_v1"
 PITCH_C_ABI_VERSION = 1
 PCM_SAMPLE_RATE_HZ = 48_000
