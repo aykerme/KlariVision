@@ -456,9 +456,55 @@ final class RecentLibrary {
     }
 }
 
+/// Hangi ekranın gösterildiğinin tek kaynağı. `library.activeViewer` ise hangi
+/// dosyanın açık olduğunun kaynağıdır — ikisi ayrı sorulara cevap verir.
+/// iPad tarafındaki `iPadWorkspaceRoute` (AppState.swift) aynı kalıbın örneğidir.
+enum AppRoute: Equatable {
+    case modeSelection
+    case listening
+    case live
+    case together
+}
+
+/// Kenar çubuğu seçimi iki ayrı yönden değişebilir: kullanıcı bir kayda tıklar,
+/// ya da yeni bir analiz bitip `activeViewer` dolunca senkron gözlemcisi seçimi
+/// programlı olarak yazar.  Yalnız ilki route'u `.listening`'e çekmelidir —
+/// ikincisi de çekerse "Birlikte Çal" için seçilen dosyanın analizi biter bitmez
+/// mod sessizce Dinleme Modu'na dönüşür (hoparlör düğmesi ve mikrofon çizimi
+/// `isTogetherMode`'a bağlı olduğu için ikisi birden kaybolur).
+///
+/// iPad tarafındaki `iPadCompactNavigationPolicy` gibi saf ve test edilebilir
+/// tutuluyor; SwiftUI `@State`'i içinde saklı kalırsa bu hata yine sessizce
+/// geri gelebilir.
+struct StudySelectionSync: Equatable {
+    private(set) var isSyncingFromViewer = false
+
+    /// `activeViewer` değişti.  `true` dönerse çağıran seçimi yazmalıdır.
+    /// Değer zaten aynıysa `onChange` tetiklenmeyeceği için bayrak da
+    /// kaldırılmaz; aksi halde bir sonraki gerçek tıklamayı yutardı.
+    mutating func viewerChanged(to identifier: String?, currentSelection: String?) -> Bool {
+        guard identifier != currentSelection else { return false }
+        isSyncingFromViewer = true
+        return true
+    }
+
+    /// Seçim değişti.  `true` dönerse bu gerçek bir kullanıcı tıklamasıdır ve
+    /// route `.listening` olmalıdır.
+    mutating func selectionChangeIsUserDriven() -> Bool {
+        if isSyncingFromViewer {
+            isSyncingFromViewer = false
+            return false
+        }
+        return true
+    }
+}
+
 struct WelcomeView: View {
     @Bindable var library: RecentLibrary
-    @State private var isLivePractice = false
+    @State private var route: AppRoute = .modeSelection
+    /// `library.activeViewer` → `selectedStudyID` senkronunu kullanıcının
+    /// kendi kenar çubuğu seçiminden ayırır; bkz. aşağıdaki iki `onChange`.
+    @State private var selectionSync = StudySelectionSync()
     @State private var itemToRemove: RecentLibrary.Item?
     @State private var itemToEdit: RecentLibrary.Item?
     @State private var selectedStudyID: RecentLibrary.Item.ID?
@@ -507,26 +553,42 @@ struct WelcomeView: View {
             .listStyle(.sidebar)
             .navigationTitle("KlariVision")
         } detail: {
-            if isLivePractice {
+            switch route {
+            case .live:
                 LivePracticeView {
-                    isLivePractice = false
+                    route = .modeSelection
                 }
-            } else if let viewer = library.activeViewer {
-                WorkspaceView(viewer: viewer, library: library)
-            } else {
-                ModeSelectionView(library: library, isLivePractice: $isLivePractice)
+            case .modeSelection, .listening, .together:
+                if let viewer = library.activeViewer {
+                    WorkspaceView(viewer: viewer, library: library, isTogetherMode: route == .together)
+                } else {
+                    ModeSelectionView(library: library, route: $route)
+                }
             }
         }
         .sheet(item: $itemToEdit) { item in
             StudyEditor(item: item, library: library) { _, _ in }
         }
         .onChange(of: selectedStudyID) { _, identifier in
+            // Kenar çubuğu seçimi `library.activeViewer` değiştiğinde aşağıdaki
+            // gözlemci tarafından programlı olarak da güncelleniyor.  O senkron
+            // güncelleme kullanıcı tıklaması sayılmamalı: sayılırsa Birlikte Çal
+            // için seçilen dosyanın analizi biter bitmez route `.listening`'e
+            // düşüyor ve mod sessizce Dinleme Modu'na dönüşüyordu.
+            guard selectionSync.selectionChangeIsUserDriven() else { return }
             guard let identifier,
                   let item = library.items.first(where: { $0.id == identifier }) else { return }
+            // Kenar çubuğundan seçilen kayıtlar yalnız Dinleme Modu'na girer.
+            route = .listening
             library.open(item)
         }
         .onChange(of: library.activeViewer) { _, viewer in
-            selectedStudyID = viewer.flatMap { library.item(for: $0)?.id }
+            let identifier = viewer.flatMap { library.item(for: $0)?.id }
+            // Değer gerçekten değişmiyorsa `onChange` tetiklenmez; bayrağı yalnız
+            // tetikleneceği durumda kaldır, yoksa bir sonraki gerçek kullanıcı
+            // tıklamasını yutar.
+            guard selectionSync.viewerChanged(to: identifier, currentSelection: selectedStudyID) else { return }
+            selectedStudyID = identifier
         }
         .alert(
             "Çalışma listeden kaldırılsın mı?",
@@ -552,7 +614,7 @@ struct WelcomeView: View {
 /// the 900 pt threshold, leaving the old media element audible in the process.
 private struct ModeSelectionView: View {
     @Bindable var library: RecentLibrary
-    @Binding var isLivePractice: Bool
+    @Binding var route: AppRoute
     @State private var isDropTarget = false
 
     var body: some View {
@@ -570,13 +632,17 @@ private struct ModeSelectionView: View {
                     ListeningModeCard(
                         isTargeted: $isDropTarget,
                         selectedFile: library.selectedFile,
-                        chooseFile: library.chooseFile
+                        chooseFile: {
+                            route = .listening
+                            library.chooseFile()
+                        }
                     )
                     .onDrop(of: [.fileURL], isTargeted: $isDropTarget) { providers in
                         guard let provider = providers.first(where: { $0.canLoadObject(ofClass: URL.self) }) else {
                             library.reportDroppedFileFailure()
                             return false
                         }
+                        route = .listening
                         _ = provider.loadObject(ofClass: URL.self) { value, _ in
                             DispatchQueue.main.async {
                                 guard let url = value else {
@@ -591,7 +657,15 @@ private struct ModeSelectionView: View {
 
                     PlayingModeCard {
                         library.closeWorkspace()
-                        isLivePractice = true
+                        route = .live
+                    }
+
+                    TogetherModeCard(selectedFile: library.selectedFile) {
+                        // Mikrofon henüz bağlanmadı; burada tek teardown noktası
+                        // bırakılıyor — mikrofon durdurma sonraki görevde eklenecek.
+                        library.closeWorkspace()
+                        route = .together
+                        library.chooseFile()
                     }
                 }
 
@@ -725,6 +799,59 @@ private struct PlayingModeCard: View {
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Çalma Modu")
         .accessibilityHint("Mikrofonla canlı pitch analizini başlatır.")
+    }
+}
+
+/// "Dosya Seç" ile aynı `library.chooseFile` yolunu kullanır, ama kasıtlı olarak
+/// `onDrop` taşımaz: bu modda yalnız yeni dosya seçimiyle girilir, kenar
+/// çubuğundaki eski kayıtlar (Dinleme Modu'na özgü) bu moda giremez.
+private struct TogetherModeCard: View {
+    let selectedFile: URL?
+    let start: () -> Void
+
+    var body: some View {
+        VStack(spacing: 17) {
+            ZStack {
+                Circle()
+                    .fill(Color.purple.opacity(0.14))
+                    .frame(width: 72, height: 72)
+
+                Image(systemName: selectedFile == nil ? "person.wave.2" : "checkmark.circle.fill")
+                    .font(.system(size: 32, weight: .semibold))
+                    .foregroundStyle(selectedFile == nil ? Color.purple : Color.green)
+            }
+
+            VStack(spacing: 6) {
+                Text("Birlikte Çal")
+                    .font(.title3.weight(.bold))
+
+                Text(selectedFile?.lastPathComponent ?? "Dosya çalarken kendi çalışınızı aynı grafikte, ikinci renkle görün.")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .lineLimit(2)
+            }
+
+            Button(action: start) {
+                Label("Dosya Seç", systemImage: "folder")
+            }
+            .buttonStyle(.borderedProminent)
+            .controlSize(.large)
+            .tint(.purple)
+        }
+        .padding(28)
+        .frame(maxWidth: .infinity, minHeight: 260)
+        .background(
+            RoundedRectangle(cornerRadius: 20)
+                .fill(Color.purple.opacity(0.055))
+        )
+        .overlay {
+            RoundedRectangle(cornerRadius: 20)
+                .stroke(Color.purple.opacity(0.28), lineWidth: 1)
+        }
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("Birlikte Çal")
+        .accessibilityHint("Bir dosya seçin; dosya çalarken mikrofonunuzdaki perde aynı grafiğe eklenir.")
     }
 }
 

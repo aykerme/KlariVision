@@ -132,7 +132,9 @@ struct SignalGateControls: View {
 struct SettingsView: View {
     @AppStorage(PitchEngineSettings.studyEngineKey) private var studyEngine = PitchEngineSettings.initialEngine
     @AppStorage(PitchEngineSettings.liveEngineKey) private var liveEngine = PitchEngineSettings.initialEngine
+    @AppStorage(PitchEngineSettings.togetherEngineKey) private var togetherEngine = PitchEngineSettings.initialEngine
     @AppStorage(AppTheme.storageKey) private var themeName = AppTheme.focus.rawValue
+    @State private var graphAppearance = GraphAppearance.stored()
 
     var body: some View {
         Form {
@@ -173,12 +175,75 @@ struct SettingsView: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
+            Section("Birlikte Çal") {
+                Picker("Birlikte Çal Motoru", selection: $togetherEngine) {
+                    ForEach(PitchEngineSettings.userChoices) { engine in
+                        Text(engine.title).tag(engine.id)
+                    }
+                }
+                .accessibilityHint(AccessibilityText.enginePickerHint)
+                Text("Dört motor eşit kullanıcı seçeneğidir. Yeni dosya yalnız seçilen motorla analiz edilir; mevcut çalışmada hazır sonuç yoksa yeniden analiz gerekir.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                // Mikrofon hizalaması bilinçli olarak burada değil, çalışma
+                // ekranının üst çubuğunda: doğru değer ancak çalarken eğriye
+                // bakılarak bulunuyor ve ayrı bir pencereye gidip gelmek onu
+                // kullanılamaz kılıyordu.
+            }
+            Section("Grafik Renkleri") {
+                HStack {
+                    Text("Pitch eğrisi")
+                    Spacer()
+                    ColorPicker("", selection: Binding(
+                        get: { GraphAppearance.color(hex: graphAppearance.pitchHex) },
+                        set: { color in
+                            if let hex = GraphAppearance.hex(from: color) {
+                                graphAppearance.pitchHex = hex
+                            }
+                        }
+                    ))
+                    .frame(width: 60)
+                }
+                HStack {
+                    Text("Not rehberi")
+                    Spacer()
+                    ColorPicker("", selection: Binding(
+                        get: { GraphAppearance.color(hex: graphAppearance.noteGuideHex) },
+                        set: { color in
+                            if let hex = GraphAppearance.hex(from: color) {
+                                graphAppearance.noteGuideHex = hex
+                            }
+                        }
+                    ))
+                    .frame(width: 60)
+                }
+                HStack {
+                    Text("Mikrofon eğrisi")
+                    Spacer()
+                    ColorPicker("", selection: Binding(
+                        get: { GraphAppearance.color(hex: graphAppearance.micHex) },
+                        set: { color in
+                            if let hex = GraphAppearance.hex(from: color) {
+                                graphAppearance.micHex = hex
+                            }
+                        }
+                    ))
+                    .frame(width: 60)
+                }
+                Text("Bu renkler hem Dinleme hem Birlikte Çal grafiğinde kullanılır. Mikrofon eğrisi, çalınan dosyanın eğrisinden ayırt edilebilsin diye ayrı bir renk taşır.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
         }
         .formStyle(.grouped)
-        .frame(width: 520, height: 540)
+        .frame(width: 520, height: 640)
         .onAppear {
             studyEngine = PitchEngineSettings.resolvedSelection(studyEngine)
             liveEngine = PitchEngineSettings.resolvedSelection(liveEngine)
+            togetherEngine = PitchEngineSettings.resolvedSelection(togetherEngine)
+        }
+        .onChange(of: graphAppearance) { _, newValue in
+            newValue.save()
         }
     }
 }
@@ -457,6 +522,17 @@ enum LivePitchEngine: String, CaseIterable, Identifiable {
 
     static var storedUserSelection: LivePitchEngine {
         switch PitchEngineSettings.storedSelection(for: PitchEngineSettings.liveEngineKey) {
+        case "pitch_engine_v2": return .candidateV2
+        case "vpm_like": return .vpmLike
+        case "hapt_v1": return .hapt
+        default: return .yin
+        }
+    }
+
+    /// "Birlikte Çal" motoru `togetherEngineKey`'de ayrı saklanır; Dinleme
+    /// (`liveEngineKey`) veya Çalma (`studyEngineKey`) seçimlerinden bağımsız.
+    static var togetherModeSelection: LivePitchEngine {
+        switch PitchEngineSettings.storedSelection(for: PitchEngineSettings.togetherEngineKey) {
         case "pitch_engine_v2": return .candidateV2
         case "vpm_like": return .vpmLike
         case "hapt_v1": return .hapt
@@ -809,6 +885,21 @@ final class LivePitchAnalyzer: ObservableObject, @unchecked Sendable {
         selectPitchEngineSynchronously(.storedUserSelection)
         // Ordinary microphone practice should use wall-clock time rather than
         // the frozen timeline of a previous source test.
+        referenceTestStartedAt = nil
+        referenceTimelineEnd = nil
+        referenceOfflineFrames.removeAll(keepingCapacity: true)
+        referenceIsAnalytic = false
+        referenceErrorRanges.removeAll(keepingCapacity: true)
+        referenceErrorPoints.removeAll(keepingCapacity: true)
+        requestAndStart()
+    }
+
+    /// "Birlikte Çal" girişi (bkz. StudyWorkspace.swift → TogetherSession).
+    /// Adi mikrofon pratiğinden tek farkı motor seçiminin `liveEngineKey`
+    /// değil `togetherEngineKey`'den okunmasıdır. Kasıtlı olarak
+    /// `playbackURL` geçirmez: "Kaynakla Test" akışı burada istenmiyor.
+    func startForTogetherMode() {
+        selectPitchEngineSynchronously(.togetherModeSelection)
         referenceTestStartedAt = nil
         referenceTimelineEnd = nil
         referenceOfflineFrames.removeAll(keepingCapacity: true)

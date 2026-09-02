@@ -248,3 +248,63 @@ def test_frequency_viewer_uses_cpp_engine_revision_only_for_cpp_engines(tmp_path
     assert '<meta name="klarivision-engine" content="vamp">' in html
     assert 'klarivision-offline-revision' not in html
     assert 'Motor: Vamp pYIN (referans)' in html
+
+
+def test_frequency_viewer_adds_microphone_api_methods(tmp_path) -> None:
+    pitch_json = tmp_path / "pitch.json"
+    pitch_json.write_text(json.dumps({"frames": []}), encoding="utf-8")
+    output = tmp_path / "viewer.html"
+    build_frequency_viewer(pitch_json, "audio.wav", output)
+
+    html = output.read_text(encoding="utf-8")
+    # Birlikte Çal modunun mikrofon API adları
+    assert "micAppend" in html
+    assert "micClear" in html
+    assert "micTruncate" in html
+    assert "setMicColor" in html
+    assert "setMuted" in html
+
+
+def test_frequency_viewer_includes_microphone_color_in_defaults(tmp_path) -> None:
+    pitch_json = tmp_path / "pitch.json"
+    pitch_json.write_text(json.dumps({"frames": []}), encoding="utf-8")
+    output = tmp_path / "viewer.html"
+    build_frequency_viewer(pitch_json, "audio.wav", output)
+
+    html = output.read_text(encoding="utf-8")
+    # Mikrofon eğrisi varsayılan rengi
+    assert "defaultGraphAppearance.micHex='#FF9F0A'" in html
+
+
+def test_frequency_viewer_adds_microphone_color_settings_ui(tmp_path) -> None:
+    pitch_json = tmp_path / "pitch.json"
+    pitch_json.write_text(json.dumps({"frames": []}), encoding="utf-8")
+    output = tmp_path / "viewer.html"
+    build_frequency_viewer(pitch_json, "audio.wav", output)
+
+    html = output.read_text(encoding="utf-8")
+    # Grafik renkleri ayarlarında mikrofon eğrisi rengi input'u
+    assert "mic.id='graph-mic-color'" in html
+    assert "Mikrofon eğrisi" in html
+
+
+def test_frequency_viewer_snapshot_includes_muted_state(tmp_path) -> None:
+    pitch_json = tmp_path / "pitch.json"
+    pitch_json.write_text(json.dumps({"frames": []}), encoding="utf-8")
+    output = tmp_path / "viewer.html"
+    build_frequency_viewer(pitch_json, "audio.wav", output)
+
+    html = output.read_text(encoding="utf-8")
+    # snapshot() fonksiyonu muted durumunu içeriyor
+    assert "muted:!!media.muted" in html
+
+
+def test_frequency_viewer_chart_palette_includes_microphone_color(tmp_path) -> None:
+    pitch_json = tmp_path / "pitch.json"
+    pitch_json.write_text(json.dumps({"frames": []}), encoding="utf-8")
+    output = tmp_path / "viewer.html"
+    build_frequency_viewer(pitch_json, "audio.wav", output)
+
+    html = output.read_text(encoding="utf-8")
+    # chartPalette() üç temanın hepsinde mic: alanını veriyor
+    assert "mic:graphAppearance.micHex" in html

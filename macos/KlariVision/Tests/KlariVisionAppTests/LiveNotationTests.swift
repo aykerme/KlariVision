@@ -347,6 +347,75 @@ final class LiveNotationTests: XCTestCase {
         XCTAssertEqual(clock.advance(to: 1), 0.4, accuracy: 0.000_001)
     }
 
+    // "Birlikte Çal" mikrofon karesi → medya zamanı eşlemesi. Kare, kulağa
+    // duyulan andan `TogetherSession.fixedLatency` kadar geriden geldiği için
+    // bir mikrofon karesinin medya zamanı, o anki sunum saatinden hem bu
+    // sabit gecikme hem de kullanıcı hizalaması kadar geride olmalıdır.
+    func testTogetherSessionMapsMicrophoneFrameToMediaTimeUsingFixedLatencyAndAlignment() {
+        // Kare tam "şimdi" (wallNow) yakalandı, oynatma hızı 1×, kullanıcı
+        // hizalaması yok: medya zamanı yalnız sabit gecikme kadar gerisin.
+        let atNow = TogetherSession.mapFrameToMediaTime(
+            clockNow: 10.0,
+            wallNow: 100.0,
+            frameTime: 100.0,
+            rate: 1.0,
+            userAlignment: 0
+        )
+        XCTAssertEqual(atNow, 10.0 - TogetherSession.fixedLatency, accuracy: 0.000_001)
+
+        // Kare 0,20 saniye önce yakalandıysa (işlem gecikmesi), 2× hızda bu
+        // fark iki katına çıkar.
+        let delayed = TogetherSession.mapFrameToMediaTime(
+            clockNow: 10.0,
+            wallNow: 100.0,
+            frameTime: 99.8,
+            rate: 2.0,
+            userAlignment: 0
+        )
+        XCTAssertEqual(delayed, 10.0 - 0.40 - TogetherSession.fixedLatency, accuracy: 0.000_001)
+
+        // Kullanıcı hizalaması (saniyeye çevrilmiş) doğrudan çıkarılır.
+        let aligned = TogetherSession.mapFrameToMediaTime(
+            clockNow: 10.0,
+            wallNow: 100.0,
+            frameTime: 100.0,
+            rate: 1.0,
+            userAlignment: 0.05
+        )
+        XCTAssertEqual(aligned, 10.0 - TogetherSession.fixedLatency - 0.05, accuracy: 0.000_001)
+    }
+
+    // Regresyon: "Birlikte Çal" seçilip dosya analizi bittiğinde route
+    // `.listening`'e düşüyor, mod sessizce Dinleme Modu'na dönüşüyordu.  Kök
+    // neden, `activeViewer` senkronunun yazdığı seçimin kullanıcı tıklaması
+    // sayılmasıydı.
+    func testViewerDrivenSelectionSyncIsNotTreatedAsAUserSidebarClick() {
+        var sync = StudySelectionSync()
+
+        // Analiz biter, `activeViewer` dolar: seçim yazılmalı ama bu bir
+        // kullanıcı tıklaması sayılmamalı.
+        XCTAssertTrue(sync.viewerChanged(to: "yeni-kayit", currentSelection: nil))
+        XCTAssertFalse(sync.selectionChangeIsUserDriven())
+
+        // Bayrak tek seferliktir: sonraki gerçek tıklama yutulmamalı.
+        XCTAssertTrue(sync.selectionChangeIsUserDriven())
+    }
+
+    func testUnchangedViewerDoesNotArmTheSyncFlagAndSwallowTheNextClick() {
+        var sync = StudySelectionSync()
+
+        // Aynı değer yeniden yazılırsa SwiftUI `onChange` tetiklemez; bayrak
+        // burada kurulursa bir sonraki gerçek tıklamayı yutar.
+        XCTAssertFalse(sync.viewerChanged(to: "ayni", currentSelection: "ayni"))
+        XCTAssertTrue(sync.selectionChangeIsUserDriven())
+    }
+
+    func testSidebarClickWithoutAViewerSyncStaysUserDriven() {
+        var sync = StudySelectionSync()
+        XCTAssertTrue(sync.selectionChangeIsUserDriven())
+        XCTAssertTrue(sync.selectionChangeIsUserDriven())
+    }
+
     func testStudySettingsDraftParsesCompleteValidSnapshot() {
         let values: [String: Any] = [
             "theme": "studio", "scale": "hicaz", "tonic": 9, "countdown": 4,

@@ -72,6 +72,7 @@ struct PitchEngineChoice: Identifiable, Hashable {
 enum PitchEngineSettings {
     static let studyEngineKey = "klarivision-study-pitch-engine-v1"
     static let liveEngineKey = "klarivision-live-pitch-engine-v1"
+    static let togetherEngineKey = "klarivision-together-pitch-engine-v1"
     /// Kept only so existing installs open with their prior behaviour; this
     /// does not express a quality ranking or a recommended engine.
     static let initialEngine = "yin_v1"
@@ -113,15 +114,19 @@ enum AccessibilityText {
 struct GraphAppearance: Codable, Equatable {
     static let pitchColorKey = "klarivision-graph-pitch-color-v1"
     static let noteGuideColorKey = "klarivision-graph-note-guide-color-v1"
+    static let micColorKey = "klarivision-graph-mic-color-v1"
     static let defaultPitchHex = "#0A84FF"
     static let defaultNoteGuideHex = "#8E8E93"
+    static let defaultMicHex = "#FF9F0A"
 
     var pitchHex: String
     var noteGuideHex: String
+    var micHex: String
 
-    init(pitchHex: String = Self.defaultPitchHex, noteGuideHex: String = Self.defaultNoteGuideHex) {
+    init(pitchHex: String = Self.defaultPitchHex, noteGuideHex: String = Self.defaultNoteGuideHex, micHex: String = Self.defaultMicHex) {
         self.pitchHex = Self.normalizedHex(pitchHex) ?? Self.defaultPitchHex
         self.noteGuideHex = Self.normalizedHex(noteGuideHex) ?? Self.defaultNoteGuideHex
+        self.micHex = Self.normalizedHex(micHex) ?? Self.defaultMicHex
     }
 
     static func normalizedHex(_ value: String?) -> String? {
@@ -135,13 +140,15 @@ struct GraphAppearance: Codable, Equatable {
     static func stored(defaults: UserDefaults = .standard) -> Self {
         Self(
             pitchHex: defaults.string(forKey: pitchColorKey) ?? defaultPitchHex,
-            noteGuideHex: defaults.string(forKey: noteGuideColorKey) ?? defaultNoteGuideHex
+            noteGuideHex: defaults.string(forKey: noteGuideColorKey) ?? defaultNoteGuideHex,
+            micHex: defaults.string(forKey: micColorKey) ?? defaultMicHex
         )
     }
 
     func save(to defaults: UserDefaults = .standard) {
         defaults.set(pitchHex, forKey: Self.pitchColorKey)
         defaults.set(noteGuideHex, forKey: Self.noteGuideColorKey)
+        defaults.set(micHex, forKey: Self.micColorKey)
     }
 
     static func reset(in defaults: UserDefaults = .standard) {
@@ -168,6 +175,17 @@ struct GraphAppearance: Codable, Equatable {
 
     var pitchColor: Color { Self.color(hex: pitchHex) }
     var noteGuideColor: Color { Self.color(hex: noteGuideHex) }
+    var micColor: Color { Self.color(hex: micHex) }
+}
+
+enum MicrophoneSettings {
+    static let micAlignmentKey = "klarivision-together-mic-alignment-ms-v1"
+    static let defaultMicAlignment = 0.0
+
+    /// Mikrofon hizalamasını −200…+200 ms aralığına kelepçeler.
+    static func clampedMicAlignment(_ value: Double) -> Double {
+        max(-200, min(200, value))
+    }
 }
 
 @main
