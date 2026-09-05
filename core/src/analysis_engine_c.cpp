@@ -1,4 +1,6 @@
 #include "klarivision/core/analysis_engine_c.h"
+
+#include "klarivision/core/unified_pitch_constants.hpp"
 #include "klarivision/core/analysis_engine.hpp"
 #include "klarivision/core/pitch_engine_v2_session.hpp"
 
@@ -50,7 +52,8 @@ int kv_pitch_contract_get_v1(kv_pitch_contract_v1 *out_contract) {
         .capabilities = KV_CAP_ENGINE_YIN_V1 | KV_CAP_ENGINE_V2 |
             KV_CAP_ENGINE_VPM_LIKE | KV_CAP_PROFILE_REALTIME |
             KV_CAP_PROFILE_OFFLINE_TRACK_V1 | KV_CAP_SOURCE_TIMESTAMPS |
-            KV_CAP_V2_FIXED_LAG_FINISH | KV_CAP_ENGINE_HAPT_V1,  // bitmask of every engine/profile/feature this build supports
+            KV_CAP_V2_FIXED_LAG_FINISH | KV_CAP_ENGINE_HAPT_V1 |
+            KV_CAP_ENGINE_UNIFIED_V1,  // bitmask of every engine/profile/feature this build supports
         .sample_rate_hz = 48'000,
         .window_size = 1'536,
         .hop_size = 512,
@@ -59,10 +62,13 @@ int kv_pitch_contract_get_v1(kv_pitch_contract_v1 *out_contract) {
     };
     return 1;
 }
+size_t kv_unified_lag_frames(void) {
+    return klarivision::core::unified::kDefaultLagFrames;
+}
 // Allocates an offline/causal PitchEngine wrapper for the given engine id
 // and analysis profile.
 kv_pitch_engine *kv_pitch_engine_create(int id, int profile) {
-    if (id < KV_ENGINE_YIN_V1 || id > KV_ENGINE_HAPT_V1 || profile < KV_PROFILE_REALTIME || profile > KV_PROFILE_OFFLINE_TRACK) return nullptr;  // reject out-of-range enum values
+    if (id < KV_ENGINE_YIN_V1 || id > KV_ENGINE_UNIFIED_V1 || profile < KV_PROFILE_REALTIME || profile > KV_PROFILE_OFFLINE_TRACK) return nullptr;  // reject out-of-range enum values
     return new kv_pitch_engine(static_cast<klarivision::core::PitchEngineId>(id), static_cast<klarivision::core::PitchEngineProfile>(profile));
 }
 void kv_pitch_engine_destroy(kv_pitch_engine *engine) { delete engine; }
@@ -83,7 +89,7 @@ kv_production_pitch_session *kv_production_pitch_session_create(
     const int id,
     const double minimum_rms
 ) {
-    if (id < KV_ENGINE_YIN_V1 || id > KV_ENGINE_HAPT_V1 ||
+    if (id < KV_ENGINE_YIN_V1 || id > KV_ENGINE_UNIFIED_V1 ||
         !std::isfinite(minimum_rms) || minimum_rms < 0) return nullptr;  // reject an invalid engine id or a nonsensical RMS floor
     try {
         return new kv_production_pitch_session(

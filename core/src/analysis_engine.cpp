@@ -1,5 +1,7 @@
 #include "klarivision/core/analysis_engine.hpp"
 
+#include "klarivision/core/unified_pitch_session.hpp"
+
 #include "klarivision/core/harmonic_arbitration.hpp"
 #include "klarivision/core/pitch_engine_v2_session.hpp"
 #include "klarivision/core/vpm_like.hpp"
@@ -695,6 +697,11 @@ std::vector<EngineFrame> backtrack_viterbi_path(
 // they all live together so switching engines (or reset()) is just a matter
 // of rebuilding this one struct.
 struct ProductionPitchSession::Impl {
+    // Only constructed for unified_v1. The legacy engines keep their existing
+    // state layout untouched, so adding a fifth engine cannot perturb the
+    // baseline the fifth engine is measured against.
+    std::unique_ptr<UnifiedPitchSession> unified{};
+
     PitchEngineId id;             // which engine this session runs (yin_v1, vpm_like, hapt_v1, pitch_engine_v2)
     PitchEngineConfig config;
 
@@ -854,6 +861,15 @@ std::vector<EngineFrame> ProductionPitchSession::process_frame(
     }
     if (session.id == PitchEngineId::pitch_engine_v2) {
         return session.process_v2_frame(samples, rate, source_time);
+    }
+    if (session.id == PitchEngineId::unified_v1) {
+        // Self-contained, like v2: it owns candidate generation, path decoding
+        // and its own publication decision, including the decision to stay
+        // silent. The shared gap-bridging tail below would only undo that.
+        if (!session.unified) {
+            session.unified = std::make_unique<UnifiedPitchSession>(session.config);
+        }
+        return session.unified->process_frame(samples, rate, source_time);
     }
 
     const double rms = centered_rms(samples);  // this window's loudness
@@ -1609,6 +1625,12 @@ std::vector<EngineFrame> ProductionPitchSession::Impl::build_bridged_output(
 std::vector<EngineFrame> ProductionPitchSession::finish() {
     if (impl_->finished) return {};
     impl_->finished = true;
+    if (impl_->id == PitchEngineId::unified_v1) {
+        // Drain the fixed-lag window using the real remaining suffix as
+        // look-ahead. At 15 hops this tail is 160 ms, and dropping it would
+        // silently truncate the end of every recording.
+        return impl_->unified ? impl_->unified->finish() : std::vector<EngineFrame>{};
+    }
     if (impl_->id != PitchEngineId::pitch_engine_v2) return {};
     std::vector<EngineFrame> output;
     for (const auto& frame : impl_->v2_session.finish()) {
@@ -2074,6 +2096,18 @@ std::vector<EngineFrame> PitchEngine::analyse(
     const std::span<const float> samples,
     const double rate
 ) {
+    if (id_ == PitchEngineId::unified_v1) {
+        if (profile_ != PitchEngineProfile::offline_track) return analyse_causal(samples, rate);
+        // Not a refinement of the causal trace. The existing offline path may
+        // only reprice frames the causal pass already published, so a frame the
+        // causal pass declined to answer is permanently lost to it -- and
+        // declining is now the engine's central mechanism. Decoding the whole
+        // sequence over the same candidates can revisit voicing as well as
+        // pitch, which strictly dominates.
+        const auto evidence = collect_unified_evidence(samples, rate, config_);
+        return drop_offline_stray_runs(decode_unified_offline_track(evidence, config_));
+    }
+
     auto baseline = analyse_causal(samples, rate);
     if (profile_ != PitchEngineProfile::offline_track || baseline.empty()) {
         return baseline;

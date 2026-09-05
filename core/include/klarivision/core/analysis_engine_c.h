@@ -28,7 +28,7 @@ typedef struct {
     double default_minimum_rms;
 } kv_pitch_contract_v1;
 
-enum { KV_ENGINE_YIN_V1 = 0, KV_ENGINE_V2 = 1, KV_ENGINE_VPM_LIKE = 2, KV_ENGINE_HAPT_V1 = 3 };
+enum { KV_ENGINE_YIN_V1 = 0, KV_ENGINE_V2 = 1, KV_ENGINE_VPM_LIKE = 2, KV_ENGINE_HAPT_V1 = 3, KV_ENGINE_UNIFIED_V1 = 4 };
 enum { KV_PROFILE_REALTIME = 0, KV_PROFILE_OFFLINE_TRACK = 1 };
 enum { KV_PITCH_C_ABI_V1 = 1 };
 enum {
@@ -40,6 +40,7 @@ enum {
     KV_CAP_SOURCE_TIMESTAMPS = 1u << 5,
     KV_CAP_V2_FIXED_LAG_FINISH = 1u << 6,
     KV_CAP_ENGINE_HAPT_V1 = 1u << 7,
+    KV_CAP_ENGINE_UNIFIED_V1 = 1u << 8,
 };
 
 /// Returns 1 on success and 0 for an invalid output pointer. Ownership remains
@@ -47,6 +48,13 @@ enum {
 /// functions is mono Float32 at sample_rate_hz; frame timestamps describe the
 /// centre of that source window, not publication latency.
 int kv_pitch_contract_get_v1(kv_pitch_contract_v1 *out_contract);
+
+/// Decision latency of the unified engine, in hops. Exposed as its own call
+/// rather than as a field on kv_pitch_contract_v1: that struct's layout is a
+/// persisted contract, callers assert on it, and appending to it would require
+/// a new ABI version for what is a single engine's parameter. The v1 struct's
+/// v2_fixed_lag_frames continues to describe pitch_engine_v2 alone.
+size_t kv_unified_lag_frames(void);
 
 kv_pitch_engine *kv_pitch_engine_create(int engine, int profile);
 void kv_pitch_engine_destroy(kv_pitch_engine *engine);

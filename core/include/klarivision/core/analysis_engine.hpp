@@ -9,7 +9,9 @@
 
 namespace klarivision::core {
 
-enum class PitchEngineId { yin_v1, pitch_engine_v2, vpm_like, hapt_v1 };
+// Appended, never reordered: these values are the persisted C ABI enum, so
+// 0-3 keep their meaning even after the engines behind them are removed.
+enum class PitchEngineId { yin_v1, pitch_engine_v2, vpm_like, hapt_v1, unified_v1 };
 enum class PitchEngineProfile { realtime, offline_track };
 
 struct PitchEngineConfig {
