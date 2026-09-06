@@ -1,5 +1,47 @@
 # KlariVision Test Tabanı
 
+## Dış karşılaştırma — pYIN referansıyla — 6 Eylül 2026
+
+24 dosya, üç küme, beş motor + iki çevrimdışı pYIN referansı.
+
+### Oktav hata oranı (RPA − RCA)
+
+| Küme | **unified_v1** | pyin_vamp | pyin_librosa | yin_v1 |
+|---|---|---|---|---|
+| bach10_mf0_synth | 0,0007 | 0,0006 | 0,0005 | 0,0206 |
+| **mdb_stem_synth** | **0,0134** | 0,0658 | 0,1390 | 0,0804 |
+| vocadito | **0,0000** | 0,0000 | 0,0000 | 0,0141 |
+
+**En zor ve en çeşitli kümede `unified_v1`, pYIN'den 5–10 kat az oktav hatası
+yapıyor** — raporun "ulaşılabilir en iyi" dediği çevrimdışı referanstan. Diğer
+iki kümede pYIN ile aynı seviyede. Beş motorun tamamı arasında da her kümede
+birinci ya da birinciyle eşit.
+
+Bu, D-037'nin sert şartının hiç görülmemiş veride, üstelik referans tavanının
+üstünde karşılandığı anlamına gelir.
+
+### Ham perde doğruluğu — açık burada
+
+| Küme | unified_v1 | pyin_vamp | pyin_librosa |
+|---|---|---|---|
+| bach10_mf0_synth | 0,635 | 0,988 | 0,987 |
+| mdb_stem_synth | 0,315 | 0,655 | 0,661 |
+| vocadito | 0,620 | 0,989 | 0,992 |
+
+Fark neredeyse tamamen **ötüm recall**'dan geliyor: `unified_v1` 0,641 / 0,346 /
+0,635, pYIN 0,995 / 0,754 / 0,991. Yani motor perdeyi doğru ölçüyor ama sesli
+karelerin önemli bir kısmında susuyor.
+
+pYIN'in yanlış alarmı ise çok daha yüksek (vocadito'da 0,15 ve 0,34, bizde
+0,06) — yani kapsamanın bir kısmını sessizliğe perde bildirerek alıyor.
+Karşılaştırma bu yüzden tek yönlü okunmamalı; ama recall farkı bununla
+açıklanamayacak kadar büyük.
+
+**Projenin bir sonraki gerçek işi budur:** klarnet dışı materyalde ötüm
+kapsaması. Ve bu tabloya bakarak ayarlanamaz — ayrı bir doğrulama kümesi
+ayrılmalıdır.
+
+
 ## Dış karşılaştırma — tam koşu — 6 Eylül 2026
 
 36 dosya, üç küme, beş motor. **Oktav hata oranı (RPA − RCA)**, hiç görülmemiş
