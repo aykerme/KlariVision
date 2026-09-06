@@ -44,9 +44,23 @@ geliştirme 96 / holdout 72 / yedek 142. Koşucu `--split` alır ve hangi bölü
   nota yok" sorusu doğrudan buradan cevaplanır.
 ### Açık kalanlar
 
-1. **iPad `xcodebuild`** — kod ve proje değişikliği yapıldı, doğrulama
-   koşulmadı: bu makinede Xcode'da iOS platformu kurulu değil. Kurulunca ilk
-   iş budur.
+1. **iPad `KlariVisioniPadTests` temizden derlenmiyor** — `@testable import
+   KlariVisioniPad` "unable to resolve module dependency" veriyor. Bu **eski
+   bir kırık**: `310706e` (motor silmeden önceki commit) ayrı bir worktree'de
+   aynı hatayı veriyor. Artımlı derlemede görünmüyor, çünkü DerivedData'daki
+   eski modül soruyu cevaplıyor — bu yüzden fark edilmemiş ve bir süredir
+   AppStateTests hiç koşulmamış olabilir.
+
+   Denendi ve **çözmedi**: test hedefine `SWIFT_INCLUDE_PATHS =
+   $(BUILT_PRODUCTS_DIR)`. Hedefin bağımlılığı, `TEST_HOST` ve `BUNDLE_LOADER`
+   ayarları yerinde; sorun büyük olasılıkla explicit-module derlemesinde app
+   hedefinin `.swiftmodule`'ünün test hedefine görünür olmaması.
+
+   **Not:** iPad uygulamasının kendisi hem simülatör hem cihaz SDK'sıyla
+   derleniyor (`BUILD SUCCEEDED`), ve C ABI tarafını doğrulayan
+   `KlariVisionCoreSmokeTests` hedefi de derleniyor. Derlenemeyen tek şey bu
+   test paketi. Bu makinede simülatör cihazı tanımlı olmadığı için testler
+   zaten *koşulamıyor*; kırık olan derlenmeleri.
 2. **`adverse_v1` vetosu** (23 kare, sınır 12). Artık gerekçesi de ölçülü:
    17 `unvoiced`, 2 `contested`, 2 `abstain-recovery`, 0 RMS kapısı. Ucuz ayar
    yok; ölçülüp reddedilen altı kol tekrar denenmemeli.
