@@ -28,6 +28,15 @@ struct iPadPitchABIAdapter {
         else { throw iPadPitchABIError.contract }
         return value
     }
+
+    /// unified_v1's own decision latency, in hops. Deliberately separate from
+    /// `contract().v2_fixed_lag_frames`, which the struct above hard-asserts
+    /// as a stable field describing pitch_engine_v2 alone and must not be
+    /// mutated for a new engine; see kv_unified_lag_frames() in
+    /// analysis_engine_c.h.
+    static func unifiedLagFrames() -> Int {
+        Int(kv_unified_lag_frames())
+    }
 }
 
 final class iPadProductionPitchSession {

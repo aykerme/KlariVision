@@ -30,7 +30,7 @@ Wav read_wav(const std::string& path) {
     return wav;
 }
 std::vector<float> resample(const Wav& source) { constexpr double target=48000; if(source.rate==target) return source.samples; const std::size_t size=static_cast<std::size_t>(source.samples.size()*target/source.rate); std::vector<float> output(size); for(std::size_t i=0;i<size;++i) { const double p=i*source.rate/target; const auto lo=static_cast<std::size_t>(p); const auto hi=std::min(lo+1,source.samples.size()-1); output[i]=static_cast<float>(source.samples[lo]+(source.samples[hi]-source.samples[lo])*(p-lo)); } return output; }
-klarivision::core::PitchEngineId parse_engine(const std::string& value) { if(value=="yin_v1") return klarivision::core::PitchEngineId::yin_v1; if(value=="pitch_engine_v2") return klarivision::core::PitchEngineId::pitch_engine_v2; if(value=="vpm_like") return klarivision::core::PitchEngineId::vpm_like; if(value=="hapt_v1") return klarivision::core::PitchEngineId::hapt_v1; throw std::runtime_error("Geçersiz pitch motoru."); }
+klarivision::core::PitchEngineId parse_engine(const std::string& value) { if(value=="yin_v1") return klarivision::core::PitchEngineId::yin_v1; if(value=="pitch_engine_v2") return klarivision::core::PitchEngineId::pitch_engine_v2; if(value=="vpm_like") return klarivision::core::PitchEngineId::vpm_like; if(value=="hapt_v1") return klarivision::core::PitchEngineId::hapt_v1; if(value=="unified_v1") return klarivision::core::PitchEngineId::unified_v1; throw std::runtime_error("Geçersiz pitch motoru."); }
 bool same_frame(const klarivision::core::EngineFrame& left, const klarivision::core::EngineFrame& right) {
     if (std::abs(left.time_seconds - right.time_seconds) > 0.000001 ||
         left.frequency_hz.has_value() != right.frequency_hz.has_value()) return false;
@@ -174,11 +174,16 @@ int main(int argc, char** argv) {
                   << ",\"sample_rate_hz\":" << contract.sample_rate_hz
                   << ",\"window_size\":" << contract.window_size
                   << ",\"hop_size\":" << contract.hop_size
-                  << ",\"engines\":[\"yin_v1\",\"pitch_engine_v2\",\"vpm_like\",\"hapt_v1\"]}\n";
+                  << ",\"engines\":[\"yin_v1\",\"pitch_engine_v2\",\"vpm_like\",\"hapt_v1\",\"unified_v1\"]"
+                  // Separate from kv_pitch_contract_v1 on purpose: that
+                  // struct is frozen and v2_fixed_lag_frames describes v2
+                  // only. See kv_unified_lag_frames() in analysis_engine_c.h.
+                  << ",\"unified_lag_frames\":" << kv_unified_lag_frames()
+                  << "}\n";
         return 0;
     }
     if((argc != 6 && argc != 8) || std::string(argv[2]) != "--engine" || std::string(argv[4]) != "--output" ||
-       (argc == 8 && std::string(argv[6]) != "--diagnostic")) { std::cerr << "Kullanım: pitch_track_cli INPUT.wav --engine yin_v1|pitch_engine_v2|vpm_like|hapt_v1 --output OUTPUT.json [--diagnostic DIAG.json]\n"; return 2; }
+       (argc == 8 && std::string(argv[6]) != "--diagnostic")) { std::cerr << "Kullanım: pitch_track_cli INPUT.wav --engine yin_v1|pitch_engine_v2|vpm_like|hapt_v1|unified_v1 --output OUTPUT.json [--diagnostic DIAG.json]\n"; return 2; }
     try {
         const auto wav = read_wav(argv[1]);
         const auto samples = resample(wav);
@@ -197,7 +202,10 @@ int main(int argc, char** argv) {
         output << std::fixed << std::setprecision(6)
                << "{\n  \"engine\": \"" << argv[3]
                << "\",\n  \"profile\": \"offline_track_v1\","
-               << "\n  \"implementation_revision\": \"offline-harmonic-path-r7\","
+               // NOTE: this string must match OFFLINE_TRACK_REVISION in
+               // src/klarivision/pitch/cpp_engine.py exactly. There is no
+               // compile-time link between the two.
+               << "\n  \"implementation_revision\": \"offline-unified-path-r1\","
                << "\n  \"frames\": [\n";
         for (std::size_t index = 0; index < frames.size(); ++index) {
             const auto unchanged = std::any_of(causal.begin(), causal.end(), [&](const auto& item) {

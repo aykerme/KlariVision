@@ -31,6 +31,9 @@ V2_ANALYSIS_MAX_FREQUENCY = 1_650.0
 V2_LAG_FRAMES = int(os.environ.get("KLARIVISION_V2_LAG_FRAMES", "5"))
 if V2_LAG_FRAMES not in {2, 3, 4, 5}:
     raise ValueError("KLARIVISION_V2_LAG_FRAMES must be one of 2, 3, 4 or 5")
+# Mirrors kv_unified_lag_frames() / unified::kDefaultLagFrames: 15 hops x
+# 512 / 48000 = 160 ms of fixed decision latency, not v2's 5-hop/53 ms figure.
+UNIFIED_DEFAULT_LAG_FRAMES = 15
 
 
 @dataclass(frozen=True)
@@ -753,8 +756,80 @@ def hapt_frames(
     return _bridge_short_hapt_gaps(frames, hop / rate, blocked_times)
 
 
+def _compile_unified_runner(destination: Path) -> None:
+    subprocess.run([
+        "xcrun", "clang++", "-O3", "-std=c++20", "-Wall", "-Wextra", "-Werror",
+        "-I", str(ROOT / "core/include"),
+        str(ROOT / "core/src/unified_pitch_session.cpp"),
+        str(ROOT / "core/src/unified_track_decoder.cpp"),
+        str(ROOT / "core/src/pyin_ladder.cpp"),
+        str(ROOT / "core/src/frame_spectrum.cpp"),
+        str(ROOT / "core/src/harmonic_evidence.cpp"),
+        str(ROOT / "core/src/swipe_prime.cpp"),
+        str(ROOT / "core/src/harmonic_arbitration.cpp"),
+        str(ROOT / "core/src/harmonic_probe.cpp"),
+        str(ROOT / "core/src/mpm.cpp"),
+        str(ROOT / "core/tools/unified_trace.cpp"),
+        "-framework", "Accelerate",
+        "-o", str(destination),
+    ], check=True)
+
+
+def _unified_runner() -> Path:
+    runner = Path(tempfile.gettempdir()) / "klarivision_unified_tournament_trace"
+    sources = [
+        ROOT / "core/include/klarivision/core/unified_pitch_session.hpp",
+        ROOT / "core/include/klarivision/core/unified_track_decoder.hpp",
+        ROOT / "core/include/klarivision/core/unified_pitch_constants.hpp",
+        ROOT / "core/src/unified_pitch_session.cpp",
+        ROOT / "core/src/unified_track_decoder.cpp",
+        ROOT / "core/src/pyin_ladder.cpp",
+        ROOT / "core/src/frame_spectrum.cpp",
+        ROOT / "core/src/harmonic_evidence.cpp",
+        ROOT / "core/src/swipe_prime.cpp",
+        ROOT / "core/src/harmonic_arbitration.cpp",
+        ROOT / "core/src/harmonic_probe.cpp",
+        ROOT / "core/src/mpm.cpp",
+        ROOT / "core/tools/unified_trace.cpp",
+    ]
+    if not runner.exists() or runner.stat().st_mtime < max(source.stat().st_mtime for source in sources):
+        _compile_unified_runner(runner)
+    return runner
+
+
+def unified_frames(
+    audio: np.ndarray,
+    rate: int,
+    window: int = LIVE_WINDOW,
+    hop: int = HOP,
+    minimum_rms: float = DEFAULT_MINIMUM_RMS,
+    lag_frames: int = UNIFIED_DEFAULT_LAG_FRAMES,
+) -> list[tuple[float, float, float]]:
+    """Production adapter: run the canonical shared C++ unified_v1 session.
+
+    Self-contained like v2: unified_trace already reports the correct
+    (source-time) timestamp and its own decision to stay silent, so no
+    half-window shift and no gap-bridging helper is applied here.
+    """
+    runner = _unified_runner()
+    with tempfile.NamedTemporaryFile(suffix=".f32") as raw:
+        np.asarray(audio, dtype=np.float32).tofile(raw.name)
+        completed = subprocess.run([
+            str(runner), raw.name, str(rate), str(window), str(hop),
+            str(minimum_rms), str(lag_frames),
+        ], check=True, capture_output=True, text=True)
+    rows = csv.DictReader(completed.stdout.splitlines())
+    return [
+        (float(row["time_seconds"]), float(row["frequency_hz"]), float(row["confidence"]))
+        for row in rows
+    ]
+
+
 def run_engines(
-    audio: np.ndarray, rate: int, minimum_rms: float = DEFAULT_MINIMUM_RMS
+    audio: np.ndarray,
+    rate: int,
+    minimum_rms: float = DEFAULT_MINIMUM_RMS,
+    unified_lag_frames: list[int] | None = None,
 ) -> dict[str, EngineTrace]:
     # Compilation is setup, not pitch-analysis CPU time.
     _vpm_runner()
@@ -768,14 +843,29 @@ def run_engines(
     v2_frames(warm_audio, rate, minimum_rms=minimum_rms)
     audio_seconds = len(audio) / rate
     half_window_ms = LIVE_WINDOW / (2 * rate) * 1_000
+    # (implementation, operation, fixed_lag_ms, analysis_half_window_ms)
     definitions = {
-        "yin_v1": ("Python mirror of shipped Swift YIN v1", lambda: [(*frame, 1.0) for frame in causal_yin_frames(audio, rate, minimum_rms)], 0.0),
-        "pitch_engine_v2": ("Canonical shared C++ V2 session", lambda: v2_cpp_frames(audio, rate, minimum_rms=minimum_rms), V2_LAG_FRAMES * HOP / rate * 1_000),
-        "vpm_like": ("Production C++ core vpm_like.cpp", lambda: vpm_frames(audio, rate, minimum_rms=minimum_rms), 0.0),
-        "hapt_v1": ("Production C++ core hapt.cpp", lambda: hapt_frames(audio, rate, minimum_rms=minimum_rms), 0.0),
+        "yin_v1": ("Python mirror of shipped Swift YIN v1", lambda: [(*frame, 1.0) for frame in causal_yin_frames(audio, rate, minimum_rms)], 0.0, half_window_ms),
+        "pitch_engine_v2": ("Canonical shared C++ V2 session", lambda: v2_cpp_frames(audio, rate, minimum_rms=minimum_rms), V2_LAG_FRAMES * HOP / rate * 1_000, half_window_ms),
+        "vpm_like": ("Production C++ core vpm_like.cpp", lambda: vpm_frames(audio, rate, minimum_rms=minimum_rms), 0.0, half_window_ms),
+        "hapt_v1": ("Production C++ core hapt.cpp", lambda: hapt_frames(audio, rate, minimum_rms=minimum_rms), 0.0, half_window_ms),
     }
+    # unified_v1's own fixed-lag decoder already IS its whole constant decision
+    # latency (see unified::kDefaultLagFrames's doc comment): unlike the other
+    # engines above, no separate half-window term is added on top, so
+    # decision_latency_ms == lag_frames * HOP / rate * 1000 exactly (160.0 ms
+    # for the production default of 15 hops).
+    lags = unified_lag_frames if unified_lag_frames else [UNIFIED_DEFAULT_LAG_FRAMES]
+    for lag in lags:
+        key = "unified_v1" if len(lags) == 1 and unified_lag_frames is None else f"unified_v1@lag{lag}"
+        definitions[key] = (
+            "Production C++ core unified_pitch_session.cpp",
+            (lambda lag=lag: unified_frames(audio, rate, minimum_rms=minimum_rms, lag_frames=lag)),
+            lag * HOP / rate * 1_000,
+            0.0,
+        )
     traces: dict[str, EngineTrace] = {}
-    for name, (implementation, operation, fixed_lag_ms) in definitions.items():
+    for name, (implementation, operation, fixed_lag_ms, analysis_half_window_ms) in definitions.items():
         started = time.process_time()
         children_before = resource.getrusage(resource.RUSAGE_CHILDREN)
         frames = operation()
@@ -786,6 +876,6 @@ def run_engines(
             + children_after.ru_stime - children_before.ru_stime
         )
         traces[name] = EngineTrace(
-            name, implementation, frames, runtime, audio_seconds, half_window_ms, fixed_lag_ms
+            name, implementation, frames, runtime, audio_seconds, analysis_half_window_ms, fixed_lag_ms
         )
     return traces

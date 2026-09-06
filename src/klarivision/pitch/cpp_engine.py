@@ -10,16 +10,22 @@ from pathlib import Path
 from ..runtime_paths import resource_root
 
 
-ENGINES = frozenset({"yin_v1", "pitch_engine_v2", "vpm_like", "hapt_v1"})
+ENGINES = frozenset({"yin_v1", "pitch_engine_v2", "vpm_like", "hapt_v1", "unified_v1"})
 # Keep the public offline_track_v1 JSON contract stable while preventing a
 # result made by an older decision pipeline from being reused after an engine
 # behaviour change.
-OFFLINE_TRACK_REVISION = "offline-harmonic-path-r7"
+# NOTE: this string must match the hand-duplicated literal at
+# core/tools/pitch_track_cli.cpp:~200 ("implementation_revision") exactly.
+# There is no compile-time link between the two.
+OFFLINE_TRACK_REVISION = "offline-unified-path-r1"
 OFFLINE_TRACK_PROFILE = "offline_track_v1"
 PITCH_C_ABI_VERSION = 1
 PCM_SAMPLE_RATE_HZ = 48_000
 PCM_WINDOW_SAMPLES = 1_536
 PCM_HOP_SAMPLES = 512
+# Mirrors kv_unified_lag_frames() from the C ABI — unified_v1's own decision
+# latency, separate from kv_pitch_contract_v1.v2_fixed_lag_frames (v2 only).
+UNIFIED_DEFAULT_LAG_FRAMES = 15
 
 
 def executable() -> Path:
@@ -69,4 +75,9 @@ def contract() -> dict[str, object]:
         raise RuntimeError("C++ pitch motoru v1 sözleşmesiyle uyumlu değil.")
     if set(payload.get("engines", [])) != ENGINES:
         raise RuntimeError("C++ pitch motoru üç kullanıcı motorunu sunmuyor.")
+    # unified_v1's decision latency lives outside kv_pitch_contract_v1 (that
+    # struct is frozen and its v2_fixed_lag_frames field describes v2 alone),
+    # so it is mirrored here as its own value instead of the `expected` dict.
+    if payload.get("unified_lag_frames") != UNIFIED_DEFAULT_LAG_FRAMES:
+        raise RuntimeError("C++ pitch motoru unified_v1 gecikmesi beklenen değerle uyuşmuyor.")
     return payload

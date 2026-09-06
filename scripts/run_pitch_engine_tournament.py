@@ -33,7 +33,7 @@ BENCHMARKS = ROOT / "data/benchmarks"
 OUTPUT = ROOT / "outputs/pitch-engine-tournament-all-synthetic-2026-08-09.json"
 MARKDOWN = ROOT / "outputs/pitch-engine-tournament-all-synthetic-2026-08-09.md"
 SAMPLE_INDEX = ROOT / "outputs/pitch-engine-tournament-all-synthetic-sample-index-2026-08-09.md"
-ENGINE_ORDER = ("yin_v1", "pitch_engine_v2", "vpm_like", "hapt_v1")
+ENGINE_ORDER = ("yin_v1", "pitch_engine_v2", "vpm_like", "hapt_v1", "unified_v1")
 TRUTH_STEP_SECONDS = 0.01
 REAL_RECORDING_PREFIX = "klarnet_gercek_"
 
@@ -218,6 +218,13 @@ def tournament_groups() -> list[tuple[str, list[Path], bool]]:
             BENCHMARKS / "klarivision_stress_ground_truth_v2.json",
             BENCHMARKS / "klarivision_validated_clarinet_ground_truth_v1.json",
         ], False),
+        # Development gate for the new unified engine's octave-trap handling.
+        # policy: "diagnostic-may-be-retuned" (see the manifest itself) — this
+        # group is NOT frozen, so it never enters verify_holdout()/safety_results
+        # and never feeds the promotion veto. It measures, it does not gate.
+        ("octave_traps", [
+            BENCHMARKS / "klarivision_octave_trap_suite_ground_truth_v1.json",
+        ], False),
         *[(f"frozen_holdout_v{version}", [BENCHMARKS / f"klarivision_pitch_tournament_holdout_ground_truth_v{version}.json"], True)
           for version in range(1, 6)],
     ]
@@ -329,8 +336,15 @@ def aggregate(results: Iterable[dict[str, object]], engine: str) -> dict[str, fl
         )},
         "correct_pitch_absolute_cents_sum": round(absolute_sum, 6),
         "correct_pitch_mean_absolute_cents": round(absolute_sum / correct, 6) if correct else None,
-        "decision_latency_ms": rows[0]["latency"]["decision_latency_ms"],
-        "maximum_cpu_realtime_factor": max(float(row["performance"]["cpu_realtime_factor"]) for row in rows),
+        # An engine absent from this particular `results` set (e.g. a
+        # hand-built test fixture that only lists a subset of ENGINE_ORDER)
+        # has no row to read a latency/CPU figure from; math.inf keeps
+        # ranking_key()'s tuple comparison well-defined and pushes such an
+        # engine to the bottom of the ranking rather than crashing.
+        "decision_latency_ms": rows[0]["latency"]["decision_latency_ms"] if rows else math.inf,
+        "maximum_cpu_realtime_factor": max(
+            (float(row["performance"]["cpu_realtime_factor"]) for row in rows), default=math.inf
+        ),
     }
     summary["non_serious_error_frames"] = int(summary["total_error_frames"]) - int(summary["serious_total_error_frames"])
     return summary
@@ -339,6 +353,11 @@ def aggregate(results: Iterable[dict[str, object]], engine: str) -> dict[str, fl
 def selection(all_results: list[dict[str, object]], safety_results: list[dict[str, object]] | None = None) -> dict[str, object]:
     """Rank all synthetic fixtures; safety gates remain separate from ranking."""
     summaries = {engine: aggregate(all_results, engine) for engine in ENGINE_ORDER}
+    # An engine with zero rows in `all_results` aggregates to an all-zero
+    # (hence falsely "perfect") summary -- see aggregate()'s math.inf
+    # fallback. It must never be allowed to win the ranking or count as a
+    # significant-gain contender on the strength of having submitted no data.
+    engines_with_data = {result["engine"] for result in all_results}
     baseline = summaries["yin_v1"]
     safety_results = safety_results if safety_results is not None else all_results
     parity = {
@@ -346,6 +365,7 @@ def selection(all_results: list[dict[str, object]], safety_results: list[dict[st
         "pitch_engine_v2": {"verified": False, "evidence": "benchmark mirror; C++/Swift trace parity not yet proven"},
         "vpm_like": {"verified": False, "evidence": "production C++ trace; duplicated Swift trace parity not yet proven"},
         "hapt_v1": {"verified": False, "evidence": "production C++ trace; no Swift mirror exists by design (see docs/HAPTPitchEngine.md)"},
+        "unified_v1": {"verified": False, "evidence": "production C++ trace; no Swift mirror exists by design, C-ABI only"},
     }
     decisions = {"yin_v1": {"eligible": True, "significant_gain": False, "vetoes": [], "parity": parity["yin_v1"]}}
     contenders = []
@@ -368,7 +388,7 @@ def selection(all_results: list[dict[str, object]], safety_results: list[dict[st
                 frames = max(1, int(baseline_row[denominator]))
                 if (candidate_count - baseline_count) / frames > 0.005:
                     vetoes.append(f"{result['source']}: {key} exceeds YIN v1 by >0.5pp")
-        significant = ranking_key(summary) < ranking_key(baseline)
+        significant = engine in engines_with_data and ranking_key(summary) < ranking_key(baseline)
         decisions[engine] = {
             "eligible": not vetoes,
             "significant_gain": significant,
@@ -377,7 +397,10 @@ def selection(all_results: list[dict[str, object]], safety_results: list[dict[st
         }
         if not vetoes and significant:
             contenders.append(engine)
-    benchmark_winner = min(ENGINE_ORDER, key=lambda name: ranking_key(summaries[name]))
+    benchmark_winner = min(
+        (name for name in ENGINE_ORDER if name in engines_with_data),
+        key=lambda name: ranking_key(summaries[name]),
+    )
     winner_decision = decisions[benchmark_winner]
     promotion_ready = (
         benchmark_winner != "yin_v1"
@@ -535,6 +558,7 @@ def run_tournament(
     markdown: Path = MARKDOWN,
     sample_index: Path = SAMPLE_INDEX,
     minimum_rms: float = DEFAULT_MINIMUM_RMS,
+    unified_lag_frames: list[int] | None = None,
 ) -> dict[str, object]:
     if not 0 < minimum_rms <= 1:
         raise ValueError("minimum_rms must be in (0, 1]")
@@ -562,7 +586,7 @@ def run_tournament(
                 conditions = manifest.get("variant_conditions", {}).get(filename, {})
                 if not conditions and ("room" in filename or "adverse" in filename):
                     conditions = {"silence_guard_seconds": 0.150}
-                for trace in run_engines(audio, rate, minimum_rms).values():
+                for trace in run_engines(audio, rate, minimum_rms, unified_lag_frames).values():
                     result = score_trace(
                         trace,
                         effective_manifest,
@@ -617,9 +641,26 @@ def main() -> None:
     parser.add_argument("--markdown", type=Path, default=MARKDOWN)
     parser.add_argument("--sample-index", type=Path, default=SAMPLE_INDEX)
     parser.add_argument("--minimum-rms", type=float, default=DEFAULT_MINIMUM_RMS)
+    parser.add_argument(
+        "--unified-lag-frames",
+        type=str,
+        default=None,
+        help=(
+            "Comma-separated unified_v1 decoder lag values in hops (e.g. 5,10,15). "
+            "Each value is run separately and reported as its own row "
+            "(unified_v1@lag5, ...). Defaults to a single run at the production "
+            "value (15 hops = 160 ms)."
+        ),
+    )
     arguments = parser.parse_args()
+    unified_lag_frames = (
+        [int(value) for value in arguments.unified_lag_frames.split(",")]
+        if arguments.unified_lag_frames
+        else None
+    )
     payload = run_tournament(
-        arguments.output, arguments.markdown, arguments.sample_index, arguments.minimum_rms
+        arguments.output, arguments.markdown, arguments.sample_index, arguments.minimum_rms,
+        unified_lag_frames,
     )
     print(
         f"benchmark_winner={payload['selection']['benchmark_winner']} "

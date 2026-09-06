@@ -498,6 +498,7 @@ enum LivePitchEngine: String, CaseIterable, Identifiable {
     case candidateV2
     case vpmLike
     case hapt
+    case unified
 
     var id: String { rawValue }
     var title: String {
@@ -507,6 +508,7 @@ enum LivePitchEngine: String, CaseIterable, Identifiable {
         case .candidateV2: return "Pitch Engine v2"
         case .vpmLike: return "VPM-benzeri"
         case .hapt: return "Harmonik-Faz (HAPT)"
+        case .unified: return "Birleşik (Unified v1)"
         }
     }
 
@@ -517,6 +519,7 @@ enum LivePitchEngine: String, CaseIterable, Identifiable {
         case .candidateV2: return "pitch_engine_v2_experimental"
         case .vpmLike: return "yamaoka_vpm_like_experimental"
         case .hapt: return "hapt_v1"
+        case .unified: return "unified_v1"
         }
     }
 
@@ -525,6 +528,7 @@ enum LivePitchEngine: String, CaseIterable, Identifiable {
         case "pitch_engine_v2": return .candidateV2
         case "vpm_like": return .vpmLike
         case "hapt_v1": return .hapt
+        case "unified_v1": return .unified
         default: return .yin
         }
     }
@@ -536,6 +540,7 @@ enum LivePitchEngine: String, CaseIterable, Identifiable {
         case "pitch_engine_v2": return .candidateV2
         case "vpm_like": return .vpmLike
         case "hapt_v1": return .hapt
+        case "unified_v1": return .unified
         default: return .yin
         }
     }
@@ -1642,6 +1647,7 @@ final class LivePitchAnalyzer: ObservableObject, @unchecked Sendable {
         case .vpmLike: return Int32(KV_ENGINE_VPM_LIKE)
         case .autocorrelation: return Int32(KV_ENGINE_YIN_V1)
         case .hapt: return Int32(KV_ENGINE_HAPT_V1)
+        case .unified: return Int32(KV_ENGINE_UNIFIED_V1)
         }
     }
     #endif
@@ -2843,7 +2849,7 @@ final class LivePitchAnalyzer: ObservableObject, @unchecked Sendable {
             case .vpmLike:
                 pendingVPMLikeGapFrames.removeAll(keepingCapacity: true)
                 _ = vpmHarmonicJumpGate.filter(nil)
-            case .autocorrelation, .hapt:
+            case .autocorrelation, .hapt, .unified:
                 break
             }
             return nil
@@ -3228,7 +3234,7 @@ final class LivePitchAnalyzer: ObservableObject, @unchecked Sendable {
             return v2HarmonicJumpGate.filter(result)
         case .vpmLike:
             return vpmHarmonicJumpGate.filter(result)
-        case .yin, .autocorrelation, .hapt:
+        case .yin, .autocorrelation, .hapt, .unified:
             return result
         }
     }
@@ -3836,6 +3842,12 @@ final class LivePitchAnalyzer: ObservableObject, @unchecked Sendable {
             // this reference-only path (Swift Package / parity builds) is
             // unreachable for HAPT in the shipped app, which always routes
             // through the production C++ core.
+            return nil
+        case .unified:
+            // C++-only by design, like HAPT: no Swift mirror. This
+            // reference-only path (Swift Package / parity builds) is
+            // unreachable for unified_v1 in the shipped app, which always
+            // routes through the production C++ core.
             return nil
         }
     }

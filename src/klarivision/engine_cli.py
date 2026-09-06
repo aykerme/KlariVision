@@ -16,7 +16,7 @@ def main() -> None:
     parser.add_argument("--makam", default="huzzam")
     parser.add_argument("--karar", default="dugah")
     parser.add_argument(
-        "--engine", choices=("yin_v1", "pitch_engine_v2", "vpm_like", "hapt_v1"), default="yin_v1"
+        "--engine", choices=("yin_v1", "pitch_engine_v2", "vpm_like", "hapt_v1", "unified_v1"), default="yin_v1"
     )
     arguments = parser.parse_args()
 

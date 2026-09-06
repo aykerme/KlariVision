@@ -81,6 +81,7 @@ enum PitchEngineSettings {
         PitchEngineChoice(id: "pitch_engine_v2", title: "Pitch Engine v2"),
         PitchEngineChoice(id: "vpm_like", title: "VPM-benzeri"),
         PitchEngineChoice(id: "hapt_v1", title: "Harmonik-Faz (HAPT)"),
+        PitchEngineChoice(id: "unified_v1", title: "Birleşik (Unified v1)"),
     ]
 
     static func resolvedSelection(_ value: String?) -> String {
@@ -99,13 +100,13 @@ enum PitchEngineSettings {
 }
 
 /// Short, stable VoiceOver copy shared by the two primary study flows. The
-/// engine wording deliberately describes four peer choices rather than a
+/// engine wording deliberately describes five peer choices rather than a
 /// recommendation or quality order.
 enum AccessibilityText {
     static let listeningStatus = "Dinleme durumu"
     static let practiceStatus = "Çalma durumu"
     static let unsupportedDrop = "Dosya alınamadı. Desteklenen bir ses veya video dosyası bırakın."
-    static let enginePickerHint = "YIN v1, Pitch Engine v2, VPM-benzeri ve Harmonik-Faz (HAPT) eşit kullanıcı seçenekleridir."
+    static let enginePickerHint = "YIN v1, Pitch Engine v2, VPM-benzeri, Harmonik-Faz (HAPT) ve Birleşik (Unified v1) eşit kullanıcı seçenekleridir."
 }
 
 /// The two graph renderers use different technologies, but share these two

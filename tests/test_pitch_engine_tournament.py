@@ -286,7 +286,7 @@ def test_tournament_inventory_is_exactly_all_synthetic_wavs() -> None:
             f"({len(missing)} dosya)."
         )
     inventory = verify_inventory(sources)
-    assert len(inventory["used_synthetic_wavs"]) == 26
+    assert len(inventory["used_synthetic_wavs"]) == 29
     assert inventory["excluded_real_wavs"] == [
         "data/benchmarks/klarnet_gercek_gecis_vibrato_v1.wav",
         "data/benchmarks/klarnet_gercek_sabit_re3_v1.wav",
