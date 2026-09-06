@@ -95,13 +95,35 @@ Bu, tuzak paketindeki `temel_yok` bölümleriyle **aynı olgu**, yalnızca alça
 register'da olduğu için sessizliğin yanında harmonik hata da üretiyor. Geri
 kalan her şey pratikte başabaş.
 
-**Sıradaki doğru iş:** raporun kendi reçetesi — Hermes'in alt-harmonik
-toplaması (SHS, 1988), "temeli olmayan sesin perdesi" problemi için kurulmuş ve
-temeli fiziksel olarak yok edilmiş (300 Hz altı kesilmiş) konuşmada test
-edilmiş. TWM'de eksik temeli **cezalandırmayı bıraktık** ama gizli temele
-**pozitif kanıt** hiç eklemedik. SHS terimi tam olarak bunu yapar: her spektral
-bileşenin bir alt-harmonik serisi ürettiğini varsayıp toplar, böylece gerçek
-(gizli) temel kendi harmoniklerinden destek alır.
+**Alt-harmonik toplaması (SHS) denendi ve alınmadı.** Raporun bu vaka için
+kendi reçetesiydi (Hermes 1988) ve sadakatle uygulandı: adayın harmoniklerinin
+geometrik azalan ağırlıklı toplamı, **istenen** ağırlığa bölünerek — yani
+adayın öngörüp de sinyalin sağlamadığı her harmonik ona maliyet olarak yazıldı,
+ki SHS'in klasik alt-harmoniğe kayma yanlılığı doğmasın. Kare içinde en iyi
+adaya göre normalize edildi. Ham hâliyle tiz bölgeyi ağır bozdu
+(`adverse_v5` 47 → 225), çünkü bir alt-harmonik üstündeki notanın bütün
+kısmi seslerini miras alır. Yalnız temelin zayıf/yok olduğu yerde konuşacak
+şekilde kapılandı (`1 - fundamental_presence` ağırlığıyla) ve 0,10–0,25
+aralığında tarandı.
+
+Ölçüm (`kShsWeight = 0,10`, kapılı):
+
+| | SHS'siz | SHS'li |
+|---|---|---|
+| Holdout ciddi eksik | 142 | **131** |
+| Holdout ciddi harmonik | **27** | 30 |
+| `clean_v1` harmonik | **12** | 15 |
+| Tuzak ciddi eksik | 1914 | **1805** |
+| Tuzak ciddi harmonik | 0 | 0 |
+
+Kapsamada 120 kare kazandırıyor, harmonikte 3 kaybettiriyor — ve kaybın
+tamamı, harmonik vetosunu taşıyan tek dosya olan `clean_v1`'de. D-037'nin açık
+önceliği harmonik hatanın sıfırlanması olduğu için alınmadı.
+
+**Kalan iş:** `clean_v1`'in `hidden_fundamental_96.3` ve `_128.6`
+bölümlerindeki 12 harmonik karesi. SHS bu haliyle cevap değil; gizli temele
+pozitif kanıt vermenin, alt-harmoniği aynı anda güçlendirmeyen bir biçimi
+gerekiyor.
 
 ### Sentetik turnuva — 6 Eylül 2026 (ikinci koşu, berraklık tabanlı ses kararı)
 
