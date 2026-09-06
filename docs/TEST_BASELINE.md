@@ -1,5 +1,47 @@
 # KlariVision Test Tabanı
 
+## `adverse_v1` ve `adverse_v4` incelemesi — kalan vetonun tükendiği nokta — 6 Eylül 2026
+
+Üç engelleyici dosyanın diğer ikisi. Doğruluk farkı küçük:
+
+| Dosya | unified doğru | yin_v1 doğru | Fark | unified ort. sent | yin ort. sent |
+|---|---|---|---|---|---|
+| adverse_v1 | 2124 | 2184 | −60 | 2,412 | 2,149 |
+| adverse_v4 | 1024 | 1067 | −43 | 1,654 | 1,573 |
+
+Hassasiyet pratikte eşit; kayıp yalnızca çekimserlikten.
+
+**Teşhis aracının yanılttığı yer.** `why` histogramı kayıpların çoğunu
+`voiced_posterior` kapısına yazıyordu (`adverse_v1` 183, `adverse_v4` 67). Bu
+yanlış: o kareler bir eşik tarafından reddedilmiyor, **kod çözücünün kendisi
+sessizliği seçiyor** (yayın sebebi `unvoiced`). Eşiği taramak bunu gösterdi —
+0,40'tan 0,15'e indirmek **tek kare** değiştirmedi.
+
+**Kayıp kareler atakta değil.** Bölüm başlangıcından medyan 610 ms (`v1`) ve
+796 ms (`v4`) sonra; yalnızca beşte biri ilk 200 ms içinde. Yani 160 ms'lik
+karar gecikmesi açıklama değil. `adverse_v1`'de en büyük küme
+`irregular_dropouts`: 22/263 kare — gerçek bir boşluktan sonra toparlanma.
+
+### Bu turda ölçülen ve reddedilen kollar
+
+| Kol | Holdout eksik | Maliyet |
+|---|---|---|
+| Ses posterior tabanı 0,40 → 0,25 → 0,15 | 114 → 114 → 114 | — (hiç etkisi yok) |
+| Berraklık tavanı 0,85 → 0,80 → 0,72 → 0,66 | 114 → 120 → 123 → 120 | daha kötü |
+| Emisyonları en iyi adaya göre kalibre etmek | 114 → 118 | daha kötü |
+| Yapışkan toparlanma 2 → 1 | 114 → **96** | tuzak harmonik 0 → **6** |
+| Yapışkan toparlanma 2 → 0 | 114 → **76** | tuzak harmonik 0 → **20** |
+
+Kapsamayı gerçekten hareket ettiren tek kol, harmonik hatayı geri getiriyor —
+ve bu, gizli-temel düzeltmesinden sonra yeniden ölçüldüğünde de aynı çıktı.
+
+**Durum:** veto marjı `adverse_v1` için ≤12, `adverse_v4` için ≤6,
+`adverse_v5` için ≤5 kare istiyor; sırasıyla 39, 14, 45'teyiz. Ucuz kol
+kalmadı. Kalan kareler, kod çözücünün 15 karelik pencerenin tamamını görüp
+sessizliği daha iyi açıklama saydığı karelerdir; çekimserliği gevşetmek
+ölçülmüş biçimde harmonik hatayı geri getiriyor.
+
+
 ## Beşinci turnuva — ayrık pencere mimarisi — 6 Eylül 2026
 
 | Motor | Ciddi yanlış | Ciddi eksik | Ciddi harmonik | Ciddi toplam | **Ort. sent** | Kapı |
