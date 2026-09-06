@@ -3,6 +3,61 @@
 Bu dosya yalnızca sonraki çalışmaları etkileyen kararları tutar. Günlük ilerleme
 notları `CODEX_HANDOFF.md`, sayısal durum `TEST_BASELINE.md` içindedir.
 
+## D-039 — Dört eski motor koddan çıkarıldı; `unified_v1` tek motordur
+
+Kullanıcı kararı, 6 Eylül 2026. D-037'nin nihai hedefi uygulandı: `yin_v1`,
+`pitch_engine_v2`, `vpm_like` ve `hapt_v1` kaynak, yapı, UI, betik ve test
+düzeyinde kaldırıldı. D-038 bu adımı "ayrı bir turda yapılır" diye ertelemişti;
+bu, o turdur. D-020'nin "eşit son kullanıcı seçenekleri" politikası da bununla
+sona erer: seçilecek motor kalmadı.
+
+**ABI numaraları donmuş kalır.** `KV_ENGINE_YIN_V1..HAPT_V1` (0–3) ve onların
+yetenek bitleri başlıkta *rezerve* olarak durur; yeniden numaralanmaz, başka
+bir motora verilmez. Kaldırılan bir motorun kimliğiyle oturum açmak **hata
+döndürür**, hayatta kalan motora yönlendirilmez: istenmeyen bir motorun
+çıktısını istenen motorun adıyla vermek, aşağı akışta hiçbir yerden
+görülemeyecek tek hata biçimidir.
+
+- `kv_pitch_contract_v1` yerleşimi değişmedi (iPad sert doğruluyor).
+  `v2_fixed_lag_frames` alanı **rezerve**dir, `5` bildirmeye devam eder ve artık
+  hiçbir şeyi tanımlamaz; canlı gecikme `kv_unified_lag_frames()`'tir.
+- Yetenek maskesi artık yalnız `KV_CAP_ENGINE_UNIFIED_V1`, `..._PROFILE_*` ve
+  `..._SOURCE_TIMESTAMPS` bitlerini kurar. Kaldırılan motorların bitleri
+  konumlarında durur ve **temiz okunur**.
+- `kv_v2_session_*` girişleri **başlıkta ve sembol tablosunda kalır**, hepsi
+  temiz biçimde başarısız olur (create `NULL`, diğerleri `0`). v1'in dışa
+  verdiği sembol kümesi donmuş sözleşmedir; v1'e karşı derlenmiş bir tüketici
+  çözülemeyen sembol yerine teşhis edilebilir bir hata almalıdır.
+
+**Kullanıcı seçimi geriye uyumlu düşer.** macOS `PitchEngineSettings`, iPad
+`iPadAppState.engine(_:)` ve Python köprüsü, kaldırılmış bir motoru adlandıran
+kayıtlı değeri `unified_v1`'e çözer. Üç ayrı kalıcılık anahtarı (Dinleme /
+Çalma / Birlikte Çal) korunur. **Daha önce çözümlenmiş çalışmalar kendi
+sonuçlarını ve kendi motor kimliğini korur**; görüntüleyici o kimliği
+"(kaldırıldı)" etiketiyle doğru biçimde göstermeye devam eder. Motor seçici
+arayüzlerin yerini, ne çalıştığını söyleyen tek bir satır aldı.
+
+**Turnuva artık seçim yapmaz, ölçer.** `selection()` bir terfi mekanizmasıydı:
+dört adayı `yin_v1` tabanına karşı sıralıyordu. Sıralanacak bir şey kalmadığı
+için `benchmark_winner` / `default_engine` / `outcome` alanları kaldırıldı —
+tek atlı bir yarışta kazanan ilan etmek, hiç yapılmamış bir kıyası yapılmış
+gibi gösterirdi. Güvenlik kapısının **eşiği değişmedi**: "bir donmuş holdout
+dosyasında hiçbir ciddi sınıf `yin_v1`'i 0,5 puandan fazla geçemez" kuralı,
+`yin_v1` bütün donmuş holdout'larda sıfır aldığı için aynı sınırın mutlak
+ifadesine (`SAFETY_RATE_LIMIT = 0.005`) dönüştü. Yalnız referans noktası
+değişti.
+
+D-038'in kayıtlı ölçümleri (turnuvanın `benchmark_winner=vpm_like` satırı
+dahil) `outputs/` altındaki raporlarda kayıt olarak durur. Bu adımdan sonra o
+kıyas **yeniden üretilemez**; kararın bilinen ve kabul edilen bedeli budur.
+
+Kaldırılan geliştirme araçları: `check_v2_swift_python_parity.py`,
+`check_vpm_swift_cpp_parity.py`, `calibrate_vpm_like_engine.py`,
+`diagnose_sukru_vpm_divergences.py`, `pitch_engine_divergence_map.py` (+ HTML
+şablonu), `run_pitch_regression_suite.py` (canlı-YIN ↔ pYIN kapısı) ve onun iki
+`evaluate_*` tüketicisi, `pitch_track_cli`'nin `--diagnostic` kipi (üç
+kaldırılmış motora aitti) ve Swift/Python motor aynaları.
+
 ## D-038 — `unified_v1` kazanan motordur; yeni kurulumların varsayılanı
 
 Kullanıcı kararı, 6 Eylül 2026. D-037'nin "eski motorlar ölçümle geçilene kadar

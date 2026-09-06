@@ -10,14 +10,15 @@
 		C00000000000000000000011 /* ../core/src/analysis_engine.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C00000000000000000000031 /* ../core/src/analysis_engine.cpp */; };
 		C00000000000000000000012 /* ../core/src/analysis_engine_c.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C00000000000000000000032 /* ../core/src/analysis_engine_c.cpp */; };
 		C00000000000000000000013 /* ../core/src/mpm.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C00000000000000000000033 /* ../core/src/mpm.cpp */; };
-		C00000000000000000000014 /* ../core/src/pitch_engine_v2.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C00000000000000000000034 /* ../core/src/pitch_engine_v2.cpp */; };
 		C00000000000000000000015 /* ../core/src/fixed_lag_tracker.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C00000000000000000000035 /* ../core/src/fixed_lag_tracker.cpp */; };
-		C00000000000000000000016 /* ../core/src/pitch_engine_v2_session.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C00000000000000000000036 /* ../core/src/pitch_engine_v2_session.cpp */; };
 		C00000000000000000000017 /* ../core/src/swipe_prime.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C00000000000000000000037 /* ../core/src/swipe_prime.cpp */; };
-		C00000000000000000000018 /* ../core/src/vpm_like.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C00000000000000000000038 /* ../core/src/vpm_like.cpp */; };
 		C000000000000000000000C1 /* ../core/src/harmonic_arbitration.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C000000000000000000000C2 /* ../core/src/harmonic_arbitration.cpp */; };
-		C000000000000000000000C3 /* ../core/src/hapt.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C000000000000000000000C4 /* ../core/src/hapt.cpp */; };
 		C000000000000000000000C5 /* ../core/src/harmonic_probe.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C000000000000000000000C6 /* ../core/src/harmonic_probe.cpp */; };
+		C000000000000000000000D1 /* ../core/src/unified_pitch_session.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C000000000000000000000D0 /* ../core/src/unified_pitch_session.cpp */; };
+		C000000000000000000000D3 /* ../core/src/unified_track_decoder.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C000000000000000000000D2 /* ../core/src/unified_track_decoder.cpp */; };
+		C000000000000000000000D5 /* ../core/src/pyin_ladder.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C000000000000000000000D4 /* ../core/src/pyin_ladder.cpp */; };
+		C000000000000000000000D7 /* ../core/src/frame_spectrum.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C000000000000000000000D6 /* ../core/src/frame_spectrum.cpp */; };
+		C000000000000000000000D9 /* ../core/src/harmonic_evidence.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C000000000000000000000D8 /* ../core/src/harmonic_evidence.cpp */; };
 		C00000000000000000000019 /* KlariVisioniPadCoreSmoke/Tests/KlariVisionCoreSmokeTests/CoreSmokeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C00000000000000000000040 /* KlariVisioniPadCoreSmoke/Tests/KlariVisionCoreSmokeTests/CoreSmokeTests.swift */; };
 		C0000000000000000000001A /* libKlariVisionCore.a in Frameworks */ = {isa = PBXBuildFile; fileRef = C00000000000000000000021 /* libKlariVisionCore.a */; };
 		C0000000000000000000001B /* XCTest.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C00000000000000000000041 /* XCTest.framework */; };
@@ -72,14 +73,15 @@
 		C00000000000000000000031 /* ../core/src/analysis_engine.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ../core/src/analysis_engine.cpp; sourceTree = SOURCE_ROOT; };
 		C00000000000000000000032 /* ../core/src/analysis_engine_c.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ../core/src/analysis_engine_c.cpp; sourceTree = SOURCE_ROOT; };
 		C00000000000000000000033 /* ../core/src/mpm.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ../core/src/mpm.cpp; sourceTree = SOURCE_ROOT; };
-		C00000000000000000000034 /* ../core/src/pitch_engine_v2.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ../core/src/pitch_engine_v2.cpp; sourceTree = SOURCE_ROOT; };
 		C00000000000000000000035 /* ../core/src/fixed_lag_tracker.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ../core/src/fixed_lag_tracker.cpp; sourceTree = SOURCE_ROOT; };
-		C00000000000000000000036 /* ../core/src/pitch_engine_v2_session.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ../core/src/pitch_engine_v2_session.cpp; sourceTree = SOURCE_ROOT; };
 		C00000000000000000000037 /* ../core/src/swipe_prime.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ../core/src/swipe_prime.cpp; sourceTree = SOURCE_ROOT; };
-		C00000000000000000000038 /* ../core/src/vpm_like.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ../core/src/vpm_like.cpp; sourceTree = SOURCE_ROOT; };
 		C000000000000000000000C2 /* ../core/src/harmonic_arbitration.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ../core/src/harmonic_arbitration.cpp; sourceTree = SOURCE_ROOT; };
-		C000000000000000000000C4 /* ../core/src/hapt.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ../core/src/hapt.cpp; sourceTree = SOURCE_ROOT; };
 		C000000000000000000000C6 /* ../core/src/harmonic_probe.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ../core/src/harmonic_probe.cpp; sourceTree = SOURCE_ROOT; };
+		C000000000000000000000D0 /* ../core/src/unified_pitch_session.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ../core/src/unified_pitch_session.cpp; sourceTree = "<group>"; };
+		C000000000000000000000D2 /* ../core/src/unified_track_decoder.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ../core/src/unified_track_decoder.cpp; sourceTree = "<group>"; };
+		C000000000000000000000D4 /* ../core/src/pyin_ladder.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ../core/src/pyin_ladder.cpp; sourceTree = "<group>"; };
+		C000000000000000000000D6 /* ../core/src/frame_spectrum.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ../core/src/frame_spectrum.cpp; sourceTree = "<group>"; };
+		C000000000000000000000D8 /* ../core/src/harmonic_evidence.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ../core/src/harmonic_evidence.cpp; sourceTree = "<group>"; };
 		C00000000000000000000039 /* KlariVisioniPadCoreSmoke/Sources/KlariVisionCoreSmoke/KlariVisionCoreBridge.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = KlariVisioniPadCoreSmoke/Sources/KlariVisionCoreSmoke/KlariVisionCoreBridge.h; sourceTree = SOURCE_ROOT; };
 		C00000000000000000000040 /* KlariVisioniPadCoreSmoke/Tests/KlariVisionCoreSmokeTests/CoreSmokeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KlariVisioniPadCoreSmoke/Tests/KlariVisionCoreSmokeTests/CoreSmokeTests.swift; sourceTree = SOURCE_ROOT; };
 		C00000000000000000000041 /* XCTest.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = XCTest.framework; path = System/Library/Frameworks/XCTest.framework; sourceTree = SDKROOT; };
@@ -160,14 +162,15 @@
 				C00000000000000000000031 /* ../core/src/analysis_engine.cpp */,
 				C00000000000000000000032 /* ../core/src/analysis_engine_c.cpp */,
 				C00000000000000000000033 /* ../core/src/mpm.cpp */,
-				C00000000000000000000034 /* ../core/src/pitch_engine_v2.cpp */,
 				C00000000000000000000035 /* ../core/src/fixed_lag_tracker.cpp */,
-				C00000000000000000000036 /* ../core/src/pitch_engine_v2_session.cpp */,
 				C00000000000000000000037 /* ../core/src/swipe_prime.cpp */,
-				C00000000000000000000038 /* ../core/src/vpm_like.cpp */,
 				C000000000000000000000C2 /* ../core/src/harmonic_arbitration.cpp */,
-				C000000000000000000000C4 /* ../core/src/hapt.cpp */,
 				C000000000000000000000C6 /* ../core/src/harmonic_probe.cpp */,
+				C000000000000000000000D0 /* ../core/src/unified_pitch_session.cpp */,
+				C000000000000000000000D2 /* ../core/src/unified_track_decoder.cpp */,
+				C000000000000000000000D4 /* ../core/src/pyin_ladder.cpp */,
+				C000000000000000000000D6 /* ../core/src/frame_spectrum.cpp */,
+				C000000000000000000000D8 /* ../core/src/harmonic_evidence.cpp */,
 			);
 			name = "KlariVision Core";
 			sourceTree = "<group>";
@@ -357,14 +360,15 @@
 				C00000000000000000000011 /* ../core/src/analysis_engine.cpp in Sources */,
 				C00000000000000000000012 /* ../core/src/analysis_engine_c.cpp in Sources */,
 				C00000000000000000000013 /* ../core/src/mpm.cpp in Sources */,
-				C00000000000000000000014 /* ../core/src/pitch_engine_v2.cpp in Sources */,
 				C00000000000000000000015 /* ../core/src/fixed_lag_tracker.cpp in Sources */,
-				C00000000000000000000016 /* ../core/src/pitch_engine_v2_session.cpp in Sources */,
 				C00000000000000000000017 /* ../core/src/swipe_prime.cpp in Sources */,
-				C00000000000000000000018 /* ../core/src/vpm_like.cpp in Sources */,
 				C000000000000000000000C1 /* ../core/src/harmonic_arbitration.cpp in Sources */,
-				C000000000000000000000C3 /* ../core/src/hapt.cpp in Sources */,
 				C000000000000000000000C5 /* ../core/src/harmonic_probe.cpp in Sources */,
+				C000000000000000000000D1 /* ../core/src/unified_pitch_session.cpp in Sources */,
+				C000000000000000000000D3 /* ../core/src/unified_track_decoder.cpp in Sources */,
+				C000000000000000000000D5 /* ../core/src/pyin_ladder.cpp in Sources */,
+				C000000000000000000000D7 /* ../core/src/frame_spectrum.cpp in Sources */,
+				C000000000000000000000D9 /* ../core/src/harmonic_evidence.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -1,18 +1,33 @@
 # KlariVision — Güncel Proje Durumu
 
-Son güncelleme: 24 Ağustos 2026
-Aktif dal: `agent/pitch-engine-v2`
-Durum anı: Dinleme ve Çalma grafikleri WebKit/JavaScript canvas renderer'ında
-Sürüm anı: `v0.6.0-beta.3`
+Son güncelleme: 6 Eylül 2026
+Aktif dal: `fix/pitch-octave-and-stray-points`
+Durum anı: Tek pitch motoru (`unified_v1`); Dinleme ve Çalma grafikleri
+WebKit/JavaScript canvas renderer'ında
+Sürüm anı: `v0.6.0-beta.3` kaynağı + D-037/D-038/D-039 motor turu
 
-24 Ağustos'ta dördüncü, bağımsız tasarlanmış bir pitch motoru eklendi:
-Harmonik-Faz (`hapt_v1`), `KV_ENGINE_HAPT_V1 = 3`. ABI sürümü 1 olarak kaldı
-(yeni yetenek biti eklendi); dört motor da eşit son kullanıcı seçeneği,
-`yin_v1` varsayılan olarak kaldı. Yöntem, kalibrasyon (turnuva holdout v1–v5
-üzerinde) ve v6 tek-seferlik doğrulama sonucu `docs/HAPTPitchEngine.md` ve
-`docs/PITCH_ENGINE_USER_OPTION_ACCEPTANCE_V1.md`'dedir; karar kaydı D-036.
-Fiziksel klarnet kabul oturumu henüz yapılmadı. Diğer üç motorun davranışı
-değişmedi.
+## Tek motor
+
+6 Eylül 2026'da dört eski motor (`yin_v1`, `pitch_engine_v2`, `vpm_like`,
+`hapt_v1`) koddan çıkarıldı; **çalışan tek motor `unified_v1`'dir** (D-039).
+Bu, D-037'nin başından beri ilan edilmiş hedefi ve D-038'in ertelediği adımdır.
+D-020'nin "eşit son kullanıcı seçenekleri" politikası burada sona erer:
+Ayarlar'da motor seçici yoktur, ne çalıştığını söyleyen tek bir satır vardır.
+
+Kalıcı sınırlar: C ABI **v1 olarak kalır**; 0–3 motor kimlikleri ve yetenek
+bitleri rezervedir, yeniden kullanılmaz; kaldırılmış bir kimlikle oturum açmak
+hata döner, hayatta kalan motora yönlendirilmez. Kayıtlı seçimi kaldırılmış bir
+motoru adlandıran kurulumlar `unified_v1`'e düşer; **daha önce çözümlenmiş
+çalışmalar kendi sonuçlarını ve motor kimliğini korur.**
+
+Bu turda motor davranışı, eşikler, gecikme (5 hop / 53,3 ms) ve kalıcı veri
+biçimleri değişmedi. Bu belgenin altındaki dört motora ait bölümler tarihçedir.
+
+Doğrulandı: `scripts/test_core.sh`, macOS Swift paketi, macOS Xcode Debug
+derlemesi, Python paketi, turnuva testleri. Bu tur ayrıca iki bayat kaydı
+düzeltti: **macOS ve iPad Xcode projeleri `unified_*` kaynaklarını hiç
+derlemiyordu** — D-037'den beri her iki uygulama da kendi kazanan motorunu
+bağlayamıyordu.
 
 13 Ağustos'ta uygulama davranışı değiştirilmeden Swift kaynakları küçük
 sorumluluk dosyalarına ayrıştırıldı: ayarlar, çalışma modelleri/medya köprüsü,
@@ -153,18 +168,17 @@ Yeni bir görevde önce bu dosya, sonra `CODEX_HANDOFF.md` okunmalıdır.
 
 | Motor | Rol | Durum |
 |---|---|---|
+| `unified_v1` | Çoklu aday + yol seçimi + harmonik spektral kanıt; 5 hop (53,3 ms) sabit karar gecikmesi | **Çalışan tek motor** |
 | Vamp pYIN | Çevrimdışı dosya analizi ve gerçek kayıtta kararlı referans | Kullanımda |
-| YIN v1 | Düşük gecikmeli YIN yolu | Son kullanıcı seçeneği; yalnız ilk açılışta seçili |
-| Pitch Engine v2 | MPM/NSDF + SWIPE′ benzeri puan + yaklaşık 5 kare sabit gecikmeli izleyici | Son kullanıcı seçeneği |
-| VPM-benzeri | Yamaoka yaklaşımından esinlenen aday/eşik motoru | Son kullanıcı seçeneği |
+| YIN v1 / Pitch Engine v2 / VPM-benzeri / Harmonik-Faz | — | **Kaldırıldı (D-039)**; ABI kimlikleri 0–3 rezerve |
 
-Üç motorun uygulama içi adları nötr tutulur. Sayısal ölçümler ve kullanıcı
-notları regresyon takibi içindir; ürün bunlardan bir kazanan veya önerilen motor
-çıkarmaz. Seçim Dinleme ve Çalma Modu için ayrı saklanır; Çalışma önbelleği
-motor kimliğini ve `offline_track` profil sürümünü içerir.
+Çalışma önbelleği motor kimliğini ve `offline_track` profil sürümünü taşımaya
+devam eder; üç kalıcılık anahtarı (Dinleme / Çalma / Birlikte Çal) korunur.
 
-Bu bölümün altındaki varsayılan, deneysel veya terfi ifadeleri önceki teknik
-kararların tarihçesidir; güncel ürün politikası D-020'dir.
+**Bu bölümün altındaki her şey tarihçedir.** Dört motorun kalibrasyonu,
+turnuva sıralamaları, parite kapıları ve "varsayılan / deneysel / terfi"
+ifadeleri, o motorlar hâlâ koddayken alınmış kararların kaydıdır; güncel ürün
+politikası D-039'dur.
 
 Çalışma modu için ayrı üretim-yolu sentetik kontrolü bulunur. Bu kontrol,
 aynı mono/48 kHz dönüşüm ve C++ `offline_track_v1` CLI ile üç motorun ham
@@ -382,8 +396,10 @@ sessizlik boşluklarını `sessizlikte N yanlış nokta` olarak ayrıca raporlar
    sağlamadığı için yeni eşik ayarı yapılmadan bağımsız/elle doğrulama gerekir.
 2. Hoparlör/oda/mikrofon zinciri doğrudan dosyaya göre daha zorlayıcıdır;
    dış sesler ve güçlü 2x/3x harmonikler ek sağlamlık gerektirir.
-3. Pitch Engine v2 ve VPM-benzeri motor, bütün regresyonlarda kararlı YIN v1'i
-   geçtiği kanıtlanmadan kullanıcı varsayılanı yapılamaz.
+3. `unified_v1`'in `holdout_adverse_v1.wav` vetosu açık: 24 kare ciddi eksik
+   ötüm, sınır ≈ 12. Kullanıcı bunu kabul etti (D-038) ama kapanmadı. Klarnet
+   dışı materyalde ötüm kapsaması da açık; **dış karşılaştırma tablosuna
+   bakılarak ayarlanamaz** — ayrı bir doğrulama kümesi ayrılmadan girilmez.
 4. Android bağ katmanı henüz oluşturulmadı; iOS/iPadOS'ta kalan kabul gerçek
    iPhone'da dosya ve mikrofon yaşam döngüsü, ardından gerçek iPad regresyonudur.
 

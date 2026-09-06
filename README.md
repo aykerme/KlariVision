@@ -8,10 +8,11 @@ sözleşmesini kullanır; ses ve çalışma kayıtları cihazdan çıkmaz.
 
 | Hedef | Kaynak | Arayüz | Analiz |
 | --- | --- | --- | --- |
-| macOS | `macos/KlariVision/` | SwiftUI + WebKit | Dosyada Vamp pYIN, canlıda C++ motorları |
+| macOS | `macos/KlariVision/` | SwiftUI + WebKit | Dosyada Vamp pYIN, canlıda C++ `unified_v1` |
 | iPhone/iPad | `ipad/KlariVisioniPadCoreSmoke/` | SwiftUI + WebKit | C++ C ABI v1 |
 
-Her iki uygulamada kullanıcı makamı, karar perdesini ve pitch motorunu seçer.
+Her iki uygulamada kullanıcı makamı ve karar perdesini seçer. Pitch motoru
+seçilebilir değildir: tek motor `unified_v1` çalışır (D-039).
 Nota adı/transpozisyon yalnız gösterimi değiştirir; ölçülen fiziksel frekansı
 değiştirmez. Otomatik makam ve süsleme tespiti ana ürün kapsamında değildir.
 

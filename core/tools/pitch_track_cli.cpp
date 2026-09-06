@@ -1,7 +1,5 @@
 #include "klarivision/core/analysis_engine.hpp"
 #include "klarivision/core/analysis_engine_c.h"
-#include "klarivision/core/hapt.hpp"
-#include "klarivision/core/pitch_engine_v2_session.hpp"
 
 #include <algorithm>
 #include <cstdint>
@@ -30,7 +28,13 @@ Wav read_wav(const std::string& path) {
     return wav;
 }
 std::vector<float> resample(const Wav& source) { constexpr double target=48000; if(source.rate==target) return source.samples; const std::size_t size=static_cast<std::size_t>(source.samples.size()*target/source.rate); std::vector<float> output(size); for(std::size_t i=0;i<size;++i) { const double p=i*source.rate/target; const auto lo=static_cast<std::size_t>(p); const auto hi=std::min(lo+1,source.samples.size()-1); output[i]=static_cast<float>(source.samples[lo]+(source.samples[hi]-source.samples[lo])*(p-lo)); } return output; }
-klarivision::core::PitchEngineId parse_engine(const std::string& value) { if(value=="yin_v1") return klarivision::core::PitchEngineId::yin_v1; if(value=="pitch_engine_v2") return klarivision::core::PitchEngineId::pitch_engine_v2; if(value=="vpm_like") return klarivision::core::PitchEngineId::vpm_like; if(value=="hapt_v1") return klarivision::core::PitchEngineId::hapt_v1; if(value=="unified_v1") return klarivision::core::PitchEngineId::unified_v1; throw std::runtime_error("Geçersiz pitch motoru."); }
+// Only unified_v1 is accepted. The four names that used to be valid here are
+// rejected like any other unknown string: a caller asking for a removed
+// engine must see an error, not another engine's track under that name.
+klarivision::core::PitchEngineId parse_engine(const std::string& value) {
+    if (value == "unified_v1") return klarivision::core::PitchEngineId::unified_v1;
+    throw std::runtime_error("Geçersiz pitch motoru (yalnız unified_v1).");
+}
 bool same_frame(const klarivision::core::EngineFrame& left, const klarivision::core::EngineFrame& right) {
     if (std::abs(left.time_seconds - right.time_seconds) > 0.000001 ||
         left.frequency_hz.has_value() != right.frequency_hz.has_value()) return false;
@@ -43,127 +47,6 @@ void write_frame(std::ostream& output, const klarivision::core::EngineFrame& fra
            << ",\"confidence\":" << frame.confidence
            << ",\"change_reason\":\"" << reason << "\"}";
 }
-const char* candidate_source(const klarivision::core::v2::CandidateSource source) {
-    using Source = klarivision::core::v2::CandidateSource;
-    switch (source) {
-        case Source::yin: return "yin";
-        case Source::autocorrelation: return "autocorrelation";
-        case Source::mpm: return "mpm";
-        case Source::spectral: return "spectral";
-    }
-    return "unknown";
-}
-void write_candidate(std::ostream& output, const klarivision::core::v2::ScoredPitchCandidate& candidate) {
-    output << "{\"source\":\"" << candidate_source(candidate.candidate.source)
-           << "\",\"frequency_hz\":" << candidate.candidate.frequency_hz
-           << ",\"periodicity\":" << candidate.candidate.periodicity
-           << ",\"prime_harmonic_support\":" << candidate.candidate.harmonic_support
-           << ",\"cross_estimator_agreement\":"
-           << (candidate.candidate.agreement_support ? "true" : "false")
-           << ",\"emission_score\":" << candidate.emission_score << "}";
-}
-void write_diagnostic(std::ostream& output, const klarivision::core::v2::FrameDiagnostic& diagnostic) {
-    output << "{\"input_time_seconds\":" << diagnostic.input_time_seconds
-           << ",\"rms\":" << diagnostic.rms
-           << ",\"input_signal_eligible\":" << (diagnostic.input_signal_eligible ? "true" : "false")
-           << ",\"input_release_active\":" << (diagnostic.input_release_active ? "true" : "false")
-           << ",\"resolved\":" << (diagnostic.resolved ? "true" : "false");
-    if (diagnostic.resolved) {
-        output << ",\"resolved_time_seconds\":" << diagnostic.resolved_time_seconds
-               << ",\"resolved_signal_eligible\":" << (diagnostic.resolved_signal_eligible ? "true" : "false")
-               << ",\"resolved_release_active\":" << (diagnostic.resolved_release_active ? "true" : "false")
-               << ",\"selected_emission_score\":" << diagnostic.selected_emission_score
-               << ",\"selected_path_score\":" << diagnostic.selected_path_score;
-        if (diagnostic.selected_candidate) {
-            output << ",\"selected\":{\"source\":\"" << candidate_source(diagnostic.selected_candidate->source)
-                   << "\",\"frequency_hz\":" << diagnostic.selected_candidate->frequency_hz
-                   << ",\"periodicity\":" << diagnostic.selected_candidate->periodicity
-                   << ",\"prime_harmonic_support\":" << diagnostic.selected_candidate->harmonic_support
-                   << ",\"cross_estimator_agreement\":"
-                   << (diagnostic.selected_candidate->agreement_support ? "true" : "false") << "}";
-        }
-    }
-    output << ",\"publication_reason\":\"" << diagnostic.publication_reason
-           << "\",\"bridged_frames\":" << diagnostic.bridged_frames
-           << ",\"finalized\":" << (diagnostic.finalized ? "true" : "false")
-           << ",\"candidates\":[";
-    for (std::size_t index = 0; index < diagnostic.candidates.size(); ++index) {
-        write_candidate(output, diagnostic.candidates[index]);
-        if (index + 1 != diagnostic.candidates.size()) output << ',';
-    }
-    output << "]}";
-}
-void write_optional_number(std::ostream& output, const std::optional<double>& value) {
-    if (value) output << *value; else output << "null";
-}
-void write_vpm_diagnostic(
-    std::ostream& output,
-    const klarivision::core::VPMSessionDiagnostic& diagnostic
-) {
-    output << "{\"input_time_seconds\":" << diagnostic.input_time_seconds
-           << ",\"rms\":" << diagnostic.rms
-           << ",\"recent_rms_peak\":" << diagnostic.recent_rms_peak
-           << ",\"rms_to_peak_ratio\":" << diagnostic.rms_to_peak_ratio
-           << ",\"strongest_periodicity\":" << diagnostic.strongest_periodicity
-           << ",\"normal_estimate_hz\":";
-    write_optional_number(output, diagnostic.normal_estimate_hz);
-    output << ",\"weak_estimate_hz\":";
-    write_optional_number(output, diagnostic.weak_estimate_hz);
-    output << ",\"last_strong_contour_hz\":";
-    write_optional_number(output, diagnostic.last_strong_contour_hz);
-    output << ",\"direct_fundamental_support\":" << diagnostic.direct_fundamental_support
-           << ",\"recent_direct_support_peak\":" << diagnostic.recent_direct_support_peak
-           << ",\"established_upper_to_estimate_ratio\":";
-    write_optional_number(output, diagnostic.established_upper_to_estimate_ratio);
-    output << ",\"signal_eligible\":" << (diagnostic.signal_eligible ? "true" : "false")
-           << ",\"release_suspected\":" << (diagnostic.release_suspected ? "true" : "false")
-           << ",\"harmonic_veto\":" << (diagnostic.harmonic_veto ? "true" : "false")
-           << ",\"pending_gap_frames\":" << diagnostic.pending_gap_frames
-           << ",\"bridged_frames\":" << diagnostic.bridged_frames
-           << ",\"publication_reason\":\"" << diagnostic.publication_reason << "\"}";
-}
-void write_hapt_hypothesis(
-    std::ostream& output,
-    const klarivision::core::HAPTHypothesisDiagnostic& hypothesis
-) {
-    output << "{\"frequency_hz\":" << hypothesis.frequency_hz
-           << ",\"periodicity\":" << hypothesis.periodicity
-           << ",\"odd_harmonic_occupancy\":" << hypothesis.odd_harmonic_occupancy
-           << ",\"half_grid_veto\":" << hypothesis.half_grid_veto
-           << ",\"third_grid_veto\":" << hypothesis.third_grid_veto
-           << ",\"half_grid_spectrally_resolvable\":"
-           << (hypothesis.half_grid_spectrally_resolvable ? "true" : "false")
-           << ",\"third_grid_spectrally_resolvable\":"
-           << (hypothesis.third_grid_spectrally_resolvable ? "true" : "false")
-           << ",\"continuity_bonus\":" << hypothesis.continuity_bonus
-           << ",\"score\":" << hypothesis.score
-           << ",\"selected\":" << (hypothesis.selected ? "true" : "false") << "}";
-}
-void write_hapt_diagnostic(
-    std::ostream& output,
-    const klarivision::core::HAPTFrameDiagnostic& diagnostic
-) {
-    output << "{\"rms\":" << diagnostic.rms
-           << ",\"signal_eligible\":" << (diagnostic.signal_eligible ? "true" : "false")
-           << ",\"onset_recovery_attempted\":" << (diagnostic.onset_recovery_attempted ? "true" : "false")
-           << ",\"onset_recovery_used\":" << (diagnostic.onset_recovery_used ? "true" : "false")
-           << ",\"decay_recovery_attempted\":" << (diagnostic.decay_recovery_attempted ? "true" : "false")
-           << ",\"decay_recovery_used\":" << (diagnostic.decay_recovery_used ? "true" : "false")
-           << ",\"if_lock_attempted\":" << (diagnostic.if_lock_attempted ? "true" : "false")
-           << ",\"if_lock_applied\":" << (diagnostic.if_lock_applied ? "true" : "false")
-           << ",\"if_lock_harmonic\":" << diagnostic.if_lock_harmonic
-           << ",\"pre_if_lock_frequency_hz\":" << diagnostic.pre_if_lock_frequency_hz
-           << ",\"frequency_hz\":";
-    write_optional_number(output, diagnostic.pitch ? std::optional<double>(diagnostic.pitch->frequency_hz) : std::nullopt);
-    output << ",\"confidence\":";
-    write_optional_number(output, diagnostic.pitch ? std::optional<double>(diagnostic.pitch->confidence) : std::nullopt);
-    output << ",\"decision\":\"" << diagnostic.decision << "\",\"hypotheses\":[";
-    for (std::size_t index = 0; index < diagnostic.hypotheses.size(); ++index) {
-        write_hapt_hypothesis(output, diagnostic.hypotheses[index]);
-        if (index + 1 != diagnostic.hypotheses.size()) output << ',';
-    }
-    output << "]}";
-}
 }
 int main(int argc, char** argv) {
     if (argc == 2 && std::string(argv[1]) == "--contract") {
@@ -174,24 +57,22 @@ int main(int argc, char** argv) {
                   << ",\"sample_rate_hz\":" << contract.sample_rate_hz
                   << ",\"window_size\":" << contract.window_size
                   << ",\"hop_size\":" << contract.hop_size
-                  << ",\"engines\":[\"yin_v1\",\"pitch_engine_v2\",\"vpm_like\",\"hapt_v1\",\"unified_v1\"]"
+                  << ",\"engines\":[\"unified_v1\"]"
                   // Separate from kv_pitch_contract_v1 on purpose: that
-                  // struct is frozen and v2_fixed_lag_frames describes v2
-                  // only. See kv_unified_lag_frames() in analysis_engine_c.h.
+                  // struct is frozen and its v2_fixed_lag_frames field is a
+                  // reserved leftover. See kv_unified_lag_frames() in
+                  // analysis_engine_c.h.
                   << ",\"unified_lag_frames\":" << kv_unified_lag_frames()
                   << "}\n";
         return 0;
     }
-    if((argc != 6 && argc != 8) || std::string(argv[2]) != "--engine" || std::string(argv[4]) != "--output" ||
-       (argc == 8 && std::string(argv[6]) != "--diagnostic")) { std::cerr << "Kullanım: pitch_track_cli INPUT.wav --engine yin_v1|pitch_engine_v2|vpm_like|hapt_v1|unified_v1 --output OUTPUT.json [--diagnostic DIAG.json]\n"; return 2; }
+    // --diagnostic is gone with the engines it served: every per-frame
+    // diagnostic writer here belonged to pitch_engine_v2, vpm_like or hapt_v1.
+    // The unified engine's own trace tool is core/tools/unified_trace.cpp.
+    if(argc != 6 || std::string(argv[2]) != "--engine" || std::string(argv[4]) != "--output") { std::cerr << "Kullanım: pitch_track_cli INPUT.wav --engine unified_v1 --output OUTPUT.json\n"; return 2; }
     try {
         const auto wav = read_wav(argv[1]);
         const auto samples = resample(wav);
-        const bool diagnostic_requested = argc == 8;
-        if (diagnostic_requested && std::string(argv[3]) != "pitch_engine_v2" &&
-            std::string(argv[3]) != "vpm_like" && std::string(argv[3]) != "hapt_v1") {
-            throw std::runtime_error("Tanı yalnız pitch_engine_v2, vpm_like ve hapt_v1 için kullanılabilir.");
-        }
         klarivision::core::PitchEngine engine(
             parse_engine(argv[3]), klarivision::core::PitchEngineProfile::offline_track
         );
@@ -212,8 +93,8 @@ int main(int argc, char** argv) {
                 return same_frame(item, frames[index]);
             });
             // A frame the causal pass also produced, but at a different pitch,
-            // was moved by the offline harmonic path refinement.  One that has
-            // no causal counterpart at all came out of the fixed-lag tail.
+            // was moved by the offline whole-track decode.  One that has no
+            // causal counterpart at all came out of the fixed-lag tail.
             const auto same_time = std::any_of(causal.begin(), causal.end(), [&](const auto& item) {
                 return std::abs(item.time_seconds - frames[index].time_seconds) < 1e-6;
             });
@@ -243,55 +124,6 @@ int main(int argc, char** argv) {
             first = false;
         }
         output << "\n  ]\n}\n";
-        if (diagnostic_requested) {
-            std::ofstream diagnostic_output(argv[7]);
-            if (!diagnostic_output) throw std::runtime_error("Tanı çıktısı yazılamadı.");
-            diagnostic_output << std::fixed << std::setprecision(6)
-                << "{\n  \"engine\": \"" << argv[3] << "\",\n  \"frames\": [\n";
-            bool first_diagnostic = true;
-            const auto separate = [&] {
-                if (!first_diagnostic) diagnostic_output << ",\n";
-                diagnostic_output << "    "; first_diagnostic = false;
-            };
-            if (std::string(argv[3]) == "pitch_engine_v2") {
-                klarivision::core::v2::PitchEngineV2Session session;
-                for (std::size_t start = 0; start + 1536 <= samples.size(); start += 512) {
-                    const double time = (static_cast<double>(start) + 768) / 48000;
-                    (void)session.process_frame(std::span<const float>(samples).subspan(start, 1536), 48000, time);
-                    separate(); write_diagnostic(diagnostic_output, session.last_diagnostic());
-                }
-                (void)session.finish();
-                separate(); write_diagnostic(diagnostic_output, session.last_diagnostic());
-            } else if (std::string(argv[3]) == "vpm_like") {
-                klarivision::core::ProductionPitchSession session(
-                    klarivision::core::PitchEngineId::vpm_like,
-                    klarivision::core::PitchEngineConfig{
-                        .enable_vpm_diagnostics = true,
-                    }
-                );
-                for (std::size_t start = 0; start + 1536 <= samples.size(); start += 512) {
-                    const double time = (static_cast<double>(start) + 768) / 48000;
-                    (void)session.process_frame(
-                        std::span<const float>(samples).subspan(start, 1536), 48000, time
-                    );
-                    separate(); write_vpm_diagnostic(
-                        diagnostic_output, session.last_vpm_diagnostic()
-                    );
-                }
-            } else {
-                klarivision::core::HAPTConfig hapt_config;
-                klarivision::core::HAPTTracker hapt_tracker(hapt_config);
-                for (std::size_t start = 0; start + 1536 <= samples.size(); start += 512) {
-                    const std::span<const float> window(std::span<const float>(samples).subspan(start, 1536));
-                    const auto diagnostic = klarivision::core::diagnose_hapt_pitch(
-                        window, 48000, hapt_config, hapt_tracker.published_frequency_hz()
-                    );
-                    (void)hapt_tracker.process(diagnostic.pitch, diagnostic.rms);
-                    separate(); write_hapt_diagnostic(diagnostic_output, diagnostic);
-                }
-            }
-            diagnostic_output << "\n  ]\n}\n";
-        }
     }
     catch(const std::exception& error) { std::cerr << error.what() << "\\n"; return 1; }
 }

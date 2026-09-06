@@ -3,15 +3,9 @@ import XCTest
 @testable import KlariVisionApp
 
 final class LiveNotationTests: XCTestCase {
-    func testPitchEngineSettingsKeepsFiveNeutralUserChoices() {
-        XCTAssertEqual(
-            PitchEngineSettings.userChoices.map(\.id),
-            ["yin_v1", "pitch_engine_v2", "vpm_like", "hapt_v1", "unified_v1"]
-        )
-        XCTAssertEqual(
-            PitchEngineSettings.userChoices.map(\.title),
-            ["YIN v1", "Pitch Engine v2", "VPM-benzeri", "Harmonik-Faz (HAPT)", "Birleşik (Unified v1)"]
-        )
+    func testPitchEngineSettingsExposesTheOneRemainingEngine() {
+        XCTAssertEqual(PitchEngineSettings.userChoices.map(\.id), ["unified_v1"])
+        XCTAssertEqual(PitchEngineSettings.userChoices.map(\.title), ["Birleşik (Unified v1)"])
         XCTAssertEqual(PitchEngineSettings.initialEngine, "unified_v1")
         XCTAssertEqual(PitchEngineSettings.resolvedSelection(nil), "unified_v1")
         XCTAssertEqual(PitchEngineSettings.resolvedSelection("not-a-pitch-engine"), "unified_v1")
@@ -21,28 +15,49 @@ final class LiveNotationTests: XCTestCase {
         }
     }
 
+    /// An install that still holds a removed engine's id must resolve to the
+    /// engine this build has, on every surface, rather than keeping a dead
+    /// selection alive or failing to start.
+    func testStoredSelectionOfARemovedEngineFallsBackToTheSurvivor() {
+        let suiteName = "KlariVisionRemovedEngineFallback-\(UUID().uuidString)"
+        let defaults = try! XCTUnwrap(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        for removed in ["yin_v1", "pitch_engine_v2", "vpm_like", "hapt_v1"] {
+            XCTAssertEqual(PitchEngineSettings.resolvedSelection(removed), "unified_v1")
+            for key in [PitchEngineSettings.studyEngineKey,
+                        PitchEngineSettings.liveEngineKey,
+                        PitchEngineSettings.togetherEngineKey] {
+                defaults.set(removed, forKey: key)
+                XCTAssertEqual(
+                    PitchEngineSettings.storedSelection(for: key, defaults: defaults),
+                    "unified_v1"
+                )
+            }
+        }
+    }
+
+    /// The three keys stay separate even though they can currently only hold
+    /// one value: the separation is the persisted contract, and collapsing it
+    /// would silently merge three user settings if a second engine returns.
     func testPitchEngineSelectionPersistsIndependentlyForStudyAndLiveModes() {
         let suiteName = "KlariVisionPitchEngineSettingsTests-\(UUID().uuidString)"
         let defaults = try! XCTUnwrap(UserDefaults(suiteName: suiteName))
         defer { defaults.removePersistentDomain(forName: suiteName) }
 
-        defaults.set("vpm_like", forKey: PitchEngineSettings.studyEngineKey)
-        defaults.set("pitch_engine_v2", forKey: PitchEngineSettings.liveEngineKey)
+        XCTAssertNotEqual(PitchEngineSettings.studyEngineKey, PitchEngineSettings.liveEngineKey)
+        XCTAssertNotEqual(PitchEngineSettings.studyEngineKey, PitchEngineSettings.togetherEngineKey)
+        XCTAssertNotEqual(PitchEngineSettings.liveEngineKey, PitchEngineSettings.togetherEngineKey)
 
+        defaults.set("unified_v1", forKey: PitchEngineSettings.studyEngineKey)
         XCTAssertEqual(
             PitchEngineSettings.storedSelection(
                 for: PitchEngineSettings.studyEngineKey,
                 defaults: defaults
             ),
-            "vpm_like"
+            "unified_v1"
         )
-        XCTAssertEqual(
-            PitchEngineSettings.storedSelection(
-                for: PitchEngineSettings.liveEngineKey,
-                defaults: defaults
-            ),
-            "pitch_engine_v2"
-        )
+        XCTAssertNil(defaults.string(forKey: PitchEngineSettings.liveEngineKey))
     }
 
     func testAppThemeHasStablePersistedChoices() {
@@ -56,8 +71,8 @@ final class LiveNotationTests: XCTestCase {
     func testAccessibilityCopyKeepsEngineChoiceNeutralAndDropFailureActionable() {
         XCTAssertEqual(AccessibilityText.listeningStatus, "Dinleme durumu")
         XCTAssertEqual(AccessibilityText.practiceStatus, "Çalma durumu")
-        XCTAssertTrue(AccessibilityText.enginePickerHint.contains("eşit kullanıcı seçenekleridir"))
-        XCTAssertFalse(AccessibilityText.enginePickerHint.localizedCaseInsensitiveContains("öner"))
+        XCTAssertTrue(AccessibilityText.engineDescription.contains("Birleşik (Unified v1)"))
+        XCTAssertFalse(AccessibilityText.engineDescription.localizedCaseInsensitiveContains("öner"))
 
         let library = RecentLibrary()
         library.reportDroppedFileFailure()

@@ -1,5 +1,11 @@
 # VPM-benzeri Pitch Motoru
 
+> **TARİHSEL BELGE — bu motor koddan kaldırıldı (D-039, 6 Eylül 2026).**
+> Aşağıdakiler kaldırılma anındaki yöntem, kalibrasyon ve ölçüm kaydıdır ve
+> kanıt zinciri olarak korunur. Buradaki komutlar artık koşmaz, eşikler artık
+> hiçbir kodu yönetmez. Çalışan tek motor `unified_v1`'dir; güncel durum
+> `docs/PROJECT_STATE.md` ve `docs/TEST_BASELINE.md`'dedir.
+
 ## Üretim iz paritesi
 
 10 Ağustos 2026'da C++ turnuva izi ile macOS Swift yayın yolu, turnuvadaki 26

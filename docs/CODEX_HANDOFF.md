@@ -2,6 +2,81 @@
 
 Son güncelleme: 6 Eylül 2026
 
+## Faz 6 tamamlandı — dört eski motor silindi (D-039) — 6 Eylül 2026
+
+Kullanıcı kararıyla D-037'nin nihai hedefi uygulandı. **Sonraki oturum bu
+bölümden başlamalı.**
+
+### Yapılanlar
+
+- **C++:** `hapt`, `vpm_like`, `pitch_engine_v2`, `pitch_engine_v2_session`
+  kaynakları/başlıkları/testleri/araçları silindi. `analysis_engine.cpp`
+  2120 → 284 satır: geriye oturum yaşam döngüsü, pencereleme ve çevrimdışı
+  stray-run temizliği kaldı; her perde kararı artık `unified_*` dosyalarında.
+  Paylaşılan aday sözlüğü `pitch_candidate.hpp`'ye taşındı.
+- **ABI:** v1 **mutasyona uğratılmadı**. 0–3 kimlikleri ve yetenek bitleri
+  rezerve; kaldırılmış kimlikle create **hata döner** (hayatta kalan motora
+  yönlendirilmez). `kv_v2_session_*` sembolleri duruyor ve temiz başarısız
+  oluyor. `v2_fixed_lag_frames` rezerve alan olarak `5` bildirmeye devam ediyor.
+- **UI:** macOS ve iPad'de motor seçicileri kaldırıldı; yerine ne çalıştığını
+  söyleyen tek satır kondu. Kaldırılmış motoru adlandıran kayıtlı seçimler
+  `unified_v1`'e düşüyor; **çözümlenmiş çalışmalar kendi motor kimliklerini
+  koruyor** ve görüntüleyici onları "(kaldırıldı)" etiketiyle gösteriyor.
+- **Swift:** V2/VPM/YIN Swift aynaları, parite dışa aktarımları, karşılaştırma
+  grafiği (`LiveGraphDisplay`, yin/autocorrelation benchmark kareleri) ve
+  `ExperimentalHarmonicJumpGate` silindi. Canlı yol tek dal: C++ üretim
+  oturumu.
+- **Turnuva:** artık seçim değil ölçüm. `benchmark_winner`/`default_engine`/
+  `outcome` kaldırıldı; güvenlik kapısı aynı eşikle mutlak orana çevrildi
+  (`SAFETY_RATE_LIMIT = 0.005`).
+- **Silinen geliştirme araçları:** v2/vpm parite denetimleri, VPM kalibrasyonu,
+  Şükrü Tunar VPM tanılaması, motor ayrışma haritası (+HTML şablonu),
+  `run_pitch_regression_suite.py` (canlı-YIN ↔ pYIN kapısı) ve iki `evaluate_*`
+  tüketicisi, `pitch_track_cli --diagnostic`.
+
+### Bu turda bulunan iki gerçek kusur
+
+**macOS ve iPad Xcode projeleri `unified_*` kaynaklarını hiç derlemiyordu.**
+D-037'den beri her iki uygulama da kazanan motoru bağlayamazdı; `build_beta_app.sh`'de
+aynı hata bir önceki oturumda bulunmuştu, proje dosyalarında kalmıştı. İkisi de
+düzeltildi ve macOS Debug derlemesi geçti.
+
+### Sonraki oturumun işleri — öncelik sırasıyla
+
+1. **iPad hedefi bu makinede derlenemedi:** Xcode'da iOS 26.5 platformu kurulu
+   değil. Kod ve proje değişikliği yapıldı, `xcodebuild` doğrulaması
+   **koşulmadı**. Platform kurulduğunda ilk iş budur.
+2. **Faz 7 —** `swipe_prime.cpp`'nin `FrameSpectrum` üstüne katlanması, ardından
+   `graphify update .`.
+3. **Klarnet dışı ötüm kapsaması** (D-038'den devam). Dış karşılaştırmada
+   RPA 0,315–0,635, pYIN 0,66–0,99; fark neredeyse tamamen voicing recall.
+   **Uyarı:** dış tabloya bakılarak ayarlanamaz — o tablo elimizdeki tek
+   ayarlanmamış ölçüt. Önce ayrı bir doğrulama kümesi ayrılmalı.
+4. **`adverse_v1` vetosu** (D-038'den devam): 24 kare ciddi eksik ötüm, sınır
+   12. Artık teste sabitlendi (`ACCEPTED_VETO_MISSING_VOICED_FRAMES = 24`), yani
+   büyürse kırmızıya döner. `TEST_BASELINE.md`'de ölçülüp reddedilen altı kol
+   kayıtlı; **tekrar denenmemeli**, mimari iş gerekir.
+5. **Küçük borç:** `pitch_candidate.hpp`'nin ad alanı hâlâ
+   `klarivision::core::v2`. Mekanik bir yeniden adlandırma; motor silme
+   commit'ini okunabilir tutmak için ayrı bırakıldı.
+
+### Sonraki oturumun bilmesi gereken tuzaklar
+
+- **Turnuvanın kıyas tarafı artık yeniden üretilemez.** D-038'in koruduğu
+  `benchmark_winner=vpm_like` satırı yalnız `outputs/` altındaki raporlarda
+  kayıtlıdır. Bu, kararın bilinen bedelidir; "kaybolmuş" bir sonuç değildir.
+- Sayısal eşikler donmuş holdout'lara bakılarak seçildi. Hangi sabitin
+  `frozen-no-retuning-after-first-result`, hangisinin `diagnostic-may-be-retuned`
+  olduğu `TEST_BASELINE.md`'de yazılı.
+- `KLARIVISION_PITCH_TRACK_CLI` ayarlı değilse `build/klarivision-pitch-track-cli`
+  kullanılır ve **bayat kalabilir**; sabitler değiştiğinde yeniden derlenmeli.
+- `outputs/` altındaki motor izleri farklı derlemelerden kalmış olabilir;
+  kıyaslamadan önce tazelenir.
+- Motor davranışını değiştiren her tur, üç yerde birden duran gecikme sabitini
+  senkron tutmalı: `unified::kDefaultLagFrames`,
+  `scripts/pitch_tournament_engines.py:UNIFIED_DEFAULT_LAG_FRAMES` (C++
+  varsayılanını **gölgeler**) ve `src/klarivision/pitch/cpp_engine.py`.
+
 ## Dokümantasyon ve kaynak açıklama turu — 20 Ağustos
 
 Ana `README.md`, macOS/mobil README'leri ve metin mimari özeti güncel ürün

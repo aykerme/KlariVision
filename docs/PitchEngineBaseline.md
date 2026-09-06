@@ -1,5 +1,11 @@
 # Canlı Pitch Motoru Kararlı Temeli
 
+> **TARİHSEL BELGE — bu motor koddan kaldırıldı (D-039, 6 Eylül 2026).**
+> Aşağıdakiler kaldırılma anındaki yöntem, kalibrasyon ve ölçüm kaydıdır ve
+> kanıt zinciri olarak korunur. Buradaki komutlar artık koşmaz, eşikler artık
+> hiçbir kodu yönetmez. Çalışan tek motor `unified_v1`'dir; güncel durum
+> `docs/PROJECT_STATE.md` ve `docs/TEST_BASELINE.md`'dedir.
+
 Tarih: 2 Ağustos 2026
 
 Bu belge, ikinci nesil çok adaylı pitch motoru geliştirilmeden önce korunan

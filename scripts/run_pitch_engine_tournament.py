@@ -33,7 +33,16 @@ BENCHMARKS = ROOT / "data/benchmarks"
 OUTPUT = ROOT / "outputs/pitch-engine-tournament-all-synthetic-2026-08-09.json"
 MARKDOWN = ROOT / "outputs/pitch-engine-tournament-all-synthetic-2026-08-09.md"
 SAMPLE_INDEX = ROOT / "outputs/pitch-engine-tournament-all-synthetic-sample-index-2026-08-09.md"
-ENGINE_ORDER = ("yin_v1", "pitch_engine_v2", "vpm_like", "hapt_v1", "unified_v1")
+# One engine since D-039. Kept as a tuple because every report shape here is
+# per-engine and a second engine would be added back here.
+ENGINE_ORDER = ("unified_v1",)
+# Absolute safety bound for a single frozen holdout case, per serious class,
+# as a fraction of that case's reference frames. This used to be expressed as
+# "no more than 0.5 percentage points worse than yin_v1"; yin_v1 scored zero
+# serious frames on every frozen holdout, so the removal of that baseline
+# (D-039) turns the same rule into this absolute rate. The threshold is
+# unchanged, only its reference point is.
+SAFETY_RATE_LIMIT = 0.005
 TRUTH_STEP_SECONDS = 0.01
 REAL_RECORDING_PREFIX = "klarnet_gercek_"
 
@@ -337,10 +346,9 @@ def aggregate(results: Iterable[dict[str, object]], engine: str) -> dict[str, fl
         "correct_pitch_absolute_cents_sum": round(absolute_sum, 6),
         "correct_pitch_mean_absolute_cents": round(absolute_sum / correct, 6) if correct else None,
         # An engine absent from this particular `results` set (e.g. a
-        # hand-built test fixture that only lists a subset of ENGINE_ORDER)
-        # has no row to read a latency/CPU figure from; math.inf keeps
-        # ranking_key()'s tuple comparison well-defined and pushes such an
-        # engine to the bottom of the ranking rather than crashing.
+        # hand-built test fixture that lists no rows for it) has no row to
+        # read a latency/CPU figure from; math.inf keeps the summary
+        # well-formed instead of crashing or implying a zero-latency engine.
         "decision_latency_ms": rows[0]["latency"]["decision_latency_ms"] if rows else math.inf,
         "maximum_cpu_realtime_factor": max(
             (float(row["performance"]["cpu_realtime_factor"]) for row in rows), default=math.inf
@@ -351,93 +359,67 @@ def aggregate(results: Iterable[dict[str, object]], engine: str) -> dict[str, fl
 
 
 def selection(all_results: list[dict[str, object]], safety_results: list[dict[str, object]] | None = None) -> dict[str, object]:
-    """Rank all synthetic fixtures; safety gates remain separate from ranking."""
+    """Score the shipped engine on every synthetic fixture and apply the safety gate.
+
+    This was a promotion machine: it ranked four candidates against the yin_v1
+    baseline and decided whether one of them could become the default. That
+    question was settled by product decision (D-038) and the losing engines
+    were then removed (D-039), so there is nothing left to rank. What survives
+    is the part that still measures something: the per-case safety gate.
+
+    The gate's threshold is unchanged. It was "no serious class may exceed
+    yin_v1 by more than 0.5 percentage points on an individual frozen
+    holdout"; yin_v1 scored zero serious frames on every frozen holdout, so
+    the same bound is now stated absolutely (SAFETY_RATE_LIMIT). The
+    `benchmark_winner` / `outcome` fields are gone rather than trivially
+    naming the only engine -- a one-horse race with a declared winner reads
+    like a comparison that was never run.
+    """
     summaries = {engine: aggregate(all_results, engine) for engine in ENGINE_ORDER}
-    # An engine with zero rows in `all_results` aggregates to an all-zero
-    # (hence falsely "perfect") summary -- see aggregate()'s math.inf
-    # fallback. It must never be allowed to win the ranking or count as a
-    # significant-gain contender on the strength of having submitted no data.
     engines_with_data = {result["engine"] for result in all_results}
-    baseline = summaries["yin_v1"]
     safety_results = safety_results if safety_results is not None else all_results
-    parity = {
-        "yin_v1": {"verified": True, "evidence": "protected production baseline"},
-        "pitch_engine_v2": {"verified": False, "evidence": "benchmark mirror; C++/Swift trace parity not yet proven"},
-        "vpm_like": {"verified": False, "evidence": "production C++ trace; duplicated Swift trace parity not yet proven"},
-        "hapt_v1": {"verified": False, "evidence": "production C++ trace; no Swift mirror exists by design (see docs/HAPTPitchEngine.md)"},
-        "unified_v1": {"verified": False, "evidence": "production C++ trace; no Swift mirror exists by design, C-ABI only"},
-    }
-    decisions = {"yin_v1": {"eligible": True, "significant_gain": False, "vetoes": [], "parity": parity["yin_v1"]}}
-    contenders = []
-    for engine in ENGINE_ORDER[1:]:
-        summary = summaries[engine]
+    decisions: dict[str, object] = {}
+    for engine in ENGINE_ORDER:
         vetoes = []
         for result in [row for row in safety_results if row["engine"] == engine]:
-            baseline_row = next(
-                row for row in safety_results
-                if row["engine"] == "yin_v1" and row["source"] == result["source"]
-            )
             for key, denominator in (
                 ("serious_false_voiced_frames", "reference_silent_frames"),
                 ("serious_missing_voiced_frames", "reference_voiced_frames"),
                 ("serious_harmonic_error_frames", "reference_voiced_frames"),
                 ("serious_non_harmonic_error_frames", "reference_voiced_frames"),
             ):
-                candidate_count = int(result.get(key, result.get(key.removeprefix("serious_"), 0)))
-                baseline_count = int(baseline_row.get(key, baseline_row.get(key.removeprefix("serious_"), 0)))
-                frames = max(1, int(baseline_row[denominator]))
-                if (candidate_count - baseline_count) / frames > 0.005:
-                    vetoes.append(f"{result['source']}: {key} exceeds YIN v1 by >0.5pp")
-        significant = engine in engines_with_data and ranking_key(summary) < ranking_key(baseline)
+                count = int(result.get(key, result.get(key.removeprefix("serious_"), 0)))
+                frames = max(1, int(result[denominator]))
+                if count / frames > SAFETY_RATE_LIMIT:
+                    vetoes.append(
+                        f"{result['source']}: {key} exceeds {SAFETY_RATE_LIMIT:.1%} of reference frames"
+                    )
         decisions[engine] = {
             "eligible": not vetoes,
-            "significant_gain": significant,
+            "has_data": engine in engines_with_data,
             "vetoes": vetoes,
-            "parity": parity[engine],
+            "parity": {
+                "verified": False,
+                "evidence": "production C++ trace; no Swift mirror exists by design, C-ABI only",
+            },
         }
-        if not vetoes and significant:
-            contenders.append(engine)
-    benchmark_winner = min(
-        (name for name in ENGINE_ORDER if name in engines_with_data),
-        key=lambda name: ranking_key(summaries[name]),
-    )
-    winner_decision = decisions[benchmark_winner]
-    promotion_ready = (
-        benchmark_winner != "yin_v1"
-        and bool(winner_decision["eligible"])
-        and bool(winner_decision["significant_gain"])
-        and bool(parity[benchmark_winner]["verified"])
-    )
-    default_engine = benchmark_winner if promotion_ready else "yin_v1"
-    if benchmark_winner == "yin_v1":
-        outcome = "keep_yin_v1"
-    elif promotion_ready:
-        outcome = "promote_candidate"
-    elif not winner_decision["eligible"]:
-        outcome = "candidate_vetoed_keep_yin_v1"
-    else:
-        outcome = "candidate_requires_parity"
     return {
-        "outcome": outcome,
-        "benchmark_winner": benchmark_winner,
-        "default_engine": default_engine,
+        "shipped_engine": ENGINE_ORDER[0],
         "policy": {
-            "ranking": ["serious_total_error_frames", "non_serious_error_frames", "correct_pitch_mean_absolute_cents", "decision_latency_ms"],
-            "winner": "All synthetic WAVs are ranked by serious errors, then non-serious raw errors, correct-pitch mean absolute cents, and latency.",
-            "veto": "No serious class rate may exceed YIN v1 by more than 0.5 percentage points for an individual frozen holdout case; this gate never changes benchmark_winner.",
+            "reported": ["serious_total_error_frames", "non_serious_error_frames", "correct_pitch_mean_absolute_cents", "decision_latency_ms"],
+            "veto": (
+                f"No serious class may exceed {SAFETY_RATE_LIMIT:.1%} of an individual frozen "
+                "holdout case's reference frames. Previously expressed relative to yin_v1, "
+                "which scored zero on every frozen holdout."
+            ),
+            "no_ranking": (
+                "There is one engine (D-039), so this report measures it; it does not "
+                "choose between engines."
+            ),
         },
         "summaries": summaries,
         "decisions": decisions,
     }
-
-
-def ranking_key(summary: dict[str, float | int | None]) -> tuple[int, int, float, float]:
-    return (
-        int(summary["serious_total_error_frames"]),
-        int(summary["non_serious_error_frames"]),
-        float(summary["correct_pitch_mean_absolute_cents"] or math.inf),
-        float(summary["decision_latency_ms"]),
-    )
 
 
 def deterministic_fingerprint(payload: dict[str, object]) -> str:
@@ -456,15 +438,15 @@ def deterministic_fingerprint(payload: dict[str, object]) -> str:
 def markdown_report(payload: dict[str, object]) -> str:
     lines = [
         "# Tüm sentetik dosyalarla Pitch Engine Tournament", "",
-        f"Benchmark kazananı: **{payload['selection']['benchmark_winner']}** · "
-        f"varsayılan: **{payload['selection']['default_engine']}** · `{payload['selection']['outcome']}`", "",
+        f"Sevk edilen motor: **{payload['selection']['shipped_engine']}** "
+        "(D-039'dan beri tek motor; bu rapor ölçer, seçim yapmaz).", "",
         "pYIN bu raporda gerçek-değer veya seçim metriği olarak kullanılmaz.",
         f"Ortak düşük-seviye kapısı: RMS **{payload['reference_policy']['minimum_rms']:.6f}** "
         f"(**{payload['reference_policy']['minimum_dbfs']:.1f} dBFS**); motor ve matematiksel hedef aynı kareleri boş bırakır.",
         "Ham beşli muhasebe korunur. Ciddi hata: geçiş payı dışında en az 3 ardışık kare; 50–100 sent yakın-perde uyarısıdır.", "",
         f"Kapsam: {len(payload['inventory']['used_synthetic_wavs'])} sentetik WAV; dışarıda: "
         f"{', '.join(Path(path).name for path in payload['inventory']['excluded_real_wavs'])}.", "",
-        "## Genel sıralama", "",
+        "## Genel sonuç", "",
         "| Motor | Ciddi yanlış | Ciddi eksik | Ciddi harmonik | Ciddi diğer | Ciddi toplam | Ciddi olmayan | Ham toplam | Doğru-kare ort. sent | Karar gecikmesi | Güvenlik kapısı |",
         "|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|",
     ]
@@ -663,8 +645,8 @@ def main() -> None:
         unified_lag_frames,
     )
     print(
-        f"benchmark_winner={payload['selection']['benchmark_winner']} "
-        f"default={payload['selection']['default_engine']} outcome={payload['selection']['outcome']}"
+        f"engine={payload['selection']['shipped_engine']} "
+        f"eligible={payload['selection']['decisions'][payload['selection']['shipped_engine']]['eligible']}"
     )
     print(f"fingerprint={payload['deterministic_fingerprint']}")
     print(arguments.output)

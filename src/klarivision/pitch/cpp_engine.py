@@ -10,7 +10,20 @@ from pathlib import Path
 from ..runtime_paths import resource_root
 
 
-ENGINES = frozenset({"yin_v1", "pitch_engine_v2", "vpm_like", "hapt_v1", "unified_v1"})
+# The engines this build can run. D-039 removed yin_v1, pitch_engine_v2,
+# vpm_like and hapt_v1; their C ABI ids stay reserved but no longer resolve to
+# anything, so naming one here (or on the CLI) is an error rather than a
+# request that quietly gets served by unified_v1.
+ENGINES = frozenset({"unified_v1"})
+# Engine ids that may still appear in a stored study, a cached result or an
+# older viewer. They are recognised for *reading* only.
+REMOVED_ENGINES = frozenset({"yin_v1", "pitch_engine_v2", "vpm_like", "hapt_v1"})
+# Every id whose cached result carries the offline_track_v1 filename shape,
+# including the removed engines: an analysis produced before D-039 must stay
+# readable, so the *naming* of past results has to outlive the engines that
+# produced them. Use this to find a result; use ENGINES to decide what may
+# still be run.
+OFFLINE_TRACK_ENGINES = ENGINES | REMOVED_ENGINES
 # Keep the public offline_track_v1 JSON contract stable while preventing a
 # result made by an older decision pipeline from being reused after an engine
 # behaviour change.
@@ -24,7 +37,8 @@ PCM_SAMPLE_RATE_HZ = 48_000
 PCM_WINDOW_SAMPLES = 1_536
 PCM_HOP_SAMPLES = 512
 # Mirrors kv_unified_lag_frames() from the C ABI — unified_v1's own decision
-# latency, separate from kv_pitch_contract_v1.v2_fixed_lag_frames (v2 only).
+# latency, separate from kv_pitch_contract_v1.v2_fixed_lag_frames, which is a
+# reserved leftover of the removed pitch_engine_v2.
 UNIFIED_DEFAULT_LAG_FRAMES = 5
 
 
@@ -47,6 +61,10 @@ def executable() -> Path:
 
 
 def extract(wav: Path, engine: str, output: Path) -> None:
+    if engine in REMOVED_ENGINES:
+        raise ValueError(
+            f"{engine} motoru kaldırıldı (D-039); yalnız unified_v1 çalıştırılabilir."
+        )
     if engine not in ENGINES:
         raise ValueError("Geçersiz C++ pitch motoru seçimi.")
     output.parent.mkdir(parents=True, exist_ok=True)
@@ -74,7 +92,7 @@ def contract() -> dict[str, object]:
     if any(payload.get(key) != value for key, value in expected.items()):
         raise RuntimeError("C++ pitch motoru v1 sözleşmesiyle uyumlu değil.")
     if set(payload.get("engines", [])) != ENGINES:
-        raise RuntimeError("C++ pitch motoru üç kullanıcı motorunu sunmuyor.")
+        raise RuntimeError("C++ pitch motoru beklenen motor kümesini sunmuyor.")
     # unified_v1's decision latency lives outside kv_pitch_contract_v1 (that
     # struct is frozen and its v2_fixed_lag_frames field describes v2 alone),
     # so it is mirrored here as its own value instead of the `expected` dict.

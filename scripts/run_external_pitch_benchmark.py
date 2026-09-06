@@ -16,7 +16,7 @@ Kullanım:
 
     .venv/bin/python scripts/run_external_pitch_benchmark.py
     .venv/bin/python scripts/run_external_pitch_benchmark.py --dataset vocadito --limit 5
-    .venv/bin/python scripts/run_external_pitch_benchmark.py --engine unified_v1 --engine yin_v1
+    .venv/bin/python scripts/run_external_pitch_benchmark.py --engine unified_v1
 """
 
 from __future__ import annotations

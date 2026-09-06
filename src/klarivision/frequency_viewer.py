@@ -151,12 +151,16 @@ def build_frequency_viewer(
     turkish_reference = extend_reference_octaves(load_turkish_pitch_reference())
     is_audio_only = video_relative_path is None
 
-    # Engine identifier mapping for user-facing labels
+    # Engine identifier mapping for user-facing labels. The first four engines
+    # were removed in D-039, but their labels stay: a study analysed before the
+    # removal keeps its own engine id, and a viewer regenerated for it must
+    # still say truthfully which engine produced those frames.
     ENGINE_LABELS = {
-        "yin_v1": "YIN v1",
-        "pitch_engine_v2": "Pitch Engine v2",
-        "vpm_like": "VPM-benzeri",
-        "hapt_v1": "Harmonik-Faz (HAPT)",
+        "unified_v1": "Birleşik (Unified v1)",
+        "yin_v1": "YIN v1 (kaldırıldı)",
+        "pitch_engine_v2": "Pitch Engine v2 (kaldırıldı)",
+        "vpm_like": "VPM-benzeri (kaldırıldı)",
+        "hapt_v1": "Harmonik-Faz (HAPT) (kaldırıldı)",
         "vamp": "Vamp pYIN (referans)",
         "python": "librosa pYIN (geliştirme)",
     }
@@ -171,9 +175,12 @@ def build_frequency_viewer(
         engine_label = ENGINE_LABELS[engine]
         title = f"KlariVision {VIEWER_VERSION} — {engine_label} · Pitch konturu"
         meta_engine = engine
-        # Add revision only for C++ engines
-        if engine in {"yin_v1", "pitch_engine_v2", "vpm_like", "hapt_v1"}:
-            from .pitch.cpp_engine import OFFLINE_TRACK_REVISION
+        # Every C++ engine's cached result carries the offline_track filename
+        # and revision, including the four removed in D-039 -- a study analysed
+        # before the removal is still read under that revision, so the meta tag
+        # stays truthful for it too.
+        from .pitch.cpp_engine import OFFLINE_TRACK_ENGINES, OFFLINE_TRACK_REVISION
+        if engine in OFFLINE_TRACK_ENGINES:
             meta_revision = OFFLINE_TRACK_REVISION
 
     meta_tags = ""

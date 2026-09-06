@@ -79,21 +79,17 @@ struct iPadCompactNavigationState: Equatable {
     }
 }
 
+/// One case since D-039. The raw values are persisted in `Studies-v1.json`
+/// and in UserDefaults, so decoding a study recorded under a removed engine
+/// must not throw -- see `engine(_:)`, which maps any unknown or removed id
+/// onto the engine this build has.
 enum iPadPitchEngine: String, CaseIterable, Identifiable, Codable {
-    case yinV1 = "yin_v1"
-    case pitchEngineV2 = "pitch_engine_v2"
-    case vpmLike = "vpm_like"
-    case haptV1 = "hapt_v1"
     case unifiedV1 = "unified_v1"
 
     var id: String { rawValue }
 
     var title: String {
         switch self {
-        case .yinV1: "YIN v1"
-        case .pitchEngineV2: "Pitch Engine v2"
-        case .vpmLike: "VPM-benzeri"
-        case .haptV1: "Harmonik-Faz (HAPT)"
         case .unifiedV1: "Birleşik (Unified v1)"
         }
     }
@@ -368,9 +364,10 @@ final class iPadAppState {
         komaIntervals = Self.validKomaIntervals(storedIntervals) ? storedIntervals : Self.defaultKomaIntervals
     }
 
-    /// Fresh installs and unreadable stored values fall back to unified_v1
-    /// (D-038). A stored value that still names another engine is honoured, so
-    /// existing installs keep their selection.
+    /// Fresh installs, unreadable values and any id naming one of the four
+    /// engines removed in D-039 all resolve to unified_v1 -- the only engine
+    /// this build can run. Previously analysed studies keep their own stored
+    /// results; only the *selection* falls back.
     static func engine(_ value: String?) -> iPadPitchEngine {
         iPadPitchEngine(rawValue: value ?? "") ?? .unifiedV1
     }

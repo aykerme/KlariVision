@@ -1,5 +1,4 @@
 #include "klarivision/core/swipe_prime.hpp"
-#include "klarivision/core/pitch_engine_v2.hpp"
 
 #include <array>
 #include <cassert>
@@ -9,9 +8,6 @@
 #include <vector>
 
 using klarivision::core::v2::swipe_prime_harmonic_supports;
-using klarivision::core::v2::CandidateSource;
-using klarivision::core::v2::PitchCandidate;
-using klarivision::core::v2::select_candidate;
 
 namespace {
 
@@ -41,15 +37,6 @@ int main() {
     assert(supports[0] > supports[1] + 0.10);
     assert(supports[0] > supports[2] + 0.10);
     assert(supports[0] > 0.50);
-
-    const std::array scored_candidates{
-        PitchCandidate{candidates[0], 0.80, supports[0], CandidateSource::yin},
-        PitchCandidate{candidates[1], 0.80, supports[1], CandidateSource::mpm},
-        PitchCandidate{candidates[2], 0.80, supports[2], CandidateSource::autocorrelation},
-    };
-    const auto selected = select_candidate(scored_candidates);
-    assert(selected);
-    assert(std::abs(selected->candidate.frequency_hz - fundamental) < 0.001);
 
     // With a 330 Hz fundamental, both f/2 and f/3 are inside the live engine's
     // candidate range. Prime-only credit must keep both below the true pitch.

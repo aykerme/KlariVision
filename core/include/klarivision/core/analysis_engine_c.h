@@ -24,13 +24,27 @@ typedef struct {
     unsigned int sample_rate_hz;
     size_t window_size;
     size_t hop_size;
+    /// Reserved. Historically pitch_engine_v2's fixed decision lag. That
+    /// engine was removed (D-039) but the field cannot be: this struct's
+    /// layout is the persisted v1 contract and callers hard-assert its value.
+    /// It keeps reporting 5 and describes nothing this build runs. The
+    /// unified engine's lag is kv_unified_lag_frames().
     size_t v2_fixed_lag_frames;
     double default_minimum_rms;
 } kv_pitch_contract_v1;
 
+/// Engine ids. 0-3 are RESERVED historical slots: the engines behind them
+/// were removed in D-039 and their numbers are never reused or renumbered,
+/// so a stored selection naming one stays recognisable as "an engine that
+/// existed once". Passing a reserved id to any create function fails; it is
+/// never silently resolved to the surviving engine.
 enum { KV_ENGINE_YIN_V1 = 0, KV_ENGINE_V2 = 1, KV_ENGINE_VPM_LIKE = 2, KV_ENGINE_HAPT_V1 = 3, KV_ENGINE_UNIFIED_V1 = 4 };
 enum { KV_PROFILE_REALTIME = 0, KV_PROFILE_OFFLINE_TRACK = 1 };
 enum { KV_PITCH_C_ABI_V1 = 1 };
+/// Capability bits. Like the engine ids, the bits of removed engines and
+/// features stay declared and stay at their own positions; a build simply
+/// stops setting them. Callers already test with `&`, so a removed engine
+/// reads as absent rather than as a renumbered neighbour.
 enum {
     KV_CAP_ENGINE_YIN_V1 = 1u << 0,
     KV_CAP_ENGINE_V2 = 1u << 1,
@@ -53,7 +67,8 @@ int kv_pitch_contract_get_v1(kv_pitch_contract_v1 *out_contract);
 /// rather than as a field on kv_pitch_contract_v1: that struct's layout is a
 /// persisted contract, callers assert on it, and appending to it would require
 /// a new ABI version for what is a single engine's parameter. The v1 struct's
-/// v2_fixed_lag_frames continues to describe pitch_engine_v2 alone.
+/// v2_fixed_lag_frames is a reserved leftover and describes nothing this build
+/// runs (see its own comment).
 size_t kv_unified_lag_frames(void);
 
 kv_pitch_engine *kv_pitch_engine_create(int engine, int profile);
@@ -63,7 +78,7 @@ size_t kv_pitch_engine_finish(kv_pitch_engine *engine);
 int kv_pitch_engine_frame(const kv_pitch_engine *engine, size_t index, kv_pitch_frame *out_frame);
 const char *kv_pitch_engine_last_error(const kv_pitch_engine *engine);
 
-/// Canonical live/file causal session for YIN v1, V2 and VPM-like. Each call
+/// Canonical live/file causal session for the unified engine. Each call
 /// consumes one complete analysis window centred on source_time_seconds and
 /// returns 1 on success or 0 on failure. Its output vector is replaced on every
 /// successful process or finish call; read output indices from zero each time.
@@ -99,9 +114,12 @@ const char *kv_production_pitch_session_last_error(
     const kv_production_pitch_session *session
 );
 
-/// Stateful live V2 boundary. `source_time_seconds` is the centre of the
-/// supplied analysis window. One call can expose bridged frames plus the
-/// current resolved frame through output_count/output_frame.
+/// REMOVED (D-039), declarations retained. pitch_engine_v2 is gone, but the
+/// v1 ABI's exported symbol set is a frozen contract, so these entry points
+/// are kept and now fail cleanly: create returns NULL, every other call
+/// returns 0. A caller built against v1 still links and gets a diagnosable
+/// failure instead of an unresolved symbol. Nothing in this repository calls
+/// them any more.
 kv_v2_session *kv_v2_session_create(double minimum_rms, size_t fixed_lag_frames);
 void kv_v2_session_reset(kv_v2_session *session);
 int kv_v2_session_set_minimum_rms(kv_v2_session *session, double minimum_rms);

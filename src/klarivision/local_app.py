@@ -23,7 +23,12 @@ import imageio_ffmpeg
 
 from .contour_viewer import KARAR_TONES, MAKAM_PROFILES
 from .frequency_viewer import build_frequency_viewer, prepare_display_frames
-from .pitch.cpp_engine import ENGINES as CPP_ENGINES, OFFLINE_TRACK_REVISION, extract as extract_cpp_pitch
+from .pitch.cpp_engine import (
+    ENGINES as CPP_ENGINES,
+    OFFLINE_TRACK_ENGINES as CPP_TRACK_ENGINES,
+    OFFLINE_TRACK_REVISION,
+    extract as extract_cpp_pitch,
+)
 from .pitch.models import AudioSource
 from .pitch.serialize import write_json
 from .pitch.vamp_pyin import VampPyinPitchExtractor
@@ -300,7 +305,10 @@ def refresh_existing_viewer(viewer: Path, engine: str | None = None) -> Path:
 
     if selected_engine:
         # Engine explicitly provided: construct exact filename and verify it exists
-        if selected_engine in CPP_ENGINES:
+        # CPP_TRACK_ENGINES, not CPP_ENGINES: a study analysed before D-039
+        # still carries a removed engine's id, and its cached result keeps the
+        # offline_track filename shape. Reading it must keep working.
+        if selected_engine in CPP_TRACK_ENGINES:
             pitch_json = OUTPUTS_DIR / f"{viewer.stem}.{selected_engine}.offline_track_v1.{OFFLINE_TRACK_REVISION}.json"
         else:
             pitch_json = OUTPUTS_DIR / f"{viewer.stem}.{selected_engine}.json"
@@ -315,7 +323,7 @@ def refresh_existing_viewer(viewer: Path, engine: str | None = None) -> Path:
         if meta_match:
             selected_engine = meta_match.group(1)
             # Construct filename based on the engine from meta tag
-            if selected_engine in CPP_ENGINES:
+            if selected_engine in CPP_TRACK_ENGINES:
                 pitch_json = OUTPUTS_DIR / f"{viewer.stem}.{selected_engine}.offline_track_v1.{OFFLINE_TRACK_REVISION}.json"
             else:
                 pitch_json = OUTPUTS_DIR / f"{viewer.stem}.{selected_engine}.json"

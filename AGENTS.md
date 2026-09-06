@@ -50,10 +50,10 @@ xcodebuild \
   CODE_SIGNING_ALLOWED=NO build
 ```
 
-VPM-benzeri kalibrasyonu yeniden üretmek için:
+Sentetik turnuvayı (tek motorun regresyon ölçümü) yeniden üretmek için:
 
 ```bash
-.venv/bin/python scripts/calibrate_vpm_like_engine.py
+.venv/bin/python scripts/run_pitch_engine_tournament.py
 ```
 
 ## Bir işin tamamlanma koşulu

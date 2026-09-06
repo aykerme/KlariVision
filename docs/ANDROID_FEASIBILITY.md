@@ -1,5 +1,10 @@
 # Android ortak çekirdek fizibilitesi
 
+> **Not (D-039, 6 Eylül 2026):** bu fizibilite dört motor koddayken yazıldı.
+> Artık tek motor (`unified_v1`) vardır; aşağıdaki "üç motor" ifadeleri ve
+> yaşam döngüsü kapıları tek motor kimliği için okunmalıdır. ABI kimlikleri
+> 0–3 rezervedir ve Android bağı onları kullanmaz.
+
 Son güncelleme: 13 Ağustos 2026
 
 Bu belge Android ürünü, ekranı veya dağıtımı başlatmaz. Kullanıcı ayrıca istemeden

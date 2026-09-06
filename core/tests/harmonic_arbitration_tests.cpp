@@ -97,12 +97,11 @@ int main() {
     }
 
     // End-to-end: a sustained closed-pipe tone must never be published as
-    // its own third harmonic by yin_v1. Before this fix, the vacuous
-    // upper-recovery pass in `analysis_engine.cpp` compared 3x the chosen
-    // candidate's absolute spectral energy against the candidate's own and
-    // promoted unconditionally, regardless of whether that upper frequency
-    // was itself a real YIN candidate. On this tone it fires on every
-    // frame.
+    // its own third harmonic. The engine that first failed this (yin_v1) has
+    // since been removed, but the tone is kept and pointed at the surviving
+    // engine: a quiet fundamental under a dominant third is the exact shape
+    // the whole octave-error effort is about, so it is a live claim about
+    // unified_v1 rather than a fossil of the old bug.
     {
         constexpr std::size_t hop = 512;
         constexpr double fundamental = 398.0;
@@ -118,7 +117,7 @@ int main() {
             }
             tone[index] = static_cast<float>(0.18 * value);
         }
-        klarivision::core::ProductionPitchSession session(klarivision::core::PitchEngineId::yin_v1);
+        klarivision::core::ProductionPitchSession session(klarivision::core::PitchEngineId::unified_v1);
         std::size_t published_frames = 0;
         std::size_t correct_frames = 0;
         for (std::size_t start = 0; start + kWindow <= tone.size(); start += hop) {

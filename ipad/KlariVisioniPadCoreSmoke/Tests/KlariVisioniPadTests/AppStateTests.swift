@@ -164,11 +164,19 @@ final class AppStateTests: XCTestCase {
         XCTAssertFalse(FileManager.default.fileExists(atPath: owned.path)) // list removal never targets media.
     }
 
-    func testAllEnginesRemainNeutralUserChoices() {
-        XCTAssertEqual(
-            iPadPitchEngine.allCases.map(\.title),
-            ["YIN v1", "Pitch Engine v2", "VPM-benzeri", "Harmonik-Faz (HAPT)"]
-        )
+    func testOnlyTheSurvivingEngineIsOffered() {
+        XCTAssertEqual(iPadPitchEngine.allCases.map(\.rawValue), ["unified_v1"])
+        XCTAssertEqual(iPadPitchEngine.allCases.map(\.title), ["Birleşik (Unified v1)"])
+    }
+
+    /// An install (or a stored study) still naming one of the four engines
+    /// removed in D-039 must resolve to the surviving engine rather than
+    /// failing to decode or keeping a dead selection alive.
+    func testRemovedEngineIdsResolveToTheSurvivingEngine() {
+        for removed in ["yin_v1", "pitch_engine_v2", "vpm_like", "hapt_v1", "", "nonsense"] {
+            XCTAssertEqual(iPadAppState.engine(removed), .unifiedV1)
+        }
+        XCTAssertEqual(iPadAppState.engine(nil), .unifiedV1)
     }
 
     func testStudyImportValidatesAudioAndVideoExtensions() {

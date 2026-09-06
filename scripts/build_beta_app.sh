@@ -20,19 +20,15 @@ clang++ -std=c++20 -O3 -I "$PROJECT_ROOT/core/include" \
   "$PROJECT_ROOT/core/src/analysis_engine.cpp" \
   "$PROJECT_ROOT/core/src/analysis_engine_c.cpp" \
   "$PROJECT_ROOT/core/src/harmonic_arbitration.cpp" \
-  "$PROJECT_ROOT/core/src/hapt.cpp" \
   "$PROJECT_ROOT/core/src/harmonic_probe.cpp" \
   "$PROJECT_ROOT/core/src/mpm.cpp" \
-  "$PROJECT_ROOT/core/src/pitch_engine_v2.cpp" \
   "$PROJECT_ROOT/core/src/fixed_lag_tracker.cpp" \
-  "$PROJECT_ROOT/core/src/pitch_engine_v2_session.cpp" \
   "$PROJECT_ROOT/core/src/swipe_prime.cpp" \
   "$PROJECT_ROOT/core/src/pyin_ladder.cpp" \
   "$PROJECT_ROOT/core/src/frame_spectrum.cpp" \
   "$PROJECT_ROOT/core/src/harmonic_evidence.cpp" \
   "$PROJECT_ROOT/core/src/unified_track_decoder.cpp" \
   "$PROJECT_ROOT/core/src/unified_pitch_session.cpp" \
-  "$PROJECT_ROOT/core/src/vpm_like.cpp" \
   "$PROJECT_ROOT/core/tools/pitch_track_cli.cpp" \
   -framework Accelerate \
   -o "$PITCH_TRACK_CLI"

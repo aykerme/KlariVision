@@ -1,5 +1,73 @@
 # KlariVision Test Tabanı
 
+## Dört motor kaldırıldı — 6 Eylül 2026 (D-039)
+
+Bu tur **hiçbir ölçümü değiştirmedi**: motor davranışı, eşikler ve 5 hop
+(53,3 ms) gecikme aynı. Değişen, geri kalan dört motorun koddan çıkarılması.
+
+### Kapılar
+
+| Kapı | Sonuç |
+|---|---|
+| `zsh scripts/test_core.sh` | temiz (13 çekirdek ikilisi) |
+| `swift test` (macos/KlariVision) | 49 test / 0 hata |
+| macOS `xcodebuild` Debug (imzasız) | BUILD SUCCEEDED |
+| `pytest` | 87 geçti / 1 atlandı |
+| Turnuva testleri | 27 test, `unified_v1` tek motor olarak |
+| Paketlenen CLI `--contract` | `abi_version=1`, `engines=["unified_v1"]`, `unified_lag_frames=5` |
+| iPad `xcodebuild` | **KOŞULMADI** — bu makinede iOS 26.5 platformu kurulu değil |
+
+### Turnuva testinin yeni biçimi
+
+Motor başına holdout testleri (`yin_v1`, `pitch_engine_v2`, `hapt_v1`,
+`vpm_like`) yerine `unified_v1` için iki test kondu:
+
+1. **Ciddi harmonik / harmonik olmayan / yanlış ötüm hatası, beş donmuş
+   holdout'un bütün varyantlarında sıfır.** D-037'nin sert şartı.
+2. **Ciddi eksik ötüm** güvenlik oranının (`SAFETY_RATE_LIMIT = 0.005`)
+   içinde — tek kayıtlı istisnayla:
+   `klarivision_pitch_tournament_holdout_adverse_v1.wav`, **24 / 2365 kare
+   (%1,01)**. Bu, D-038'de kabul edilen ve hâlâ açık olan vetodur; muaf
+   tutulmadı, ölçülen değerine sabitlendi — sessizce büyüyemez.
+
+Eksik ötüm bilerek sıfıra sabitlenmedi: çekimserlik bu motorun merkezî
+mekanizması ve ürünün istediği takas budur (D-038).
+
+### Güvenlik kapısının eşiği değişmedi, referansı değişti
+
+Kural "bir donmuş holdout dosyasında hiçbir ciddi sınıf `yin_v1`'i 0,5 puandan
+fazla geçemez" idi. `yin_v1` bütün donmuş holdout'larda sıfır aldığı için aynı
+sınır artık mutlak olarak ifade ediliyor: dosyanın kendi referans karelerinin
+%0,5'i. Sayı aynı, dayanağı kalkan bir motor değil.
+
+### Turnuva artık seçim yapmaz
+
+`selection()` bir terfi mekanizmasıydı. `benchmark_winner`, `default_engine` ve
+`outcome` alanları kaldırıldı: tek atlı bir yarışta kazanan ilan etmek,
+yapılmamış bir kıyası yapılmış gibi gösterirdi. D-038'in koruduğu ayrım
+(`benchmark_winner=vpm_like`) `outputs/` altındaki raporlarda kayıt olarak
+durur; **o kıyas bu adımdan sonra yeniden üretilemez.** Kararın kabul edilmiş
+bedeli budur.
+
+### Bu turda bulunan üç bayat kayıt
+
+1. **macOS Xcode projesi `unified_*` kaynaklarını hiç derlemiyordu.** D-037'den
+   beri masaüstü uygulaması kendi kazanan motorunu bağlayamazdı. Beş kaynak
+   eklendi (aynı hata `scripts/build_beta_app.sh`'de daha önce bulunmuştu).
+2. **iPad Xcode projesi de aynı durumdaydı**; beş kaynak eklendi.
+3. `pitch_track_cli`'nin `--diagnostic` kipi yalnız kaldırılan üç motora
+   hizmet ediyordu; kip kaldırıldı (`core/tools/unified_trace.cpp` durur).
+
+### Geriye uyum: eski motorla çözümlenmiş çalışmalar
+
+`cpp_engine.OFFLINE_TRACK_ENGINES`, kaldırılan motorların kimliklerini de
+içerir — **sonucu bulmak için** kullanılır, **çalıştırmak için** `ENGINES`.
+Bu ayrım olmadan D-039 öncesi analiz edilmiş her çalışmanın önbellek dosyası
+bulunamaz hale geliyordu (bu tur önce kırıldı, sonra testle birlikte
+düzeltildi). Görüntüleyici bu çalışmaların motor adını "(kaldırıldı)"
+etiketiyle doğru gösterir.
+
+
 ## `unified_v1` kazanan ilan edildi, gecikme 53 ms — 6 Eylül 2026
 
 Kullanıcı kararı (D-038): `unified_v1` projenin kazanan motorudur ve karar

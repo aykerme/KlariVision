@@ -1,5 +1,11 @@
 # Dört Motor Kullanıcı-Seçeneği Kabulü v1
 
+> **TARİHSEL BELGE — bu motor koddan kaldırıldı (D-039, 6 Eylül 2026).**
+> Aşağıdakiler kaldırılma anındaki yöntem, kalibrasyon ve ölçüm kaydıdır ve
+> kanıt zinciri olarak korunur. Buradaki komutlar artık koşmaz, eşikler artık
+> hiçbir kodu yönetmez. Çalışan tek motor `unified_v1`'dir; güncel durum
+> `docs/PROJECT_STATE.md` ve `docs/TEST_BASELINE.md`'dedir.
+
 Tarih: 13 Ağustos 2026 (YIN v1, Pitch Engine v2, VPM-benzeri), eklenti:
 24 Ağustos 2026 (Harmonik-Faz / `hapt_v1`, bkz. `docs/HAPTPitchEngine.md`).
 Bu kabul, dört motor için **aynı** kullanıcı seçeneği protokolüdür. Rapor bir

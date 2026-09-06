@@ -460,11 +460,12 @@ private struct iPadSettingsView: View {
         .navigationTitle("Ayarlar")
     }
 
+    /// No picker since D-039: there is one engine, and a control with a single
+    /// option reads as a choice that is not one. The row still names what
+    /// runs, because the analysis engine is worth stating.
     @ViewBuilder private func enginePicker(_ title: String, selection: Binding<iPadPitchEngine>) -> some View {
-        Picker(title, selection: selection) {
-            ForEach(iPadPitchEngine.allCases) { Text($0.title).tag($0) }
-        }
-        Text("YIN v1, Pitch Engine v2, VPM-benzeri ve Harmonik-Faz (HAPT) eşit kullanıcı seçenekleridir.")
+        LabeledContent(title, value: selection.wrappedValue.title)
+        Text("Dinleme ve Çalma aynı motoru kullanır. Daha önce çözümlenmiş çalışmalar kendi sonuçlarını korur.")
             .font(.footnote)
             .foregroundStyle(.secondary)
     }

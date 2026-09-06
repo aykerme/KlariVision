@@ -220,7 +220,9 @@ def test_frequency_viewer_includes_engine_identity_in_title_and_meta(tmp_path) -
     build_frequency_viewer(pitch_json, "audio.wav", output, engine="vpm_like")
 
     html = output.read_text(encoding="utf-8")
-    assert '<title>KlariVision v0.6 Beta 1 — VPM-benzeri · Pitch konturu</title>' in html
+    # A study analysed before D-039 keeps its own engine id, and the viewer
+    # names that engine truthfully -- including that it no longer exists.
+    assert '<title>KlariVision v0.6 Beta 1 — VPM-benzeri (kaldırıldı) · Pitch konturu</title>' in html
     assert '<meta name="klarivision-engine" content="vpm_like">' in html
     assert '<meta name="klarivision-offline-revision" content="' + OFFLINE_TRACK_REVISION + '">' in html
     assert 'Motor: VPM-benzeri' in html

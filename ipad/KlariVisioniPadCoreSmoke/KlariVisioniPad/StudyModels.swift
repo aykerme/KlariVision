@@ -200,10 +200,6 @@ enum iPadOfflinePitchAnalyzer {
 extension iPadPitchEngine {
     var coreValue: Int32 {
         switch self {
-        case .yinV1: Int32(KV_ENGINE_YIN_V1)
-        case .pitchEngineV2: Int32(KV_ENGINE_V2)
-        case .vpmLike: Int32(KV_ENGINE_VPM_LIKE)
-        case .haptV1: Int32(KV_ENGINE_HAPT_V1)
         case .unifiedV1: Int32(KV_ENGINE_UNIFIED_V1)
         }
     }

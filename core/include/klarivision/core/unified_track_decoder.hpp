@@ -2,7 +2,7 @@
 
 #include "klarivision/core/fixed_lag_tracker.hpp"
 #include "klarivision/core/harmonic_evidence.hpp"
-#include "klarivision/core/pitch_engine_v2.hpp"
+#include "klarivision/core/pitch_candidate.hpp"
 #include "klarivision/core/unified_pitch_constants.hpp"
 
 #include <cstddef>

@@ -11,14 +11,15 @@
 		A10000000000000000000041 /* analysis_engine.cpp in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000040 /* analysis_engine.cpp */; };
 		A10000000000000000000043 /* analysis_engine_c.cpp in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000042 /* analysis_engine_c.cpp */; };
 		A10000000000000000000045 /* mpm.cpp in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000044 /* mpm.cpp */; };
-		A10000000000000000000047 /* pitch_engine_v2.cpp in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000046 /* pitch_engine_v2.cpp */; };
 		A10000000000000000000049 /* swipe_prime.cpp in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000048 /* swipe_prime.cpp */; };
-		A10000000000000000000051 /* vpm_like.cpp in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000050 /* vpm_like.cpp */; };
 		A10000000000000000000055 /* fixed_lag_tracker.cpp in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000054 /* fixed_lag_tracker.cpp */; };
-		A10000000000000000000057 /* pitch_engine_v2_session.cpp in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000056 /* pitch_engine_v2_session.cpp */; };
 		A10000000000000000000059 /* harmonic_arbitration.cpp in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000058 /* harmonic_arbitration.cpp */; };
-		A10000000000000000000081 /* hapt.cpp in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000080 /* hapt.cpp */; };
 		A10000000000000000000083 /* harmonic_probe.cpp in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000082 /* harmonic_probe.cpp */; };
+		A100000000000000000000A1 /* unified_pitch_session.cpp in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000A0 /* unified_pitch_session.cpp */; };
+		A100000000000000000000A3 /* unified_track_decoder.cpp in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000A2 /* unified_track_decoder.cpp */; };
+		A100000000000000000000A5 /* pyin_ladder.cpp in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000A4 /* pyin_ladder.cpp */; };
+		A100000000000000000000A7 /* frame_spectrum.cpp in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000A6 /* frame_spectrum.cpp */; };
+		A100000000000000000000A9 /* harmonic_evidence.cpp in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000A8 /* harmonic_evidence.cpp */; };
 		A10000000000000000000061 /* AppSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000060 /* AppSettings.swift */; };
 		A10000000000000000000063 /* StudyModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000062 /* StudyModels.swift */; };
 		A10000000000000000000065 /* StudyWorkspace.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000064 /* StudyWorkspace.swift */; };
@@ -39,15 +40,16 @@
 		A10000000000000000000040 /* analysis_engine.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ../../core/src/analysis_engine.cpp; sourceTree = "<group>"; };
 		A10000000000000000000042 /* analysis_engine_c.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ../../core/src/analysis_engine_c.cpp; sourceTree = "<group>"; };
 		A10000000000000000000044 /* mpm.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ../../core/src/mpm.cpp; sourceTree = "<group>"; };
-		A10000000000000000000046 /* pitch_engine_v2.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ../../core/src/pitch_engine_v2.cpp; sourceTree = "<group>"; };
 		A10000000000000000000048 /* swipe_prime.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ../../core/src/swipe_prime.cpp; sourceTree = "<group>"; };
-		A10000000000000000000050 /* vpm_like.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ../../core/src/vpm_like.cpp; sourceTree = "<group>"; };
 		A10000000000000000000052 /* KlariVisionBridge.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Sources/KlariVisionApp/KlariVisionBridge.h; sourceTree = "<group>"; };
 		A10000000000000000000054 /* fixed_lag_tracker.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ../../core/src/fixed_lag_tracker.cpp; sourceTree = "<group>"; };
-		A10000000000000000000056 /* pitch_engine_v2_session.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ../../core/src/pitch_engine_v2_session.cpp; sourceTree = "<group>"; };
 		A10000000000000000000058 /* harmonic_arbitration.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ../../core/src/harmonic_arbitration.cpp; sourceTree = "<group>"; };
-		A10000000000000000000080 /* hapt.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ../../core/src/hapt.cpp; sourceTree = "<group>"; };
 		A10000000000000000000082 /* harmonic_probe.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ../../core/src/harmonic_probe.cpp; sourceTree = "<group>"; };
+		A100000000000000000000A0 /* unified_pitch_session.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ../../core/src/unified_pitch_session.cpp; sourceTree = "<group>"; };
+		A100000000000000000000A2 /* unified_track_decoder.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ../../core/src/unified_track_decoder.cpp; sourceTree = "<group>"; };
+		A100000000000000000000A4 /* pyin_ladder.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ../../core/src/pyin_ladder.cpp; sourceTree = "<group>"; };
+		A100000000000000000000A6 /* frame_spectrum.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ../../core/src/frame_spectrum.cpp; sourceTree = "<group>"; };
+		A100000000000000000000A8 /* harmonic_evidence.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ../../core/src/harmonic_evidence.cpp; sourceTree = "<group>"; };
 		A10000000000000000000030 /* canli_pitch_referans_v1.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; name = canli_pitch_referans_v1.wav; path = ../../data/benchmarks/canli_pitch_referans_v1.wav; sourceTree = "<group>"; };
 		A10000000000000000000012 /* KlariVision.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = KlariVision.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -77,14 +79,15 @@
 				A10000000000000000000040 /* analysis_engine.cpp */,
 				A10000000000000000000042 /* analysis_engine_c.cpp */,
 				A10000000000000000000044 /* mpm.cpp */,
-				A10000000000000000000046 /* pitch_engine_v2.cpp */,
 				A10000000000000000000048 /* swipe_prime.cpp */,
-				A10000000000000000000050 /* vpm_like.cpp */,
 				A10000000000000000000054 /* fixed_lag_tracker.cpp */,
-				A10000000000000000000056 /* pitch_engine_v2_session.cpp */,
 				A10000000000000000000058 /* harmonic_arbitration.cpp */,
-				A10000000000000000000080 /* hapt.cpp */,
 				A10000000000000000000082 /* harmonic_probe.cpp */,
+				A100000000000000000000A0 /* unified_pitch_session.cpp */,
+				A100000000000000000000A2 /* unified_track_decoder.cpp */,
+				A100000000000000000000A4 /* pyin_ladder.cpp */,
+				A100000000000000000000A6 /* frame_spectrum.cpp */,
+				A100000000000000000000A8 /* harmonic_evidence.cpp */,
 				A10000000000000000000030 /* canli_pitch_referans_v1.wav */,
 				A10000000000000000000015 /* Products */,
 			);
@@ -176,7 +179,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "set -euo pipefail\nPROJECT_ROOT=\"${SRCROOT}/../..\"\nDEST=\"${BUILT_PRODUCTS_DIR}/${CONTENTS_FOLDER_PATH}/Resources/Engine\"\n\n# Only run for the app itself, never for the unit test bundle target.\nif [ \"${PRODUCT_TYPE:-}\" != \"com.apple.product-type.application\" ]; then\n  exit 0\nfi\n\nCORE_SOURCES=(\n  \"$PROJECT_ROOT/core/src/analysis_engine.cpp\"\n  \"$PROJECT_ROOT/core/src/analysis_engine_c.cpp\"\n  \"$PROJECT_ROOT/core/src/harmonic_arbitration.cpp\"\n  \"$PROJECT_ROOT/core/src/hapt.cpp\"\n  \"$PROJECT_ROOT/core/src/harmonic_probe.cpp\"\n  \"$PROJECT_ROOT/core/src/mpm.cpp\"\n  \"$PROJECT_ROOT/core/src/pitch_engine_v2.cpp\"\n  \"$PROJECT_ROOT/core/src/fixed_lag_tracker.cpp\"\n  \"$PROJECT_ROOT/core/src/pitch_engine_v2_session.cpp\"\n  \"$PROJECT_ROOT/core/src/swipe_prime.cpp\"\n  \"$PROJECT_ROOT/core/src/vpm_like.cpp\"\n  \"$PROJECT_ROOT/core/tools/pitch_track_cli.cpp\"\n)\n\nENGINE_DIST=\"$PROJECT_ROOT/build/KlariVisionEngineDist\"\nENGINE_WORK=\"$PROJECT_ROOT/build/KlariVisionEngineWork\"\nENGINE_SPEC=\"$PROJECT_ROOT/build/KlariVisionEngineSpec\"\nPITCH_TRACK_CLI=\"$PROJECT_ROOT/build/klarivision-pitch-track-cli\"\nENGINE_APP=\"$ENGINE_DIST/KlariVisionEngine/KlariVisionEngine\"\n\nmkdir -p \"$PROJECT_ROOT/build\"\n\n# --- Step 1: native pitch-track CLI, only rebuilt when its sources changed ---\nneeds_cpp_build=0\nif [ ! -x \"$PITCH_TRACK_CLI\" ]; then\n  needs_cpp_build=1\nelse\n  for f in \"${CORE_SOURCES[@]}\"; do\n    if [ \"$f\" -nt \"$PITCH_TRACK_CLI\" ]; then\n      needs_cpp_build=1\n      break\n    fi\n  done\nfi\n\nif [ \"$needs_cpp_build\" = \"1\" ]; then\n  echo \"KlariVision: (re)building native pitch-track CLI…\"\n  clang++ -std=c++20 -O3 -I \"$PROJECT_ROOT/core/include\" \\\n    \"${CORE_SOURCES[@]}\" \\\n    -framework Accelerate \\\n    -o \"$PITCH_TRACK_CLI\"\nfi\n\n# --- Step 2: PyInstaller-bundled engine, only rebuilt when it or its ---\n# --- Python/native inputs changed. This step is the expensive one     ---\n# --- (numpy etc.), so skipping it on unrelated rebuilds matters a lot.---\nneeds_engine_build=0\nif [ ! -x \"$ENGINE_APP\" ]; then\n  needs_engine_build=1\nelif [ \"$PITCH_TRACK_CLI\" -nt \"$ENGINE_APP\" ]; then\n  needs_engine_build=1\nelif find \"$PROJECT_ROOT/src\" -name '*.py' -newer \"$ENGINE_APP\" -print -quit | grep -q .; then\n  needs_engine_build=1\nfi\n\nif [ \"$needs_engine_build\" = \"1\" ]; then\n  echo \"KlariVision: (re)building bundled Python engine (PyInstaller)…\"\n  rm -rf \"$ENGINE_DIST\" \"$ENGINE_WORK\" \"$ENGINE_SPEC\"\n  \"$PROJECT_ROOT/.venv/bin/python\" -m PyInstaller \\\n    --noconfirm \\\n    --clean \\\n    --onedir \\\n    --name KlariVisionEngine \\\n    --distpath \"$ENGINE_DIST\" \\\n    --workpath \"$ENGINE_WORK\" \\\n    --specpath \"$ENGINE_SPEC\" \\\n    --paths \"$PROJECT_ROOT/src\" \\\n    --collect-all numpy \\\n    --collect-all imageio_ffmpeg \\\n    --collect-all openpyxl \\\n    --exclude-module yt_dlp \\\n    --exclude-module curl_cffi \\\n    --exclude-module librosa \\\n    --exclude-module scipy \\\n    --exclude-module soundfile \\\n    --exclude-module numba \\\n    --exclude-module sklearn \\\n    --add-data \"$PROJECT_ROOT/data/reference/perde-esleme.xlsx:data/reference\" \\\n    --add-data \"$PROJECT_ROOT/data/reference/Turk_Muzigi_Perdeleri_ve_Mikrotonal_Notasyon.xlsx:data/reference\" \\\n    --add-binary=\"${PITCH_TRACK_CLI}:tools\" \\\n    \"$PROJECT_ROOT/src/klarivision/engine_cli.py\"\nfi\n\n# --- Step 3: copy the built engine into this build's app bundle ---\nmkdir -p \"$(dirname \"$DEST\")\"\nrm -rf \"$DEST\"\nditto \"$ENGINE_DIST/KlariVisionEngine\" \"$DEST\"\n";
+			shellScript = "set -euo pipefail\nPROJECT_ROOT=\"${SRCROOT}/../..\"\nDEST=\"${BUILT_PRODUCTS_DIR}/${CONTENTS_FOLDER_PATH}/Resources/Engine\"\n\n# Only run for the app itself, never for the unit test bundle target.\nif [ \"${PRODUCT_TYPE:-}\" != \"com.apple.product-type.application\" ]; then\n  exit 0\nfi\n\nCORE_SOURCES=(\n  \"$PROJECT_ROOT/core/src/analysis_engine.cpp\"\n  \"$PROJECT_ROOT/core/src/analysis_engine_c.cpp\"\n  \"$PROJECT_ROOT/core/src/harmonic_arbitration.cpp\"\n  \"$PROJECT_ROOT/core/src/harmonic_probe.cpp\"\n  \"$PROJECT_ROOT/core/src/mpm.cpp\"\n  \"$PROJECT_ROOT/core/src/fixed_lag_tracker.cpp\"\n  \"$PROJECT_ROOT/core/src/swipe_prime.cpp\"\n  \"$PROJECT_ROOT/core/src/unified_pitch_session.cpp\"\n  \"$PROJECT_ROOT/core/src/unified_track_decoder.cpp\"\n  \"$PROJECT_ROOT/core/src/pyin_ladder.cpp\"\n  \"$PROJECT_ROOT/core/src/frame_spectrum.cpp\"\n  \"$PROJECT_ROOT/core/src/harmonic_evidence.cpp\"\n  \"$PROJECT_ROOT/core/tools/pitch_track_cli.cpp\"\n)\n\nENGINE_DIST=\"$PROJECT_ROOT/build/KlariVisionEngineDist\"\nENGINE_WORK=\"$PROJECT_ROOT/build/KlariVisionEngineWork\"\nENGINE_SPEC=\"$PROJECT_ROOT/build/KlariVisionEngineSpec\"\nPITCH_TRACK_CLI=\"$PROJECT_ROOT/build/klarivision-pitch-track-cli\"\nENGINE_APP=\"$ENGINE_DIST/KlariVisionEngine/KlariVisionEngine\"\n\nmkdir -p \"$PROJECT_ROOT/build\"\n\n# --- Step 1: native pitch-track CLI, only rebuilt when its sources changed ---\nneeds_cpp_build=0\nif [ ! -x \"$PITCH_TRACK_CLI\" ]; then\n  needs_cpp_build=1\nelse\n  for f in \"${CORE_SOURCES[@]}\"; do\n    if [ \"$f\" -nt \"$PITCH_TRACK_CLI\" ]; then\n      needs_cpp_build=1\n      break\n    fi\n  done\nfi\n\nif [ \"$needs_cpp_build\" = \"1\" ]; then\n  echo \"KlariVision: (re)building native pitch-track CLI…\"\n  clang++ -std=c++20 -O3 -I \"$PROJECT_ROOT/core/include\" \\\n    \"${CORE_SOURCES[@]}\" \\\n    -framework Accelerate \\\n    -o \"$PITCH_TRACK_CLI\"\nfi\n\n# --- Step 2: PyInstaller-bundled engine, only rebuilt when it or its ---\n# --- Python/native inputs changed. This step is the expensive one     ---\n# --- (numpy etc.), so skipping it on unrelated rebuilds matters a lot.---\nneeds_engine_build=0\nif [ ! -x \"$ENGINE_APP\" ]; then\n  needs_engine_build=1\nelif [ \"$PITCH_TRACK_CLI\" -nt \"$ENGINE_APP\" ]; then\n  needs_engine_build=1\nelif find \"$PROJECT_ROOT/src\" -name '*.py' -newer \"$ENGINE_APP\" -print -quit | grep -q .; then\n  needs_engine_build=1\nfi\n\nif [ \"$needs_engine_build\" = \"1\" ]; then\n  echo \"KlariVision: (re)building bundled Python engine (PyInstaller)…\"\n  rm -rf \"$ENGINE_DIST\" \"$ENGINE_WORK\" \"$ENGINE_SPEC\"\n  \"$PROJECT_ROOT/.venv/bin/python\" -m PyInstaller \\\n    --noconfirm \\\n    --clean \\\n    --onedir \\\n    --name KlariVisionEngine \\\n    --distpath \"$ENGINE_DIST\" \\\n    --workpath \"$ENGINE_WORK\" \\\n    --specpath \"$ENGINE_SPEC\" \\\n    --paths \"$PROJECT_ROOT/src\" \\\n    --collect-all numpy \\\n    --collect-all imageio_ffmpeg \\\n    --collect-all openpyxl \\\n    --exclude-module yt_dlp \\\n    --exclude-module curl_cffi \\\n    --exclude-module librosa \\\n    --exclude-module scipy \\\n    --exclude-module soundfile \\\n    --exclude-module numba \\\n    --exclude-module sklearn \\\n    --add-data \"$PROJECT_ROOT/data/reference/perde-esleme.xlsx:data/reference\" \\\n    --add-data \"$PROJECT_ROOT/data/reference/Turk_Muzigi_Perdeleri_ve_Mikrotonal_Notasyon.xlsx:data/reference\" \\\n    --add-binary=\"${PITCH_TRACK_CLI}:tools\" \\\n    \"$PROJECT_ROOT/src/klarivision/engine_cli.py\"\nfi\n\n# --- Step 3: copy the built engine into this build's app bundle ---\nmkdir -p \"$(dirname \"$DEST\")\"\nrm -rf \"$DEST\"\nditto \"$ENGINE_DIST/KlariVisionEngine\" \"$DEST\"\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 
@@ -195,14 +198,15 @@
 				A10000000000000000000041 /* analysis_engine.cpp in Sources */,
 				A10000000000000000000043 /* analysis_engine_c.cpp in Sources */,
 				A10000000000000000000045 /* mpm.cpp in Sources */,
-				A10000000000000000000047 /* pitch_engine_v2.cpp in Sources */,
 				A10000000000000000000049 /* swipe_prime.cpp in Sources */,
-				A10000000000000000000051 /* vpm_like.cpp in Sources */,
 				A10000000000000000000055 /* fixed_lag_tracker.cpp in Sources */,
-				A10000000000000000000057 /* pitch_engine_v2_session.cpp in Sources */,
 				A10000000000000000000059 /* harmonic_arbitration.cpp in Sources */,
-				A10000000000000000000081 /* hapt.cpp in Sources */,
 				A10000000000000000000083 /* harmonic_probe.cpp in Sources */,
+				A100000000000000000000A1 /* unified_pitch_session.cpp in Sources */,
+				A100000000000000000000A3 /* unified_track_decoder.cpp in Sources */,
+				A100000000000000000000A5 /* pyin_ladder.cpp in Sources */,
+				A100000000000000000000A7 /* frame_spectrum.cpp in Sources */,
+				A100000000000000000000A9 /* harmonic_evidence.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

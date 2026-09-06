@@ -73,25 +73,31 @@ enum PitchEngineSettings {
     static let studyEngineKey = "klarivision-study-pitch-engine-v1"
     static let liveEngineKey = "klarivision-live-pitch-engine-v1"
     static let togetherEngineKey = "klarivision-together-pitch-engine-v1"
-    /// The engine a FRESH install opens with. Existing installs are untouched:
-    /// every surface reads its own @AppStorage key, so anyone who has already
-    /// launched the app keeps whatever they were using until they change it.
+    /// The one engine the app runs. It was the default from D-038; D-039 then
+    /// removed the four engines it had been measured against, so this is no
+    /// longer a default among peers -- it is the engine.
     ///
-    /// Moved from "yin_v1" to "unified_v1" on 6 September 2026 (D-038). This is
-    /// a product decision, not the tournament's automatic ranking: that ranking
-    /// scores serious errors of every class together and still names vpm_like,
-    /// because unified_v1 buys its zero harmonic errors with silence. The
-    /// product requirement is the asymmetric one -- a silent point is preferred
-    /// over a harmonic error -- and unified_v1 is the only engine that meets it.
+    /// The choice was a product decision, not the tournament's automatic
+    /// ranking: that ranking scores serious errors of every class together and
+    /// still names vpm_like, because unified_v1 buys its zero harmonic errors
+    /// with silence. The product requirement is the asymmetric one -- a silent
+    /// point is preferred over a harmonic error.
     static let initialEngine = "unified_v1"
+
+    /// One entry since D-039. Kept as a collection rather than collapsed into
+    /// a constant because the persisted keys, the study cache and the C ABI
+    /// all still carry an engine *id*, and a second engine would be added
+    /// here again.
     static let userChoices = [
-        PitchEngineChoice(id: "yin_v1", title: "YIN v1"),
-        PitchEngineChoice(id: "pitch_engine_v2", title: "Pitch Engine v2"),
-        PitchEngineChoice(id: "vpm_like", title: "VPM-benzeri"),
-        PitchEngineChoice(id: "hapt_v1", title: "Harmonik-Faz (HAPT)"),
         PitchEngineChoice(id: "unified_v1", title: "Birleşik (Unified v1)"),
     ]
 
+    /// Any stored value that is not a live engine id resolves to the engine
+    /// this build has. That is the migration path for installs still holding
+    /// "yin_v1", "pitch_engine_v2", "vpm_like" or "hapt_v1": those engines no
+    /// longer exist, so the selection cannot be honoured, and falling back is
+    /// the only remaining behaviour. Existing analysed studies are unaffected
+    /// -- their cached results keep the engine id they were produced with.
     static func resolvedSelection(_ value: String?) -> String {
         guard let value, userChoices.contains(where: { $0.id == value }) else {
             return initialEngine
@@ -107,14 +113,15 @@ enum PitchEngineSettings {
     }
 }
 
-/// Short, stable VoiceOver copy shared by the two primary study flows. The
-/// engine wording deliberately describes five peer choices rather than a
-/// recommendation or quality order.
+/// Short, stable VoiceOver copy shared by the two primary study flows.
 enum AccessibilityText {
     static let listeningStatus = "Dinleme durumu"
     static let practiceStatus = "Çalma durumu"
     static let unsupportedDrop = "Dosya alınamadı. Desteklenen bir ses veya video dosyası bırakın."
-    static let enginePickerHint = "YIN v1, Pitch Engine v2, VPM-benzeri, Harmonik-Faz (HAPT) ve Birleşik (Unified v1) eşit kullanıcı seçenekleridir."
+    /// Read out on the settings row that names the analysis engine. There is
+    /// nothing to choose any more, so this says what runs rather than offering
+    /// a comparison.
+    static let engineDescription = "Ses çözümlemesi Birleşik (Unified v1) motoruyla yapılır. Seçilebilir başka motor yoktur."
 }
 
 /// The two graph renderers use different technologies, but share these two

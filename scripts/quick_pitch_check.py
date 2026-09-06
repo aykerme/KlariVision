@@ -37,7 +37,11 @@ from klarivision.pitch.cpp_engine import ENGINES, executable, extract
 
 SCHEMA = "klarivision-quick-pitch-check-v1"
 REFERENCE_SCHEMA = "klarivision-pitch-reference-v1"
-ENGINE_ORDER = ("yin_v1", "pitch_engine_v2", "vpm_like", "hapt_v1")
+# One engine since D-039. The cross-engine coverage comparisons below
+# (RELATIVE_COVERAGE_RATIO) degrade to the absolute gate when a single engine
+# is listed, which is the intended behaviour: with nothing to compare against,
+# only the absolute coverage floor can flag a gap.
+ENGINE_ORDER = ("unified_v1",)
 HOP_SECONDS = 512 / 48_000
 
 PREROLL_SECONDS = 2.0

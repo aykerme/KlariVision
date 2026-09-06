@@ -1,5 +1,9 @@
 """KlariVision perde motorlari — belgedeki Python orneklerinin tamami.
 
+TARIHSEL: bu ornekler dort motor (yin_v1, pitch_engine_v2, vpm_like, hapt_v1)
+hala koddayken yazildi. O motorlar D-039 ile kaldirildi; calisan tek motor
+unified_v1'dir. Kod ogretici olarak korunuyor, uretimde karsiligi yoktur.
+
 docs/perde-motorlari-nasil-calisir.html icindeki kod bloklari bu dosyadan
 alinmistir. Ogretme amacli: gercek motorlarin karar mantigini okunabilir
 bicimde yeniden yazar, uretim kodunun yerine gecmez.
