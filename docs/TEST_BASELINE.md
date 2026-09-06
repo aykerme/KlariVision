@@ -87,6 +87,14 @@ seviyesine göre konmuş, bu kayıtlar daha aşağıda seyrediyor" tablosudur.
 Eşiğin kendisi bir **ürün ayarıdır** (kullanıcı `−60…−20 dBFS` arasında
 değiştirir, varsayılan `−36,5 dBFS`), motor eşiği değil.
 
+**Ama projenin kendi yargıcı bu kapıyı suçlamıyor.** `adverse_v1` vetosundaki
+23 ciddi eksik ötüm karesi dört aralıkta toplanıyor ve gerekçeleri: 17
+`unvoiced`, 2 `contested`, 2 `abstain-recovery`, **0 RMS kapısı**. Yani kapı,
+yalnız dış kümelerde baskın çıkıyor — ve o kümeler yeniden sentezlenmiş
+stem'ler, seviyeleri gerçek bir mikrofon zincirinin seviyesi değil. Kapıyı bu
+tabloya bakarak indirmek, D-038'in yasakladığı hareketin ta kendisi olur.
+Ürün tarafında kapının yanlış yerde olduğuna dair bir kanıt **yok**.
+
 Yayın aralığı bu tabloda hesaba katıldı: `kDisplayMinimumHz` 80 Hz,
 `kDisplayMaximumHz` 1760 Hz (D-037), ±100 sent toleransla 75,5–1864,7 Hz.
 Referansın aralık dışında kalan payı mdb'de %18,1, bach10'da %0,6,
