@@ -41,6 +41,9 @@ sys.path.insert(0, str(ROOT / "src"))
 
 EXTERNAL = ROOT / "data/external"
 CONTRACT_RATE = 48_000
+# Bölme manifesti: scripts/split_external_pitch_datasets.py üretir. Hangi
+# dosyaya bakmaya hakkımız olduğunu tanımlar; olmadan --split kullanılamaz.
+SPLIT_MANIFEST = ROOT / "data/benchmarks/external-pitch-split-v1.json"
 
 
 @dataclass(frozen=True)
@@ -230,13 +233,35 @@ def score(
     }
 
 
+def load_split(section: str) -> dict[str, set[str]]:
+    """Manifestten bir bölümün dosya adlarını küme başına okur."""
+    if not SPLIT_MANIFEST.is_file():
+        raise SystemExit(
+            "Bölme manifesti yok. Önce:\n"
+            "  .venv/bin/python scripts/split_external_pitch_datasets.py"
+        )
+    payload = json.loads(SPLIT_MANIFEST.read_text(encoding="utf-8"))
+    return {
+        name: set(entry[section]) for name, entry in payload["datasets"].items()
+    }
+
+
 def evaluate_dataset(
-    dataset: Dataset, engines: list[str] | None, limit: int | None, skip_reference: bool = False
+    dataset: Dataset,
+    engines: list[str] | None,
+    limit: int | None,
+    skip_reference: bool = False,
+    allowed: set[str] | None = None,
 ) -> list[FileResult]:
     audio_files = sorted(EXTERNAL.glob(dataset.audio_glob))
     if not audio_files:
         print(f"ATLANDI {dataset.name}: ses bulunamadı ({dataset.audio_glob})")
         return []
+    if allowed is not None:
+        audio_files = [path for path in audio_files if path.name in allowed]
+        if not audio_files:
+            print(f"  bu bölümde {dataset.name} dosyası yok")
+            return []
     if limit:
         # Deterministik alt örnekleme: aynı çağrı hep aynı dosyaları seçer.
         step = max(1, len(audio_files) // limit)
@@ -291,7 +316,7 @@ def aggregate(results: list[FileResult]) -> dict[tuple[str, str], dict[str, floa
     }
 
 
-def markdown_report(summary: dict[tuple[str, str], dict[str, float]]) -> str:
+def markdown_report(summary: dict[tuple[str, str], dict[str, float]], split: str | None = None) -> str:
     lines = [
         "# Dış perde karşılaştırması",
         "",
@@ -300,6 +325,12 @@ def markdown_report(summary: dict[tuple[str, str], dict[str, float]]) -> str:
         "",
         "**RPA − RCA** farkı, tanımı gereği oktav hata oranıdır: raw pitch accuracy",
         "perdeyi tam ister, raw chroma accuracy oktavı bağışlar.",
+        "",
+        # Bölüm adı tablonun parçasıdır: hangi veriye bakıldığı yazmıyorsa,
+        # tablo bir iddiayı destekliyor mu yoksa ona göre mi ayarlandı,
+        # ayırt edilemez.
+        f"Bölüm: **{split or 'bölme yok — bütün dosyalar'}**"
+        + ("  (donmuş; ayar hedefi değildir)" if split == "holdout" else ""),
         "",
     ]
     for dataset in sorted({key[0] for key in summary}):
@@ -325,6 +356,15 @@ def main() -> int:
     parser.add_argument("--engine", action="append", help="yalnız bu motoru koş")
     parser.add_argument("--limit", type=int, help="küme başına dosya sayısını sınırla")
     parser.add_argument(
+        "--split",
+        choices=("development", "holdout", "reserve"),
+        help=(
+            "Bölme manifestindeki bölümlerden birini koş. Ayar ve teşhis "
+            "yalnız 'development' ile yapılır; 'holdout' hazırlanmış bir "
+            "iddiayı kaydetmek için bir kez koşulur."
+        ),
+    )
+    parser.add_argument(
         "--no-reference", action="store_true",
         help="çevrimdışı pYIN referanslarını atla (hızlı koşu)",
     )
@@ -333,11 +373,22 @@ def main() -> int:
     args = parser.parse_args()
 
     selected = [d for d in DATASETS if not args.dataset or d.name in args.dataset]
+    split = load_split(args.split) if args.split else None
+    if args.split == "holdout":
+        # Holdout bir kez harcanır. Kazara koşulmasın diye görünür olsun.
+        print(
+            "DİKKAT: donmuş holdout koşuluyor. Bu bölüm yalnız hazırlanmış bir\n"
+            "iddiayı kaydetmek için koşulur; sonucuna bakıp eşik ayarlamak\n"
+            "bölümü harcar. Ayar için --split development kullanın.\n"
+        )
     started = time.time()
     results: list[FileResult] = []
     for dataset in selected:
         print(f"{dataset.name}:")
-        results.extend(evaluate_dataset(dataset, args.engine, args.limit, args.no_reference))
+        results.extend(evaluate_dataset(
+            dataset, args.engine, args.limit, args.no_reference,
+            allowed=split.get(dataset.name) if split else None,
+        ))
 
     if not results:
         print("Hiçbir küme ölçülemedi. Önce indirin:")
@@ -348,6 +399,13 @@ def main() -> int:
     payload = {
         "schema": "klarivision-external-pitch-benchmark-v1",
         "policy": "assertion-gate-never-a-tuning-target",
+        # Hangi bölümün koşulduğu sonucun parçasıdır: bölüm adı olmayan bir
+        # tablo, hangi veriye bakılarak üretildiğini söylemez.
+        "split": args.split or "all-files-no-split",
+        "split_fingerprint": (
+            json.loads(SPLIT_MANIFEST.read_text(encoding="utf-8"))["fingerprint"]
+            if args.split else None
+        ),
         "datasets": [d.name for d in selected],
         "file_count": len({(r.dataset, r.source) for r in results}),
         "summary": {f"{key[0]}::{key[1]}": value for key, value in summary.items()},
@@ -363,10 +421,10 @@ def main() -> int:
 
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(payload, indent=2, ensure_ascii=False))
-    args.markdown.write_text(markdown_report(summary))
+    args.markdown.write_text(markdown_report(summary, args.split))
 
     print()
-    print(markdown_report(summary))
+    print(markdown_report(summary, args.split))
     print(f"dosya={payload['file_count']} süre={time.time() - started:.1f}s fingerprint={fingerprint}")
     print(args.output)
     print(args.markdown)

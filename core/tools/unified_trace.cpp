@@ -19,6 +19,19 @@ double number(const char* text, const char* label) {
     return value;
 }
 
+void write_diagnostic(const klarivision::core::UnifiedFrameDiagnostic& diagnostic) {
+    // One row per *input* frame, published or not. The publication decision is
+    // fixed-lag, so this row describes the frame that was just measured rather
+    // than the frame that was just emitted -- which is what an attribution
+    // question ("why is this note missing?") actually needs.
+    std::cout << diagnostic.input_time_seconds << ',' << diagnostic.rms << ','
+              << (diagnostic.signal_eligible ? 1 : 0) << ','
+              << diagnostic.candidate_count << ',' << diagnostic.winner_posterior << ','
+              << diagnostic.voiced_posterior << ',' << diagnostic.harmonic_dominance << ','
+              << diagnostic.harmonic_evidence_ratio << ',' << diagnostic.family_margin << ','
+              << diagnostic.parity_index << ',' << diagnostic.publication_reason << '\n';
+}
+
 void write_frame(const klarivision::core::EngineFrame& frame) {
     // Mirror hapt_trace.cpp: only a published (voiced) frame gets a row. A
     // withheld frame -- unified_v1's central mechanism, not a gap to bridge --
@@ -41,8 +54,17 @@ void write_frame(const klarivision::core::EngineFrame& frame) {
 /// accepted as CLI arguments only for shape parity with the other *_trace
 /// tools, not because any other value is supported here.
 int main(int argc, char** argv) {
+    // Optional trailing --diagnostic switches the output from "published
+    // frames" to "every frame, with the reason it was published or withheld".
+    // Kept as a mode of this tool rather than a second binary so both views
+    // are guaranteed to come from the same session and the same constants.
+    bool diagnostic_mode = false;
+    if (argc > 1 && std::string(argv[argc - 1]) == "--diagnostic") {
+        diagnostic_mode = true;
+        --argc;
+    }
     if (argc != 6 && argc != 7) {
-        std::cerr << "usage: unified_trace input.f32 sample_rate window hop minimum_rms [lag_frames]\n";
+        std::cerr << "usage: unified_trace input.f32 sample_rate window hop minimum_rms [lag_frames] [--diagnostic]\n";
         return 2;
     }
 
@@ -74,15 +96,29 @@ int main(int argc, char** argv) {
         session.set_lag_frames(static_cast<std::size_t>(number(argv[6], "lag frames")));
     }
 
-    std::cout << "time_seconds,frequency_hz,confidence\n" << std::fixed << std::setprecision(8);
+    std::cout << std::fixed << std::setprecision(8);
+    if (diagnostic_mode) {
+        std::cout << "time_seconds,rms,signal_eligible,candidate_count,winner_posterior,"
+                     "voiced_posterior,harmonic_dominance,harmonic_evidence_ratio,"
+                     "family_margin,parity_index,publication_reason\n";
+    } else {
+        std::cout << "time_seconds,frequency_hz,confidence\n";
+    }
     for (std::size_t start = 0; start + window <= samples.size(); start += hop) {
         const double centre = (static_cast<double>(start) + static_cast<double>(window) / 2.0) / sample_rate;
-        for (const auto& frame : session.process_frame({samples.data() + start, window}, sample_rate, centre)) {
+        const auto published = session.process_frame({samples.data() + start, window}, sample_rate, centre);
+        if (diagnostic_mode) {
+            write_diagnostic(session.last_diagnostic());
+            continue;
+        }
+        for (const auto& frame : published) {
             write_frame(frame);
         }
     }
-    for (const auto& frame : session.finish()) {
-        write_frame(frame);
+    if (!diagnostic_mode) {
+        for (const auto& frame : session.finish()) {
+            write_frame(frame);
+        }
     }
     return 0;
 }
