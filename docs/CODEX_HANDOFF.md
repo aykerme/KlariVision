@@ -21,16 +21,12 @@ Geliştirme bölümünün tamamında (96 dosya), aralık içi ötümlü kareleri
 kaderi: kaçırmanın baskın sebebi **sabit RMS kapısı (0,015)**, çekimserlik
 değil — mdb'de %26,6'ya karşı %4,2, vocadito'da %14,6'ya karşı %2,0.
 
-Sıradaki iş bu kapıdır ve **iki tarafı vardır**:
-
-1. Kapı ürünün kendi ayarı: kullanıcı Ayarlar'da `−60…−20 dBFS` arasında
-   değiştirebiliyor, varsayılan `−36,5 dBFS`. Yani bu bir motor eşiği değil,
-   bir ürün varsayılanı — ve klarnet mikrofonuna göre seçilmiş.
-2. Dış kümeler yeniden sentezlenmiş stem'ler; seviyeleri gerçek bir mikrofon
-   kaydının seviyesi değil. Kapıyı bu kümelere bakarak düşürmek, **tam da
-   yapılmaması gereken şey** olur (D-038'in kaydettiği kural). Doğru soru
-   "kapı mutlak RMS yerine neye bakmalı" olmalı; ölçüm geliştirme bölümünde
-   yapılır, iddia holdout'ta bir kez kaydedilir.
+**Kalem kapatıldı (D-040).** Kapı olduğu yerde kalır. Projenin kendi donmuş
+yargıcı kapıyı suçlamıyor (`adverse_v1` vetosunun 23 karesinde 0 kapı), kapının
+baskın çıktığı tek yer yeniden sentezlenmiş dış stem'ler, ve o tabloya bakarak
+eşik indirmek D-038'in yasakladığı hareket. Kalem yeniden açılacaksa gereken
+yeni bir eşik denemesi değil, **ürün tarafından kanıttır**: sessiz çalınmış
+gerçek bir klarnet kaydında kapının ne kadarını kestiğinin ölçümü.
 
 ### Bölme hazır
 
@@ -46,9 +42,16 @@ geliştirme 96 / holdout 72 / yedek 142. Koşucu `--split` alır ve hangi bölü
   bunları bağladı; yeni bir ölçüt eklenirken aynısı yapılmalı.
 - `unified_trace --diagnostic` kare başına ret gerekçesi verir; bir "neden bu
   nota yok" sorusu doğrudan buradan cevaplanır.
-- Diğer açık maddeler değişmedi: iPad `xcodebuild` (bu makinede iOS platformu
-  kurulu değil), `adverse_v1` vetosu (23 kare, mimari iş gerekir),
-  `pitch_candidate.hpp`'nin `v2` ad alanının yeniden adlandırılması.
+### Açık kalanlar
+
+1. **iPad `xcodebuild`** — kod ve proje değişikliği yapıldı, doğrulama
+   koşulmadı: bu makinede Xcode'da iOS platformu kurulu değil. Kurulunca ilk
+   iş budur.
+2. **`adverse_v1` vetosu** (23 kare, sınır 12). Artık gerekçesi de ölçülü:
+   17 `unvoiced`, 2 `contested`, 2 `abstain-recovery`, 0 RMS kapısı. Ucuz ayar
+   yok; ölçülüp reddedilen altı kol tekrar denenmemeli.
+3. **Küçük borç:** `pitch_candidate.hpp`'nin `klarivision::core::v2` ad alanı;
+   mekanik yeniden adlandırma.
 
 ## Faz 7 tamamlandı — `swipe_prime` `FrameSpectrum` üstüne katlandı — 6 Eylül 2026
 

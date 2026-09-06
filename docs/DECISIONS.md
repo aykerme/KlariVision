@@ -3,6 +3,35 @@
 Bu dosya yalnızca sonraki çalışmaları etkileyen kararları tutar. Günlük ilerleme
 notları `CODEX_HANDOFF.md`, sayısal durum `TEST_BASELINE.md` içindedir.
 
+## D-040 — RMS kapısı dış veri kümelerine bakılarak değiştirilmez
+
+Kullanıcı kararı, 6 Eylül 2026. "Klarnet dışı ötüm kapsaması" kalemi ölçüldü
+ve **kapatıldı**: kapı olduğu yerde kalır, varsayılan `0,015` (−36,5 dBFS)
+değişmez.
+
+Gerekçe ölçümdür, tercih değil. Klarnet dışı materyalde kaçırılan ötümün
+baskın sebebi çekimserlik politikası değil, sabit RMS kapısıdır (geliştirme
+bölümünde mdb %26,6 / vocadito %14,6, çekimserliğin tamamı %4,2 / %2,0). Ama:
+
+- **Projenin kendi donmuş yargıcı kapıyı suçlamıyor.** `adverse_v1` vetosunun
+  23 ciddi eksik ötüm karesinin gerekçesi 17 `unvoiced`, 2 `contested`,
+  2 `abstain-recovery`, **0 RMS kapısı**.
+- Kapının baskın çıktığı tek yer, yeniden sentezlenmiş dış stem'ler. Onların
+  seviyesi gerçek bir mikrofon zincirinin seviyesi değil ve kesilen karelerin
+  dörtte üçü kapının 10 dB içinde — yani "duyulmayan malzeme" değil, "eşik
+  başka bir sinyal zincirine göre konmuş".
+- Bu tabloya bakarak eşiği indirmek, D-038'in kaydettiği kuralın ihlalidir:
+  o tablo elimizdeki tek ayarlanmamış ölçüttür ve ona karşı ayar yapmak onu
+  ölçüt olmaktan çıkarır.
+
+Kapı zaten bir **ürün ayarıdır**: kullanıcı Ayarlar'da canlı VU metreye
+bakarak `−60…−20 dBFS` arasında değiştirir. Sessiz kayıtta yapılacak şey
+eşiği ürün genelinde indirmek değil, o ayarı kullanmaktır.
+
+Bu kalem yeniden açılırsa gereken şey yeni bir eşik denemesi değil, **ürün
+tarafından kanıttır**: sessiz çalınmış gerçek bir klarnet kaydında kapının ne
+kadarını kestiğinin ölçümü. Dış kümeler bu soruyu cevaplayamaz.
+
 ## D-039 — Dört eski motor koddan çıkarıldı; `unified_v1` tek motordur
 
 Kullanıcı kararı, 6 Eylül 2026. D-037'nin nihai hedefi uygulandı: `yin_v1`,
