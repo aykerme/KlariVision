@@ -105,6 +105,28 @@ inline constexpr double kLowRegisterHz = kLowBandMaximumHz;
 // spectral_existence's job, not this gate's.
 inline constexpr double kLowFundamentalPresenceFloor = 0.05;
 inline constexpr std::size_t kLowRegisterConfirmFrames = 3;
+
+// Second way past the low-register gate, for a fundamental that is genuinely
+// there but not radiated.
+//
+// The gate above asks whether a candidate's own frequency carries energy, and
+// a hidden fundamental answers no -- so the correct pitch was being struck off
+// the list before anything could weigh it, and the frame settled on a harmonic
+// instead. Every hidden-fundamental error measured on the frozen holdouts was
+// of that kind: 96.3 Hz reported as 288.9. The section of the same fixture an
+// octave up, at 171.4 Hz, sits above the gate and produced no errors at all,
+// which is the gate confessing.
+//
+// Presence is not the only evidence a low candidate can offer. A note whose
+// fundamental is filtered away still has its harmonic series intact, and the
+// two-way mismatch already measures exactly that: whether the candidate's
+// predicted partials are present and whether it explains the peaks that are.
+// A ghost fails it -- a candidate at f/3 predicts energy at 5f/3 and 7f/3
+// where a real signal has none, and those partials carry full weight -- while
+// a hidden fundamental passes it comfortably. Requiring either presence or a
+// series that holds up keeps the gate's protection and stops it deleting the
+// answer.
+inline constexpr double kHiddenFundamentalTwmFloor = 0.55;
 inline constexpr double kHighPassCutoffHz = 55.0;
 
 // Below this fraction of the RMS gate a frame is treated as certainly silent

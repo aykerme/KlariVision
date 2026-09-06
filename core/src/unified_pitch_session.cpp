@@ -211,8 +211,15 @@ UnifiedFrameEvidence unified_frame_evidence(
         // older engines imposed no spectral existence requirement on low
         // candidates at all, which is why lowering the search floor used to
         // cost octave errors.
+        //
+        // Presence is not the only way to be real, though: a fundamental that
+        // is simply not radiated has no energy of its own and a perfectly
+        // intact harmonic series. A candidate that explains the spectrum well
+        // is admitted on that evidence instead -- see
+        // kHiddenFundamentalTwmFloor for why this does not readmit ghosts.
         if (frequency_hz < unified::kLowRegisterHz &&
-            evidence.fundamental_presence < unified::kLowFundamentalPresenceFloor) {
+            evidence.fundamental_presence < unified::kLowFundamentalPresenceFloor &&
+            evidence.twm_score < unified::kHiddenFundamentalTwmFloor) {
             continue;
         }
 
