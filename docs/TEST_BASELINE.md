@@ -1,5 +1,40 @@
 # KlariVision Test Tabanı
 
+## Dördüncü turnuva — harmonik hata sıfır — 6 Eylül 2026
+
+| Motor | Ciddi yanlış | Ciddi eksik | **Ciddi harmonik** | Ciddi toplam | Gecikme | Kapı |
+|---|---|---|---|---|---|---|
+| yin_v1 | 54 | 13 | 498 | 658 | 16 ms | — |
+| pitch_engine_v2 | 6 | 536 | 495 | 1037 | 69 ms | — |
+| vpm_like | 15 | 54 | 34 | 115 | 16 ms | — |
+| hapt_v1 | 6 | 329 | 107 | 442 | 16 ms | — |
+| **unified_v1** | 5 | 2462 | **0** | 2467 | 160 ms | VETO (3 dosya) |
+
+**Tüm sentetik turnuvada ciddi harmonik hata sıfır.** D-037'nin sert şartı
+karşılandı. Ciddi diğer de sıfır; yanlış-sesli 5 ile en düşük.
+
+Kalan veto yalnızca eksik-sesli üzerinden, üç dosyada: `adverse_v1` 38 kare,
+`adverse_v4` 9, `adverse_v5` 47 (tiz register, glissando + vibrato). Harmonik
+veto tamamen kalktı.
+
+Belirleyici düzeltme, alçak register kapısının gizli temeli silmesini
+durdurmaktı. Kalan harmonik hataların **hepsi** aynı yöndeydi — 96,3 Hz'lik
+temel, kendi üçüncü harmoniği olan 288,9 Hz olarak — yani motorun önlemek için
+kurulduğu alt-harmonik kilidinin **tersi**. Kapı 160 Hz altındaki adayı ancak
+kendi frekansında enerji taşıyorsa kabul ediyordu; gizli temelin sahip olmadığı
+tek şey bu. Aynı fikstürün 171,4 Hz'lik gizli-temel bölümü kapının üstünde
+kaldığı için hiç hata vermiyordu — kapının itirafı.
+
+Formülasyon: **varlık, gerçek olmanın tek yolu değil.** Temeli süzülmüş bir
+notanın harmonik serisi sağlamdır ve iki yönlü uyumsuzluk zaten bunu ölçer.
+Aday artık ikisinden biriyle kabul ediliyor. Hayaletleri geri almıyor: f/3'teki
+bir hayalet 5f/3 ve 7f/3'te enerji vaat eder, orada hiçbir şey yoktur ve o
+harmonikler tam ağırlık taşır.
+
+Karşılığında tuzak paketinde 354 kare kapsama verildi — daha çok alçak aday
+karara ulaşıyor ve zayıf-temel bölümlerinde bir kısmı gerçekten çekişmeli.
+
+
 ## Birleşik motor `unified_v1` — 6 Eylül 2026
 
 Yeni motor: pYIN eşik-dağılımı merdiveni (üç bantta havuzlanmış tarama, YIN
