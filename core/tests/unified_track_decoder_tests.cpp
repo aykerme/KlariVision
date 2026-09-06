@@ -173,10 +173,32 @@ int main() {
         contested.winner_posterior = 0.60;
         contested.voiced_posterior = 0.80;
         contested.harmonic_contest_mass = 0.15;
+        // The rival's evidence is comparable, so the split posterior means the
+        // frame really is undecided.
+        contested.harmonic_evidence_ratio = 0.80;
         assert(contested.harmonic_dominance() > 0.75);
         assert(contested.harmonic_dominance() < 0.90);
         assert(!publishable_frequency(contested, unified::kRealtimeAbstention, 0.10));
         assert(publishable_frequency(contested, unified::kOfflineAbstention, 0.10));
+    }
+
+    // The same split posterior, but the rival is merely a partial of the note
+    // being played: its own evidence is a fraction of the winner's. A thin
+    // posterior here means the frame is crowded, not undecided, and silencing
+    // it would throw away a correct answer. This is the case a missing
+    // fundamental produces -- the partials that define the pitch draw real
+    // mass precisely because they are really there.
+    {
+        UnifiedDecodedFrame crowded{};
+        crowded.candidate = PitchCandidate{294.0, 0.6, 0.6, CandidateSource::yin};
+        crowded.winner_posterior = 0.60;
+        crowded.voiced_posterior = 0.80;
+        crowded.harmonic_contest_mass = 0.15;
+        crowded.harmonic_evidence_ratio = 0.10;
+        assert(crowded.harmonic_dominance() < 0.90);
+        const auto published =
+            publishable_frequency(crowded, unified::kRealtimeAbstention, 0.10);
+        assert(published && close_to(*published, 294.0, 0.001));
     }
 
     std::cout << "KlariVision unified track decoder tests passed.\n";

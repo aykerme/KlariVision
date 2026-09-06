@@ -24,6 +24,7 @@ struct UnifiedFrameDiagnostic {
     double winner_posterior{};
     double voiced_posterior{};
     double harmonic_dominance{};
+    double harmonic_evidence_ratio{};
     double family_margin{};
     double parity_index{};
     std::string publication_reason{};

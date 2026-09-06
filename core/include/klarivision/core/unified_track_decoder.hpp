@@ -40,6 +40,17 @@ struct UnifiedDecodedFrame {
     /// relationship to the winner. This is what the abstention rule prices:
     /// when the frame cannot tell f from f/2, publishing either is a coin flip.
     double harmonic_contest_mass{};
+    /// The strongest harmonic relative's emission as a fraction of the
+    /// winner's, at the frame being resolved.
+    ///
+    /// Posterior share alone cannot answer "is this frame ambiguous". It is
+    /// diluted by however many hypotheses the frame happens to carry, and this
+    /// engine deliberately carries many: a signal whose fundamental is missing
+    /// puts real energy on its own partials, so those partials draw real
+    /// posterior mass even when the evidence for the fundamental is many times
+    /// stronger. The ratio of the evidence itself is not diluted, and it is
+    /// what actually distinguishes a contested frame from a crowded one.
+    double harmonic_evidence_ratio{};
     double path_score{};
 
     /// P(f*) / (P(f*) + harmonic_contest_mass); 1.0 when uncontested.

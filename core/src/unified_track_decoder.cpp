@@ -248,14 +248,20 @@ UnifiedDecodedFrame describe_frame(
 
     decoded.candidate = states.evidence->candidates[winner].candidate;
     const auto winner_hz = decoded.candidate->frequency_hz;
+    const auto winner_emission = states.emission(winner);
+    auto strongest_relative = kNegativeInfinity;
     for (std::size_t state = 0; state < states.pitch_count; ++state) {
         if (state == winner) continue;
         const auto other_hz = states.frequency(state);
         if (other_hz <= 0.0 || winner_hz <= 0.0) continue;
-        if (is_harmonic_relationship(1200.0 * std::log2(other_hz / winner_hz))) {
-            decoded.harmonic_contest_mass += posterior[state];
-        }
+        if (!is_harmonic_relationship(1200.0 * std::log2(other_hz / winner_hz))) continue;
+        decoded.harmonic_contest_mass += posterior[state];
+        strongest_relative = std::max(strongest_relative, states.emission(state));
     }
+    decoded.harmonic_evidence_ratio =
+        (strongest_relative == kNegativeInfinity || winner_emission == kNegativeInfinity)
+            ? 0.0
+            : std::exp(strongest_relative - winner_emission);
     return decoded;
 }
 
@@ -348,7 +354,14 @@ std::optional<double> publishable_frequency(
     if (!frame.candidate.has_value()) return std::nullopt;
     if (frame.voiced_posterior < policy.voiced_posterior_floor) return std::nullopt;
     if (frame.winner_posterior < policy.winner_posterior_floor) return std::nullopt;
-    if (frame.harmonic_dominance() < policy.harmonic_dominance_floor) return std::nullopt;
+    // A frame is contested only when the posterior is split *and* the rival's
+    // own evidence is comparable. Where the winner's evidence is several times
+    // its best harmonic relative's, a thin posterior means the frame is
+    // crowded, not undecided, and silencing it discards a correct answer.
+    if (frame.harmonic_dominance() < policy.harmonic_dominance_floor &&
+        frame.harmonic_evidence_ratio > unified::kHarmonicContestEvidenceRatio) {
+        return std::nullopt;
+    }
     if (family_margin < policy.family_margin_floor) return std::nullopt;
 
     const auto frequency = frame.candidate->frequency_hz;

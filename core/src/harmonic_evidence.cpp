@@ -194,7 +194,14 @@ double twm_error(
     double e_p2m = 0.0;
     double weight_sum = 0.0;
     for (std::size_t k = 1; k <= K; ++k) {
-        const double weight = (k % 2 == 0) ? parity.even_partial_weight() : 1.0;
+        // k == 1 is the fundamental, forgiven for the reason recorded beside
+        // kFundamentalPartialWeight: its absence is a property of the source's
+        // radiation, not evidence that the pitch is wrong. Every other odd
+        // partial keeps full weight, and that is what still refuses a
+        // subharmonic, whose own odd partials have nothing behind them.
+        const double weight = (k == 1)         ? unified::kFundamentalPartialWeight
+                            : (k % 2 == 0)     ? parity.even_partial_weight()
+                                               : 1.0;
         const double mismatch = relative_mismatch(static_cast<double>(k) * f, measured_peaks);
         e_p2m += weight * mismatch * mismatch;
         weight_sum += weight;

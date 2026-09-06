@@ -165,6 +165,12 @@ inline constexpr AbstentionPolicy kOfflineAbstention{0.50, 0.05, 0.75, 0.00};
 // after an ordinary quiet or low-confidence one. Flicker between silence and a
 // disputed pitch is worth suppressing; charging every withheld frame two more
 // silent ones triples the cost of ordinary silence for no benefit at all.
+// How strong the best harmonic relative's evidence must be, relative to the
+// winner's, before a split posterior counts as a genuine contest. Below this
+// the rival is simply a partial of the note being played, drawing mass because
+// it is really there -- which is evidence for the winner, not against it.
+inline constexpr double kHarmonicContestEvidenceRatio = 0.40;
+
 inline constexpr std::size_t kAbstainRecoveryFrames = 2;
 
 // Publication tolerance around the display range. A note written at the very
@@ -195,6 +201,23 @@ inline constexpr double kParityEmaAlpha = 0.15;
 inline constexpr std::size_t kParityWarmupFrames = 8;
 inline constexpr std::size_t kParitySilenceResetFrames = 40;
 inline constexpr double kMinimumEvenWeight = 0.15;
+
+// How heavily a *missing first harmonic* counts against a candidate in the
+// predicted-to-measured direction.
+//
+// The fundamental is the one partial that is routinely absent while the pitch
+// it defines is still plainly heard: a stopped pipe in its bottom register, a
+// voice over a telephone band, any source whose lowest partial is filtered
+// away. Hermes built subharmonic summation around exactly this, and tested it
+// on speech high-passed above 300 Hz, where the fundamental is physically
+// gone. Requiring it is therefore not a test of whether the pitch is right; it
+// is a test of whether the instrument happens to radiate its own fundamental.
+//
+// Forgiving it does not open the door to subharmonics, which is the reason the
+// requirement looked useful in the first place. An f/2 or f/3 ghost is refused
+// by its *other* odd partials: a ghost at f/3 predicts energy at 5f/3 and 7f/3,
+// where a real signal has none, and those carry full weight.
+inline constexpr double kFundamentalPartialWeight = 0.25;
 
 inline constexpr double kTwmMeasuredWeight = 0.5;
 inline constexpr double kTwmPredictedWeight = 0.5;

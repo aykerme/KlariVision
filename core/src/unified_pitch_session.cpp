@@ -273,7 +273,8 @@ std::optional<double> UnifiedPitchSession::Impl::publish(
         // evidence; making every withheld frame cost two more turns ordinary
         // rests into long dropouts.
         const auto contested = decoded.candidate.has_value() &&
-            decoded.harmonic_dominance() < unified::kRealtimeAbstention.harmonic_dominance_floor;
+            decoded.harmonic_dominance() < unified::kRealtimeAbstention.harmonic_dominance_floor &&
+            decoded.harmonic_evidence_ratio > unified::kHarmonicContestEvidenceRatio;
         diagnostic.publication_reason =
             !decoded.candidate ? "unvoiced" : (contested ? "contested" : "abstained");
         if (contested) {
@@ -404,7 +405,8 @@ std::vector<EngineFrame> UnifiedPitchSession::process_frame(
     impl.diagnostic = UnifiedFrameDiagnostic{
         resolved_time, rms, eligible, candidate_count,
         decoded->winner_posterior, decoded->voiced_posterior,
-        decoded->harmonic_dominance(), margin, impl.parity.index, {}
+        decoded->harmonic_dominance(), decoded->harmonic_evidence_ratio,
+        margin, impl.parity.index, {}
     };
     const auto frequency = impl.publish(*decoded, margin);
     if (frequency && decoded->winner_posterior >= unified::kParityTrustPosterior) {
