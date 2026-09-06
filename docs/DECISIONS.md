@@ -3,6 +3,49 @@
 Bu dosya yalnızca sonraki çalışmaları etkileyen kararları tutar. Günlük ilerleme
 notları `CODEX_HANDOFF.md`, sayısal durum `TEST_BASELINE.md` içindedir.
 
+## D-037 — Birleşik motor (`unified_v1`) tek motor hedefiyle eklendi
+
+Kullanıcı kararı: dört motor tek bir genel amaçlı motorla değiştirilecek,
+harmonik hata sıfırlanacak, harmonik hata yerine sessizlik tercih edilecek,
+aralık 80–1760 Hz olacak (sol klarnetin en üst notası La6, yazılı Re7), sinir
+ağı kapsam dışı. Eski motorlar ölçümle geçilene kadar kodda kalır.
+
+Dayanak `docs/OktavHatasi-Arastirma-Raporu.pdf`. Raporun teşhisi: klasik YIN
+kare başına tek tahmin üretir ve f/3'ü seçtiği anda doğru cevap boru hattından
+tamamen kaybolur; sonradan yumuşatma onu geri getiremez (pYIN makalesinin YIN+S
+kontrolü recall'ı 0,935'ten 0,918'e **düşürüyor**). Çözüm üçlüsü: çoklu aday +
+yol seçimi + harmonik spektral kanıt.
+
+Mimari ve kalıcı kararlar:
+
+- `PitchEngineId::unified_v1` / `KV_ENGINE_UNIFIED_V1 = 4` eklendi. Enum
+  değerleri **sona** eklenir, 0–3 kalıcıdır: eski motorlar silindiğinde ABI
+  yeniden numaralandırılmaz. Bir tüketici gerçekten kaldırılmalarına ihtiyaç
+  duyarsa `KV_PITCH_C_ABI_V2` açılır, v1 mutasyona uğratılmaz.
+- Gecikme `kv_unified_lag_frames()` ile açılır, `kv_pitch_contract_v1`'e alan
+  **eklenmez**: struct yerleşimi kalıcı sözleşmedir ve iPad sert doğrular.
+  `v2_fixed_lag_frames` yalnız v2'yi tanımlamaya devam eder.
+- Canlı karar gecikmesi 15 hop ≈ **160 ms** (v2'nin 5 hop / 53 ms'i yerine).
+  Gerekçe: bu projenin kendi ölçümlerinde oktav hataları medyan 2, en fazla 9
+  kare sürüyor; 5 karelik look-ahead çoğunun sonunu göremez.
+- Çekimserlik birinci sınıf bir sonuçtur. Sessiz durum yolun üzerinde bir
+  durumdur, yoldaki bir boşluk değil — bu sayede çevrimdışı kod çözücü voicing'i
+  yeniden ziyaret edebilir. Mevcut çevrimdışı iyileştirme bunu yapamaz: yalnız
+  nedensel geçişin *yayımladığı* kareleri yeniden fiyatlandırabilir, dolayısıyla
+  çekimser kalınmış bir kare ona kalıcı olarak kapalıdır.
+- Çift/tek harmonik toleransı **ölçülür, varsayılmaz**. Klarnete sabit
+  `{1,3,5,7}` yazmak motoru enstrümana özgü kılar ve başka her şeyde doğru
+  notaları reddetmeye başlar. Parity indeksi **bağlanmış ize** demirlenir,
+  test edilen adaya değil: adayda ölçülseydi bir f/3 hayaleti gerçek temeli
+  kendi üçüncü harmoniği sanıp "tek-harmonikli" görünür ve eksik çift
+  harmonikleri için kendine mazeret üretirdi.
+- Paylaşılan `PitchEngineConfig` varsayılanları **değişmedi**: 120 Hz üretim
+  tabanı dört eski motoru yönetmeye devam eder, birleşik oturum kendi 65 Hz
+  kestirici tabanına içeride genişler. Varsayılanı düşürmek, kıyasın altındaki
+  tabanı kaydırırdı.
+
+Ölçülmüş sonuç ve bilinen sınır `docs/TEST_BASELINE.md`'dedir.
+
 ## D-036 — Dördüncü motor (Harmonik-Faz / `hapt_v1`) eşit son kullanıcı seçeneğidir
 
 `hapt_v1`, D-020'nin "eşit son kullanıcı seçeneği" politikasına dördüncü,

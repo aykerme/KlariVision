@@ -40,6 +40,39 @@ Xcode derlemesi ve evrensel iOS Simulator `build-for-testing` geçti. HTML parse
 yerel Markdown bağlantıları ve `git diff --check` temizdir. Sıradaki tek ürün
 işi değişmedi: gerçek iPhone VoiceOver odak/ad/değer/ipucu kabul turu.
 
+## Birleşik motor `unified_v1` — 6 Eylül 2026
+
+Beşinci motor eklendi ve her seçim yüzeyine kaydedildi; `yin_v1` varsayılan
+olarak kaldı. Karar gerekçesi ve kalıcı sözleşmeler `docs/DECISIONS.md` D-037,
+ölçülmüş sonuç `docs/TEST_BASELINE.md`'dedir.
+
+Özet sonuç: oktav tuzağı paketinin üç varyantında da **ciddi harmonik hatası
+sıfır** olan tek motor; donmuş dinleyici kararlarının 85 aralığının tamamında
+sıfır yeni kusur; sentetik oturum testlerinde %100 kapsama. Gerçek kayıtta
+kapsama sevkiyattaki motorla başabaş (%77,9 / %86,5 / %78,5 karşısında %79,5 /
+%87,1 / %80,8), iki kayıtta hiç harmonik uyuşmazlık yok.
+
+Doğrulandı: `zsh scripts/test_core.sh`, `pytest` (128 test), macOS `xcodebuild`
+Debug derlemesi, `quick_pitch_check.py`.
+
+### Sıradaki tek somut iş
+
+`scripts/run_external_pitch_benchmark.py` yazılacak.
+`scripts/fetch_external_pitch_datasets.py` hazır ve hangi kümenin gerçekten
+indirilebilir olduğunu kaydediyor (MDB-stem-synth, PTDB-TUG, vocadito
+otomatik; MIR-1K erişim kısıtlı). Runner `mir_eval.melody` ile RPA, RCA, GPE,
+voicing recall/false alarm raporlamalı; **RPA − RCA** birinci sınıf sütun
+olmalı, çünkü o fark tanımı gereği oktav hata oranıdır ve bu proje için en
+bilgilendirici tek sayıdır.
+
+Bu takım bir **iddia kapısıdır, ayar hedefi değildir**: klarnet yargıçları neyi
+optimize ettiğimizi söyler, bu küme neyi bozmadığımızı. Sayıları kaydedilir ve
+gerilememesi beklenir; doğrudan onlara karşı ayar yapılmaz. Motoru genel amaçlı
+diye adlandırıp yalnız klarnetle ölçmek, ölçülmemiş bir iddiadır.
+
+Ondan sonra: eski dört motorun tek commit'te silinmesi (D-037'deki ABI kuralına
+uyarak) ve `analysis_engine.cpp:538-689` ölü kodunun temizlenmesi.
+
 ## Aktif handoff özeti
 
 Evrensel iPhone+iPad dönüşümü kod ve otomatik test düzeyinde tamamlandı.

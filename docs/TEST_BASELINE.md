@@ -1,5 +1,88 @@
 # KlariVision Test Tabanı
 
+## Birleşik motor `unified_v1` — 6 Eylül 2026
+
+Yeni motor: pYIN eşik-dağılımı merdiveni (üç bantta havuzlanmış tarama, YIN
+Adım 6 dahil) → harmonik spektral kanıt (SWIPE′-asal, iki yönlü uyumsuzluk,
+hayalet vetosu, uyarlanabilir parity) → açık sessiz durumlu sabit-gecikmeli
+Viterbi (15 hop ≈ 160 ms) → çekimserlik. Çevrimdışında aynı kanıt üzerinden
+tüm diziyi çözen global Viterbi.
+
+### Oktav tuzağı paketi — ham / ciddi harmonik hata
+
+| Motor | clean | room | adverse |
+|---|---|---|---|
+| yin_v1 | 332 / 307 | 128 / 115 | 92 / 76 |
+| pitch_engine_v2 | 220 / 205 | 92 / 71 | 251 / 219 |
+| vpm_like | 13 / 0 | 20 / 7 | 43 / 27 |
+| hapt_v1 | 1 / 0 | 3 / 0 | 115 / 107 |
+| **unified_v1** | **4 / 0** | **4 / 0** | **3 / 0** |
+
+Üç varyantta da **ciddi** harmonik hatası sıfır olan tek motor. Kalan 3–4 ham
+kare tamamen `oktav_sicramasi` ve `register_sicramasi_12li` bölümlerinde:
+294 → 588 ve 294 → 882, yani **gerçek** sıçramalar. Gerçek değer değiştikten
+sonra iki–üç kare boyunca motor hâlâ çaldığı notada; o nota yeninin tam yarısı
+veya üçte biri olduğu için metrik gecikmeyi harmonik hata sayıyor. Alt-harmoniğe
+kilitlenme yok. Gecikme de arızi değil: bir sıçramayı anında izleyen kod çözücü,
+tam olarak sıçrama uyduran kod çözücüdür — kanıtın ısrar etmesini beklemek
+mekanizmanın kendisidir. Metriğin geçiş toleransı bunun içindir.
+
+### Gerçek kayıtta kapsama (ortak payda: dosyadaki hop sayısı)
+
+| Kayıt | yin_v1 | unified_v1 | oktav/onikili uyuşmazlığı |
+|---|---|---|---|
+| gercek-klarnet-calm (70 s) | %79,5 | %77,9 | **0** / 5117 |
+| calm2 (57 s) | %87,1 | %86,5 | **0** / 4605 |
+| Şükrü Tunar taksim (191 s) | %80,8 | %78,5 | 9 oktav + 4 onikili / 13857 |
+
+Eski motorlar sessiz kareyi hiç yayımlamaz, `unified_v1` sessiz kareyi de
+bildirir; bu yüzden payda her motor için dosyadaki hop sayısıdır, motorun kendi
+kare sayısı değil.
+
+### Donmuş dinleyici kararları (`quick_pitch_check.py`, 85 aralık)
+
+| Motor | Koruma hücresi | Bozuldu | Kalan kusurlar |
+|---|---|---|---|
+| yin_v1 | 46 | 0 | boşluk 18, kaçak 2, oktav 1 |
+| pitch_engine_v2 | 61 | 0 | boşluk 18, kaçak 1, oktav 1 |
+| vpm_like | 39 | 6 | boşluk 28, oktav 4 |
+| hapt_v1 | 33 | 2 | boşluk 31, kaçak 1, oktav 1 |
+| **unified_v1** | **85** | **0** | **—** |
+
+`unified_v1` kararlar dosyasında etiketli değil, bu yüzden 85 aralığın tamamı
+onun için koruma hücresidir: testi "yeni kusur çıktı mı" sorusudur ve
+diğerlerinin karşılaştığından **daha zor** bir sınavdır. Sıfır oktav, sıfır
+kaçak, sıfır yeni boşluk. Diğer dördünde toplam 7 oktav hatası duruyor.
+
+### Sentetik oturum testleri
+
+82–1760 Hz arası, hem kapalı-boru tınısı (temel kendi 3. harmoniğinin onda
+biri) hem tam harmonik seri: **her vakada %100 kapsama, sıfır harmonik hata**.
+
+Testler kapsamayı ve hatayı **birlikte** doğruluyor. Tek başına "sıfır harmonik
+hata", her karede susan bir motorda da geçer — sessiz kare yanlış kare değildir.
+
+### Bilinen sınır — temeli tamamen yok olan sinyal
+
+Temel **fiziksel olarak hiç yokken** (yalnız 3f, 5f, 7f), 294 Hz ile kendi
+üçüncü harmoniği arasındaki kanıt oranı 0,46'dır: rakip gerçekten kazananın
+yarısı kadar delil taşır. Motor orada susar. Kullanıcı kararı: olduğu gibi
+bırakılacak (çekişme eşiğini gevşetmek korumayı her yerde zayıflatır). Tuzak
+paketinde iki bölüm; üç gerçek klarnet kaydında hiç görülmedi.
+
+### Ölçülüp reddedilenler
+
+Aşağıdakiler denendi, ölçüldü ve işe yaramadı — tekrar denenmesin:
+
+- Ses posterior tabanını 0,4'ten 0,1'e indirmek: 17922 karede 41 kare kazandırdı.
+  O kareler zaten sonraki bir kapıda kalıyordu.
+- Sert-sessizlik eşiğini kapının üçte birinin altına indirmek: hiçbir şey
+  kazandırmadı, o kareler gerçekten sessiz.
+- Ağırlığı asal-harmonik çekirdeğinden uyumsuzluk terimine kaydırmak: **daha
+  kötü**. 0,15/0,85'te temeli-yok vakasında dominance 0,08'e çöküyor. Çekirdek
+  gerçek bilgi taşıyor; hata çıktısının nasıl okunduğundaydı.
+
+
 ## Çevrimdışı harmonik yol merdiveni `{1/3,1/2,2,3} -> {1/5..5}` — 31 Ağustos 2026
 
 Kullanıcı, YIN v1 simülasyonunda iki oktav hatası bildirdi: `116,379` sn'de
