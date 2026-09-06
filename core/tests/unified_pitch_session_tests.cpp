@@ -64,21 +64,34 @@ struct Score {
     }
 };
 
-Score run(const std::vector<float>& samples, const double truth) {
-    UnifiedPitchSession session;
+/// Drives the session exactly as production does: a window_size window slid
+/// forward by hop_size, so consecutive calls overlap. Feeding disjoint windows
+/// instead would hand the session three times the audio and hide any mistake
+/// in how it accounts for the overlap.
+std::vector<EngineFrame> drive(UnifiedPitchSession& session, const std::vector<float>& samples) {
     std::vector<EngineFrame> frames;
-    constexpr std::size_t kChunk = unified::kMidWindowSamples;
-    for (std::size_t index = 0; index + kChunk <= samples.size(); index += kChunk) {
-        auto produced = session.process_frame(
-            {samples.data() + index, kChunk}, kRate, static_cast<double>(index) / kRate
-        );
+    constexpr auto kWindow = unified::kMidWindowSamples;
+    for (std::size_t start = 0; start + kWindow <= samples.size(); start += unified::kHopSamples) {
+        const auto centre = (static_cast<double>(start) + kWindow / 2.0) / kRate;
+        auto produced = session.process_frame({samples.data() + start, kWindow}, kRate, centre);
         frames.insert(frames.end(), produced.begin(), produced.end());
     }
     auto tail = session.finish();
     frames.insert(frames.end(), tail.begin(), tail.end());
+    return frames;
+}
+
+Score run(const std::vector<float>& samples, const double truth) {
+    UnifiedPitchSession session;
+    const auto frames = drive(session, samples);
 
     Score score{};
     score.frames = frames.size();
+    // One frame per hop, no more: a session that mistook overlapping windows
+    // for fresh audio would emit several times this many.
+    const auto expected =
+        (samples.size() - unified::kMidWindowSamples) / unified::kHopSamples + 1;
+    assert(score.frames <= expected + 1 && score.frames + 1 >= expected);
     for (const auto& frame : frames) {
         if (!frame.frequency_hz) continue;
         ++score.voiced;
@@ -137,24 +150,9 @@ int main() {
     // the decoder's retained window together.
     {
         UnifiedPitchSession session;
-        const auto first = sawtooth_tone(294.0, 0.6);
-        const auto second = sawtooth_tone(880.0, 0.6);
-        constexpr std::size_t kChunk = unified::kMidWindowSamples;
-        for (std::size_t index = 0; index + kChunk <= first.size(); index += kChunk) {
-            (void)session.process_frame({first.data() + index, kChunk}, kRate,
-                                        static_cast<double>(index) / kRate);
-        }
-        (void)session.finish();
+        (void)drive(session, sawtooth_tone(294.0, 0.6));
         session.reset();
-
-        std::vector<EngineFrame> frames;
-        for (std::size_t index = 0; index + kChunk <= second.size(); index += kChunk) {
-            auto produced = session.process_frame({second.data() + index, kChunk}, kRate,
-                                                  static_cast<double>(index) / kRate);
-            frames.insert(frames.end(), produced.begin(), produced.end());
-        }
-        auto tail = session.finish();
-        frames.insert(frames.end(), tail.begin(), tail.end());
+        const auto frames = drive(session, sawtooth_tone(880.0, 0.6));
         std::size_t voiced = 0;
         for (const auto& frame : frames) {
             if (!frame.frequency_hz) continue;

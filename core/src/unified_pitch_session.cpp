@@ -233,7 +233,7 @@ struct UnifiedPitchSession::Impl {
     double sample_rate{unified::kContractSampleRateHz};
     double next_frame_time_seconds{};
     bool has_frame_time{false};
-    std::size_t samples_since_frame{0};
+    bool seeded{false};
 
     /// Frames still owed a clean confirmation before a low-register or
     /// post-abstention publication is allowed.
@@ -242,6 +242,7 @@ struct UnifiedPitchSession::Impl {
     std::optional<double> last_published_hz{};
 
     std::deque<double> pending_family_margins{};
+    std::deque<double> pending_frame_times{};
 
     [[nodiscard]] std::optional<double> publish(
         const UnifiedDecodedFrame& decoded,
@@ -256,12 +257,19 @@ std::optional<double> UnifiedPitchSession::Impl::publish(
     const auto candidate =
         publishable_frequency(decoded, unified::kRealtimeAbstention, family_margin);
     if (!candidate) {
-        diagnostic.publication_reason = decoded.candidate ? "abstained" : "unvoiced";
-        // A contested frame does not merely go silent for one hop. Flickering
-        // between silence and a disputed pitch reads worse than a clean rest,
-        // and the dispute rarely resolves in a single frame.
-        abstain_recovery = unified::kAbstainRecoveryFrames;
-        low_register_confirmations = unified::kLowRegisterConfirmFrames;
+        // Only a genuinely contested frame gets the sticky treatment. A frame
+        // withheld because it was quiet, or because nothing fit well, is
+        // ordinary silence and the next frame deserves to be judged on its own
+        // evidence; making every withheld frame cost two more turns ordinary
+        // rests into long dropouts.
+        const auto contested = decoded.candidate.has_value() &&
+            decoded.harmonic_dominance() < unified::kRealtimeAbstention.harmonic_dominance_floor;
+        diagnostic.publication_reason =
+            !decoded.candidate ? "unvoiced" : (contested ? "contested" : "abstained");
+        if (contested) {
+            abstain_recovery = unified::kAbstainRecoveryFrames;
+            low_register_confirmations = unified::kLowRegisterConfirmFrames;
+        }
         last_published_hz.reset();
         return std::nullopt;
     }
@@ -318,11 +326,12 @@ void UnifiedPitchSession::reset() {
     impl_->history.clear();
     impl_->next_frame_time_seconds = 0.0;
     impl_->has_frame_time = false;
-    impl_->samples_since_frame = 0;
+    impl_->seeded = false;
     impl_->low_register_confirmations = 0;
     impl_->abstain_recovery = 0;
     impl_->last_published_hz.reset();
     impl_->pending_family_margins.clear();
+    impl_->pending_frame_times.clear();
 }
 
 std::vector<EngineFrame> UnifiedPitchSession::process_frame(
@@ -332,70 +341,76 @@ std::vector<EngineFrame> UnifiedPitchSession::process_frame(
 ) {
     auto& impl = *impl_;
     impl.sample_rate = sample_rate > 0.0 ? sample_rate : unified::kContractSampleRateHz;
-    if (!impl.has_frame_time) {
-        impl.next_frame_time_seconds = source_time_seconds;
-        impl.has_frame_time = true;
+    if (samples.empty()) return {};
+
+    // The shared production contract: one call carries one complete analysis
+    // window, and consecutive windows overlap -- callers slide a window_size
+    // window forward by hop_size. Only the trailing hop is new, so admitting
+    // the whole window on every call would consume each sample three times
+    // over and run the clock at three times real speed. The first call has no
+    // predecessor to overlap with, so it seeds the ring with everything.
+    if (!impl.seeded) {
+        for (const auto sample : samples) impl.history.push(sample);
+        impl.seeded = true;
+    } else {
+        const auto fresh = std::min(samples.size(), unified::kHopSamples);
+        for (const auto sample : samples.last(fresh)) impl.history.push(sample);
     }
 
-    std::vector<EngineFrame> published;
-    for (const auto sample : samples) {
-        impl.history.push(sample);
-        if (++impl.samples_since_frame < unified::kHopSamples) continue;
-        impl.samples_since_frame = 0;
+    const auto history = impl.history.window();
+    const auto frame_time = source_time_seconds;
+    impl.next_frame_time_seconds =
+        source_time_seconds + static_cast<double>(unified::kHopSamples) / impl.sample_rate;
 
-        const auto history = impl.history.window();
+    auto evidence = unified_frame_evidence(
+        history, impl.sample_rate, frame_time, impl.config, impl.parity
+    );
+    // The margin belongs to the frame that produced it, but the decoder will
+    // not resolve that frame until the lag window has elapsed, so it travels
+    // alongside the decoder's own buffer.
+    auto best_margin = 0.0;
+    if (!evidence.evidence.empty()) {
+        best_margin = std::max_element(
+            evidence.evidence.begin(), evidence.evidence.end(),
+            [](const auto& left, const auto& right) {
+                return left.family_margin < right.family_margin;
+            }
+        )->family_margin;
+    }
+    impl.pending_family_margins.push_back(best_margin);
+    impl.pending_frame_times.push_back(frame_time);
 
-        const auto frame_time = impl.next_frame_time_seconds;
-        impl.next_frame_time_seconds +=
-            static_cast<double>(unified::kHopSamples) / impl.sample_rate;
+    const auto rms = evidence.rms;
+    const auto candidate_count = evidence.candidates.size();
+    const auto eligible = evidence.signal_eligible;
+    const auto decoded = impl.decoder.push(evidence);
+    if (!decoded) return {};
 
-        auto evidence = unified_frame_evidence(
-            history, impl.sample_rate, frame_time, impl.config, impl.parity
+    const auto margin = impl.pending_family_margins.front();
+    impl.pending_family_margins.pop_front();
+    const auto resolved_time = impl.pending_frame_times.front();
+    impl.pending_frame_times.pop_front();
+
+    impl.diagnostic = UnifiedFrameDiagnostic{
+        resolved_time, rms, eligible, candidate_count,
+        decoded->winner_posterior, decoded->voiced_posterior,
+        decoded->harmonic_dominance(), margin, impl.parity.index, {}
+    };
+    const auto frequency = impl.publish(*decoded, margin);
+    if (frequency && decoded->winner_posterior >= unified::kParityTrustPosterior) {
+        update_parity_estimate(
+            impl.parity, compute_multi_resolution_spectra(history, impl.sample_rate),
+            *frequency, impl.sample_rate
         );
-        // The margin belongs to the frame that produced it, but the decoder
-        // will not resolve that frame until the lag window has elapsed, so it
-        // travels alongside the decoder's own buffer.
-        auto best_margin = 0.0;
-        if (!evidence.evidence.empty()) {
-            best_margin = std::max_element(
-                evidence.evidence.begin(), evidence.evidence.end(),
-                [](const auto& left, const auto& right) {
-                    return left.family_margin < right.family_margin;
-                }
-            )->family_margin;
-        }
-        impl.pending_family_margins.push_back(best_margin);
-
-        const auto rms = evidence.rms;
-        const auto candidate_count = evidence.candidates.size();
-        const auto eligible = evidence.signal_eligible;
-        const auto decoded = impl.decoder.push(evidence);
-        if (!decoded) continue;
-
-        const auto margin = impl.pending_family_margins.front();
-        impl.pending_family_margins.pop_front();
-
-        impl.diagnostic = UnifiedFrameDiagnostic{
-            frame_time, rms, eligible, candidate_count,
-            decoded->winner_posterior, decoded->voiced_posterior,
-            decoded->harmonic_dominance(), margin, impl.parity.index, {}
-        };
-        const auto frequency = impl.publish(*decoded, margin);
-        if (frequency && decoded->winner_posterior >= unified::kParityTrustPosterior) {
-            const auto spectra =
-                compute_multi_resolution_spectra(history, impl.sample_rate);
-            update_parity_estimate(impl.parity, spectra, *frequency, impl.sample_rate);
-        } else if (!frequency) {
-            note_unvoiced_frame(impl.parity);
-        }
-
-        published.push_back(EngineFrame{
-            frame_time,
-            frequency,
-            frequency ? decoded->winner_posterior : 0.0,
-        });
+    } else if (!frequency) {
+        note_unvoiced_frame(impl.parity);
     }
-    return published;
+
+    return {EngineFrame{
+        resolved_time,
+        frequency,
+        frequency ? decoded->winner_posterior : 0.0,
+    }};
 }
 
 std::vector<EngineFrame> UnifiedPitchSession::finish() {
@@ -407,17 +422,20 @@ std::vector<EngineFrame> UnifiedPitchSession::finish() {
             margin = impl.pending_family_margins.front();
             impl.pending_family_margins.pop_front();
         }
-        const auto frame_time = impl.next_frame_time_seconds -
-            static_cast<double>(impl.decoder.lag_frames() + 1) *
-                static_cast<double>(unified::kHopSamples) / impl.sample_rate;
+        // Frame times are carried through the lag window rather than
+        // recomputed, so the drained tail lands on the same timestamps the
+        // caller supplied for those frames.
+        auto frame_time = impl.next_frame_time_seconds;
+        if (!impl.pending_frame_times.empty()) {
+            frame_time = impl.pending_frame_times.front();
+            impl.pending_frame_times.pop_front();
+        }
         const auto frequency = impl.publish(*decoded, margin);
         published.push_back(EngineFrame{
-            std::max(0.0, frame_time),
+            frame_time,
             frequency,
             frequency ? decoded->winner_posterior : 0.0,
         });
-        impl.next_frame_time_seconds +=
-            static_cast<double>(unified::kHopSamples) / impl.sample_rate;
     }
     return published;
 }

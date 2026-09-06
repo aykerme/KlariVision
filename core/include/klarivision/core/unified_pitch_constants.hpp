@@ -132,6 +132,12 @@ struct AbstentionPolicy {
     // which is the rule that actually matters.
     double winner_posterior_floor{};
     double harmonic_dominance_floor{};
+    // The winner must merely not be *beaten* by one of its own harmonic
+    // relatives on spectral evidence. Demanding a positive margin on top of
+    // that withholds a large number of perfectly ordinary frames on real
+    // recordings, where the margin is small and noisy even when the answer is
+    // right, and it buys nothing: harmonic ambiguity is already priced by the
+    // dominance floor above.
     double family_margin_floor{};
 };
 
@@ -140,9 +146,13 @@ struct AbstentionPolicy {
 // over a harmonic error. Offline decodes the whole file, so a contest that
 // survives global decoding is real evidence rather than a look-ahead shortage;
 // abstaining as hard there would only manufacture dropouts.
-inline constexpr AbstentionPolicy kRealtimeAbstention{0.60, 0.10, 0.90, 0.05};
+inline constexpr AbstentionPolicy kRealtimeAbstention{0.40, 0.10, 0.90, 0.00};
 inline constexpr AbstentionPolicy kOfflineAbstention{0.50, 0.05, 0.75, 0.00};
 
+// Applied only after a frame was withheld for *harmonic* ambiguity, never
+// after an ordinary quiet or low-confidence one. Flicker between silence and a
+// disputed pitch is worth suppressing; charging every withheld frame two more
+// silent ones triples the cost of ordinary silence for no benefit at all.
 inline constexpr std::size_t kAbstainRecoveryFrames = 2;
 
 // Publication tolerance around the display range. A note written at the very
