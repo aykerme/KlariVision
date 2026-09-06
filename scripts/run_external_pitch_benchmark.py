@@ -37,6 +37,8 @@ sys.path.insert(0, str(ROOT / "scripts"))
 from pitch_tournament_engines import run_engines  # noqa: E402
 from run_pitch_engine_tournament import read_wav  # noqa: E402
 
+sys.path.insert(0, str(ROOT / "src"))
+
 EXTERNAL = ROOT / "data/external"
 CONTRACT_RATE = 48_000
 
@@ -104,6 +106,59 @@ def resample_to_contract(audio: np.ndarray, rate: int) -> np.ndarray:
 
 
 HOP_SECONDS = 512 / CONTRACT_RATE
+
+# pYIN, aday motorlardan biri değil: çevrimdışı, tüm parçayı görerek çalışan bir
+# **referans tavanıdır**. Araştırma raporu onu "ulaşılabilir en iyi" olarak
+# tanımlıyor ve donmuş dinleyici kararlarında 85 aralığın hiçbirinde oktav
+# hatası yapmıyor. Tablodaki işlevi bir rakip değil, bir mesafe ölçüsüdür:
+# nedensel bir motorun ne kadar yaklaşabildiğini gösterir.
+#
+# Aralık, `unified_v1`'in kestirici aralığıyla eşitlenir. pYIN'i kendisine
+# verilmemiş bir aralıktan sorumlu tutmak karşılaştırmayı bozar.
+PYIN_MINIMUM_HZ = 65.0
+PYIN_MAXIMUM_HZ = 2_400.0
+
+
+def librosa_pyin_frames(audio: np.ndarray) -> list[tuple[float, float | None]] | None:
+    """librosa'nın pYIN'i. Kurulu değilse None döner."""
+    try:
+        import librosa
+    except ImportError:
+        return None
+    hop = 512
+    f0, voiced, _ = librosa.pyin(
+        audio.astype(np.float32),
+        fmin=PYIN_MINIMUM_HZ,
+        fmax=PYIN_MAXIMUM_HZ,
+        sr=CONTRACT_RATE,
+        frame_length=2_048,
+        hop_length=hop,
+    )
+    times = librosa.times_like(f0, sr=CONTRACT_RATE, hop_length=hop)
+    return [
+        (float(t), float(hz) if flag and np.isfinite(hz) else None)
+        for t, hz, flag in zip(times, f0, voiced)
+    ]
+
+
+def vamp_pyin_frames(audio_path: Path) -> list[tuple[float, float | None]] | None:
+    """Sonic Annotator üzerinden native Vamp pYIN. Kurulu değilse None döner."""
+    try:
+        from klarivision.pitch.models import AudioSource
+        from klarivision.pitch.vamp_pyin import VampPyinPitchExtractor
+    except ImportError:
+        return None
+    extractor = VampPyinPitchExtractor()
+    if not extractor.available():
+        return None
+    try:
+        track = extractor.extract(AudioSource(path=audio_path))
+    except Exception:  # noqa: BLE001 - eksik eklenti tabloyu düşürmemeli
+        return None
+    return [
+        (float(t), float(hz) if bool(v) else None)
+        for t, hz, v in zip(track.time_seconds, track.frequency_hz, track.voiced)
+    ]
 
 
 def on_hop_grid(frames, duration: float) -> tuple[np.ndarray, np.ndarray]:
@@ -176,7 +231,7 @@ def score(
 
 
 def evaluate_dataset(
-    dataset: Dataset, engines: list[str] | None, limit: int | None
+    dataset: Dataset, engines: list[str] | None, limit: int | None, skip_reference: bool = False
 ) -> list[FileResult]:
     audio_files = sorted(EXTERNAL.glob(dataset.audio_glob))
     if not audio_files:
@@ -203,11 +258,22 @@ def evaluate_dataset(
         if not np.any(reference_hz > 0):
             continue  # tamamen ötümsüz stem; ölçecek bir şey yok
 
-        traces = run_engines(audio, CONTRACT_RATE)
-        for name, trace in traces.items():
+        duration = len(audio) / CONTRACT_RATE
+        candidates: dict[str, list] = {
+            name: trace.frames for name, trace in run_engines(audio, CONTRACT_RATE).items()
+        }
+        if not skip_reference:
+            vamp = vamp_pyin_frames(audio_path)
+            if vamp is not None:
+                candidates["pyin_vamp (referans)"] = vamp
+            librosa_frames = librosa_pyin_frames(audio)
+            if librosa_frames is not None:
+                candidates["pyin_librosa (referans)"] = librosa_frames
+
+        for name, frames in candidates.items():
             if engines and name not in engines:
                 continue
-            times, hz = on_hop_grid(trace.frames, len(audio) / CONTRACT_RATE)
+            times, hz = on_hop_grid(frames, duration)
             results.append(
                 FileResult(dataset.name, audio_path.name, name, score(reference_times, reference_hz, times, hz))
             )
@@ -258,6 +324,10 @@ def main() -> int:
     parser.add_argument("--dataset", action="append", help="yalnız bu kümeyi koş")
     parser.add_argument("--engine", action="append", help="yalnız bu motoru koş")
     parser.add_argument("--limit", type=int, help="küme başına dosya sayısını sınırla")
+    parser.add_argument(
+        "--no-reference", action="store_true",
+        help="çevrimdışı pYIN referanslarını atla (hızlı koşu)",
+    )
     parser.add_argument("--output", type=Path, default=ROOT / "outputs/external-pitch-benchmark.json")
     parser.add_argument("--markdown", type=Path, default=ROOT / "outputs/external-pitch-benchmark.md")
     args = parser.parse_args()
@@ -267,7 +337,7 @@ def main() -> int:
     results: list[FileResult] = []
     for dataset in selected:
         print(f"{dataset.name}:")
-        results.extend(evaluate_dataset(dataset, args.engine, args.limit))
+        results.extend(evaluate_dataset(dataset, args.engine, args.limit, args.no_reference))
 
     if not results:
         print("Hiçbir küme ölçülemedi. Önce indirin:")
