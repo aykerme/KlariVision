@@ -306,9 +306,11 @@ def test_unified_v1_makes_no_serious_harmonic_error_on_any_holdout(
 
 
 # The one case that fails the safety rate, recorded in D-038 as accepted and
-# still open. 24 frames of 2365 voiced (1.0%) against the 0.5% bound.
+# still open. 23 frames of 2365 voiced (0.97%) against the 0.5% bound. It was
+# 24 until swipe_prime was folded onto FrameSpectrum, whose finer bins recover
+# one frame; the constant tracks the measurement, so it ratchets down with it.
 ACCEPTED_VETO_SOURCE = "klarivision_pitch_tournament_holdout_adverse_v1.wav"
-ACCEPTED_VETO_MISSING_VOICED_FRAMES = 24
+ACCEPTED_VETO_MISSING_VOICED_FRAMES = 23
 
 
 @pytest.mark.parametrize(
@@ -327,7 +329,7 @@ def test_unified_v1_missing_voiced_stays_inside_the_safety_bound(
 
     Every frozen holdout case must stay inside the tournament's safety rate,
     with one recorded exception: `holdout_adverse_v1.wav`, where the engine
-    withholds 24 of 2365 voiced frames (1.0%, against a 0.5% bound). That
+    withholds 23 of 2365 voiced frames (0.97%, against a 0.5% bound). That
     veto is the open item the user accepted in D-038 -- it is asserted at its
     measured count rather than waived, so the exception cannot quietly grow.
     """

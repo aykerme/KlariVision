@@ -346,11 +346,12 @@ std::vector<HarmonicEvidence> score_harmonic_evidence(
         return high_peaks;
     };
 
-    // swipe_prime_harmonic_supports pays for one FFT per call regardless of
-    // how many frequencies it scores, so every SWIPE'-prime score this
-    // function will need -- the candidates themselves, plus every in-range
-    // harmonic-family competitor used by family_margin below -- is batched
-    // into a single combined call rather than one call per frequency.
+    // swipe_prime_harmonic_supports compresses the whole spectrum once per
+    // call regardless of how many frequencies it scores, so every
+    // SWIPE'-prime score this function will need -- the candidates
+    // themselves, plus every in-range harmonic-family competitor used by
+    // family_margin below -- is batched into a single combined call rather
+    // than one call per frequency.
     std::vector<double> combined_frequencies(
         candidate_frequencies_hz.begin(), candidate_frequencies_hz.end()
     );
@@ -371,8 +372,14 @@ std::vector<HarmonicEvidence> score_harmonic_evidence(
     // evidence (see unified_pitch_constants.hpp), handing the frame to its
     // subharmonic -- kSpectralAnalysisMaximumHz (8000) is passed explicitly
     // rather than relying on that default.
+    // The low band, not the per-candidate band: SWIPE' scores a candidate
+    // against its own partials, so the window has to resolve the *lowest*
+    // frequency in the batch (family competitors reach down to
+    // kEstimatorMinimumHz), and the low band is the full history window --
+    // the same span this used to transform for itself before the kernel was
+    // folded onto FrameSpectrum.
     const auto combined_supports = v2::swipe_prime_harmonic_supports(
-        history, sample_rate, combined_frequencies, unified::kSpectralAnalysisMaximumHz
+        spectra.low, combined_frequencies, unified::kSpectralAnalysisMaximumHz
     );
 
     for (std::size_t i = 0; i < candidate_count; ++i) {

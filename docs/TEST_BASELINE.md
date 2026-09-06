@@ -1,5 +1,46 @@
 # KlariVision Test Tabanı
 
+## Faz 7: `swipe_prime` `FrameSpectrum` üstüne katlandı — 6 Eylül 2026
+
+`swipe_prime.cpp` kendi pencere/FFT/interpolasyon kopyasını taşıyordu ve aynı
+history'yi karede ikinci kez dönüştürüyordu (`frame_spectrum.cpp`'nin kendi
+notu bu katlamayı zaten öngörmüştü). SWIPE′ çekirdeği **değişmedi** — asal
+harmonikler, `1/sqrt(k)` ağırlıkları, tepe-eksi-vadi terimi, normalizasyon ve
+sqrt sıkıştırması aynı; yalnız genlikler artık hazır `FrameSpectrum`'dan
+okunuyor. Sıkıştırma hâlâ interpolasyondan **önce** yapılır: tersi çekirdeği
+değiştirirdi, işlem sırasını değil.
+
+Tek davranış farkı bin çözünürlüğü: kendi FFT'si history'yi 4096'ya
+dolduruyordu, `FrameSpectrum` 4× dolgu ile 16384 kullanır. Yani ölçüm aynı,
+tepe konumu daha keskin.
+
+### Donmuş holdout v1 — katlama öncesi / sonrası
+
+| Dosya | Ciddi eksik ötüm | Ciddi harmonik | Doğru-kare ort. sent |
+|---|---|---|---|
+| `holdout_clean_v1.wav` | 0 → 0 | 0 → 0 | 1,795 → 1,795 |
+| `holdout_room_v1.wav` | 0 → 0 | 0 → 0 | 2,120 → 2,120 |
+| `holdout_adverse_v1.wav` | **24 → 23** | 0 → 0 | 2,402 → 2,405 |
+
+Temiz ve oda varyantları **bit düzeyinde aynı** kaldı. Tek değişen, vetolu
+adverse dosyasında bir karenin geri kazanılması; sent farkı 0,003 (ölçüm
+gürültüsü mertebesinde). `ACCEPTED_VETO_MISSING_VOICED_FRAMES` sabiti 24'ten
+**23'e indirildi** — mandal ölçümü izler, ölçüm mandalı değil.
+
+### Kapılar
+
+`scripts/test_core.sh` temiz (13 ikili) · turnuva testleri 27 geçti (beş
+holdout'un bütün varyantlarında ciddi harmonik hata **hâlâ sıfır**) ·
+`pytest` 87 geçti / 1 atlandı · macOS `xcodebuild` Debug BUILD SUCCEEDED.
+
+### Hız
+
+Çevrimdışı iz, 25,45 sn'lik adverse holdout üzerinde, 5 koşunun en iyisi:
+**7,336 sn → 7,137 sn (%2,7)**. Kaldırılan 4096 noktalı FFT, korunan 16384
+noktalı bandın yanında küçük kaldığı için kazanç mütevazı; asıl kazanç tek
+kopya kalan spektrum kodu.
+
+
 ## Dört motor kaldırıldı — 6 Eylül 2026 (D-039)
 
 Bu tur **hiçbir ölçümü değiştirmedi**: motor davranışı, eşikler ve 5 hop

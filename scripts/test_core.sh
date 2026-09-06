@@ -25,10 +25,15 @@ clang++ -std=c++20 -Wall -Wextra -Werror \
 
 "$mpm_test_binary"
 
+# swipe_prime now scores an already-computed FrameSpectrum, so its test needs
+# frame_spectrum.cpp (and harmonic_probe.cpp, which frame_spectrum calls).
 clang++ -std=c++20 -Wall -Wextra -Werror \
   -I "$project_root/core/include" \
   "$project_root/core/src/swipe_prime.cpp" \
+  "$project_root/core/src/frame_spectrum.cpp" \
+  "$project_root/core/src/harmonic_probe.cpp" \
   "$project_root/core/tests/swipe_prime_tests.cpp" \
+  -framework Accelerate \
   -o "$swipe_prime_test_binary"
 
 "$swipe_prime_test_binary"

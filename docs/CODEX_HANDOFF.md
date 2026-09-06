@@ -2,6 +2,41 @@
 
 Son güncelleme: 6 Eylül 2026
 
+## Faz 7 tamamlandı — `swipe_prime` `FrameSpectrum` üstüne katlandı — 6 Eylül 2026
+
+`swipe_prime.cpp` kendi pencere/FFT/interpolasyon kopyasını taşıyordu (216 →
+153 satır) ve aynı history'yi karede ikinci kez dönüştürüyordu.
+`swipe_prime_harmonic_supports()` artık ham örnek yerine hazır bir
+`FrameSpectrum` alır; çağıran `harmonic_evidence.cpp` ona `spectra.low`'u
+verir — SWIPE′ adayı **kendi** parçalılarına karşı puanladığı için pencere en
+düşük frekansı çözebilmeli ve düşük bant zaten tam history penceresidir.
+
+SWIPE′ çekirdeği değişmedi. sqrt sıkıştırması hâlâ interpolasyondan **önce**
+yapılır; tersi çekirdeği değiştirirdi. Tek davranış farkı bin çözünürlüğü
+(kendi FFT'si 4096, `FrameSpectrum` 4× dolguyla 16384).
+
+**Ölçüldü, varsayılmadı:** temiz ve oda holdout'ları bit düzeyinde aynı;
+adverse holdout'ta ciddi eksik ötüm **24 → 23**, sent farkı +0,003; ciddi
+harmonik hata beş holdout'un bütün varyantlarında hâlâ sıfır. Çevrimdışı iz
+%2,7 hızlandı. Sayılar `TEST_BASELINE.md`'nin en üstünde.
+`ACCEPTED_VETO_MISSING_VOICED_FRAMES` 24 → 23'e indirildi.
+
+### Sonraki oturumun işleri — öncelik sırasıyla
+
+1. **Klarnet dışı ötüm kapsaması** (D-038'den devam, kullanıcı bu turu
+   onayladı). Dış karşılaştırmada RPA 0,315–0,635, pYIN 0,66–0,99; fark
+   neredeyse tamamen voicing recall — perde doğru ölçülüyor, yayımlanmıyor.
+   **Sıra önemli:** önce ayrı bir doğrulama kümesi ayrılır, sonra girilir.
+   Dış tablo elimizdeki tek ayarlanmamış ölçüttür; ona bakarak ayar yapmak onu
+   ölçüt olmaktan çıkarır.
+2. **iPad `xcodebuild`** — bu makinede iOS platformu kurulu olmadığı için
+   koşulamadı (kullanıcı en sona bıraktı). Kurulduğunda ilk iş budur.
+3. **`adverse_v1` vetosu** (23 kare, sınır 12): ucuz ayar yok, mimari iş
+   gerekir; ölçülüp reddedilen altı kol `TEST_BASELINE.md`'de, tekrar
+   denenmemeli.
+4. **Küçük borç:** `pitch_candidate.hpp`'nin ad alanı hâlâ
+   `klarivision::core::v2`; mekanik yeniden adlandırma.
+
 ## Faz 6 tamamlandı — dört eski motor silindi (D-039) — 6 Eylül 2026
 
 Kullanıcı kararıyla D-037'nin nihai hedefi uygulandı. **Sonraki oturum bu

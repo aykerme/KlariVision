@@ -11,14 +11,11 @@
 namespace klarivision::core {
 namespace {
 
-// The following three helpers (next_power_of_two, fft, interpolated_value)
-// are copied verbatim in algorithm from core/src/swipe_prime.cpp rather than
-// shared, on purpose: this file and swipe_prime.cpp are owned by different
-// agents landing in parallel, and a shared helper header would make both
-// branches conflict on every touch. They must stay bit-for-bit the same
-// algorithm so a spectrum computed here and one computed there are
-// comparable; a later cleanup phase can fold swipe_prime.cpp onto
-// FrameSpectrum and delete its private copy.
+// next_power_of_two, fft and interpolated_value used to be duplicated in
+// swipe_prime.cpp, which transformed the same history a second time. That
+// fold happened: swipe_prime.cpp now takes a FrameSpectrum and this is the
+// only transform in the frame. These helpers are private to this file
+// because nothing else needs them.
 
 // Smallest power of two that is >= value; the FFT below only supports
 // power-of-two lengths.
