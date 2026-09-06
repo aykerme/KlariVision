@@ -70,6 +70,39 @@ yarısı kadar delil taşır. Motor orada susar. Kullanıcı kararı: olduğu gi
 bırakılacak (çekişme eşiğini gevşetmek korumayı her yerde zayıflatır). Tuzak
 paketinde iki bölüm; üç gerçek klarnet kaydında hiç görülmedi.
 
+### Sentetik turnuva — 6 Eylül 2026 (üçüncü koşu, adaya göre ölçeklenen analiz sınırı)
+
+| Motor | Ciddi yanlış | Ciddi eksik | Ciddi harmonik | Ciddi toplam | Kapı |
+|---|---|---|---|---|---|
+| yin_v1 | 54 | 13 | 498 | 658 | — |
+| **unified_v1** | **5** | **2161** | **43** | **2212** | VETO (5 dosya) |
+
+Üç koşuda ciddi toplam 3192 → 2432 → **2212**, veto 7 → 6 → **5 dosya**.
+Donmuş holdout'larda ciddi eksik 1034 → 352 → **142**.
+
+**Kalan tıkanıklık tek bir akustik olguda toplanıyor.** `clean_v1` ve
+`adverse_v1`'de hem harmonik hatalar hem kayıplar `hidden_fundamental`
+bölümlerinde yığılıyor (96,3 Hz ve 128,6 Hz):
+
+| Dosya | Bölüm | Harmonik | Eksik | Toplam kare |
+|---|---|---|---|---|
+| clean_v1 | hidden_fundamental_96.3 | 13 | 12 | 127 |
+| clean_v1 | hidden_fundamental_128.6 | 10 | 9 | 141 |
+| adverse_v1 | hidden_fundamental_96.3 | 21 | 17 | 127 |
+| adverse_v1 | hidden_fundamental_128.6 | 3 | 12 | 141 |
+
+Bu, tuzak paketindeki `temel_yok` bölümleriyle **aynı olgu**, yalnızca alçak
+register'da olduğu için sessizliğin yanında harmonik hata da üretiyor. Geri
+kalan her şey pratikte başabaş.
+
+**Sıradaki doğru iş:** raporun kendi reçetesi — Hermes'in alt-harmonik
+toplaması (SHS, 1988), "temeli olmayan sesin perdesi" problemi için kurulmuş ve
+temeli fiziksel olarak yok edilmiş (300 Hz altı kesilmiş) konuşmada test
+edilmiş. TWM'de eksik temeli **cezalandırmayı bıraktık** ama gizli temele
+**pozitif kanıt** hiç eklemedik. SHS terimi tam olarak bunu yapar: her spektral
+bileşenin bir alt-harmonik serisi ürettiğini varsayıp toplar, böylece gerçek
+(gizli) temel kendi harmoniklerinden destek alır.
+
 ### Sentetik turnuva — 6 Eylül 2026 (ikinci koşu, berraklık tabanlı ses kararı)
 
 | Motor | Ciddi yanlış | Ciddi eksik | Ciddi harmonik | Ciddi toplam | Gecikme | Kapı |
