@@ -83,7 +83,16 @@ inline constexpr double kTransitionWidthCents = 700.0;
 // decisive difference from the older engines, which imposed no spectral
 // existence requirement on low candidates at all.
 inline constexpr double kLowRegisterHz = kLowBandMaximumHz;
-inline constexpr double kLowFundamentalPresenceFloor = 0.30;
+
+// A(f) relative to its strongest low multiple, below which a low candidate is
+// dropped outright. The bar has to be low: a stopped-pipe fundamental in its
+// bottom register is routinely many times weaker than its own third harmonic,
+// and a bar set where "a real fundamental is a third as loud as its harmonic"
+// rejects ordinary, correct low notes. What this catches is the other case
+// entirely -- an autocorrelation ghost, whose own frequency carries essentially
+// no energy at all. Graded demotion of merely-soft fundamentals is
+// spectral_existence's job, not this gate's.
+inline constexpr double kLowFundamentalPresenceFloor = 0.05;
 inline constexpr std::size_t kLowRegisterConfirmFrames = 3;
 inline constexpr double kHighPassCutoffHz = 55.0;
 
@@ -115,6 +124,12 @@ inline constexpr double kHarmonicToleranceCents = 90.0;
 
 struct AbstentionPolicy {
     double voiced_posterior_floor{};
+    // Guards against a pathologically flat frame where nothing fits, not
+    // against having many candidates. The engine proposes a dozen hypotheses
+    // per frame on purpose, so posterior share is diluted by design and a high
+    // bar here would punish exactly the behaviour the architecture exists to
+    // produce. Harmonic ambiguity is priced by the dominance floor below,
+    // which is the rule that actually matters.
     double winner_posterior_floor{};
     double harmonic_dominance_floor{};
     double family_margin_floor{};
@@ -125,17 +140,30 @@ struct AbstentionPolicy {
 // over a harmonic error. Offline decodes the whole file, so a contest that
 // survives global decoding is real evidence rather than a look-ahead shortage;
 // abstaining as hard there would only manufacture dropouts.
-inline constexpr AbstentionPolicy kRealtimeAbstention{0.60, 0.55, 0.90, 0.05};
-inline constexpr AbstentionPolicy kOfflineAbstention{0.50, 0.45, 0.75, 0.00};
+inline constexpr AbstentionPolicy kRealtimeAbstention{0.60, 0.10, 0.90, 0.05};
+inline constexpr AbstentionPolicy kOfflineAbstention{0.50, 0.05, 0.75, 0.00};
 
 inline constexpr std::size_t kAbstainRecoveryFrames = 2;
+
+// Publication tolerance around the display range. A note written at the very
+// top or bottom of the instrument's range lands a few cents either side of the
+// nominal frequency, and refusing it because it missed the boundary by a cent
+// would silence the extremes of the range the range was drawn to include.
+// A semitone is wide enough for tuning and vibrato, and far too narrow to let
+// a harmonic relative through.
+inline constexpr double kDisplayRangeToleranceCents = 100.0;
 
 // ---------------------------------------------------------------------------
 // Emission weights (starting points; tuned in the measurement phase)
 // ---------------------------------------------------------------------------
-inline constexpr double kPeriodWeight = 0.45;
-inline constexpr double kSwipeWeight = 0.25;
-inline constexpr double kTwmWeight = 0.30;
+//
+// A candidate's score is (periodicity) x (spectral support), following the
+// research report's own formulation. These two weights only set the blend
+// *within* the spectral term; periodicity multiplies the result rather than
+// being averaged into it, so a speculative harmonic competitor cannot buy its
+// way back to the fundamental's score on spectral evidence alone.
+inline constexpr double kSwipeWeight = 0.45;
+inline constexpr double kTwmWeight = 0.55;
 
 // ---------------------------------------------------------------------------
 // Spectral parity (adaptive odd/even harmonic tolerance)

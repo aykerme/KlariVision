@@ -50,14 +50,25 @@ void merge_candidate(
 /// decoder's transition model.
 ///
 /// Periodicity says a period fits; the spectral terms say whether anything is
-/// actually sounding there. Keeping both is the point -- a subharmonic ghost
-/// scores well on the first and badly on the second, and that gap is the only
-/// thing that separates it from a real, merely soft, fundamental.
+/// actually sounding there. The two are combined as a product, not a sum, and
+/// the difference is not cosmetic. Under a weighted sum, a harmonic relative
+/// injected as a speculative competitor -- deliberately given only a small
+/// share of its parent's periodicity -- can still reach nearly the parent's
+/// score on spectral support alone, because for a harmonically rich tone the
+/// relatives genuinely are well supported. Every frame then looks contested
+/// and the engine abstains on all of them. A product keeps periodicity
+/// decisive: a competitor holding a twentieth of the parent's period
+/// probability scores a twentieth as well no matter how good the spectrum
+/// looks at its frequency, and contest mass only becomes significant when the
+/// evidence really is ambiguous.
 double emission_for(const double period_probability, const HarmonicEvidence& evidence) {
-    const auto base = unified::kPeriodWeight * period_probability +
-                      unified::kSwipeWeight * evidence.swipe_prime_support +
-                      unified::kTwmWeight * evidence.twm_score;
-    return std::log(std::max(base * (1.0 - evidence.ghost_penalty), 1e-6));
+    // Convex blend, so support stays in [0, 1] and the product's scale is the
+    // periodicity's own.
+    constexpr auto total_weight = unified::kSwipeWeight + unified::kTwmWeight;
+    const auto support = (unified::kSwipeWeight * evidence.swipe_prime_support +
+                          unified::kTwmWeight * evidence.twm_score) / total_weight;
+    const auto base = period_probability * support * (1.0 - evidence.ghost_penalty);
+    return std::log(std::max(base, 1e-6));
 }
 
 /// Fixed-capacity ring over the analysis history.

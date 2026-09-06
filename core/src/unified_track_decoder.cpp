@@ -355,8 +355,13 @@ std::optional<double> publishable_frequency(
     // A decoded candidate outside the display range is treated as an abstention
     // rather than clamped. Clamping would report a frequency the estimator
     // never actually believed, which is precisely the failure the guard band
-    // above the display range exists to avoid.
-    if (frequency < unified::kDisplayMinimumHz || frequency > unified::kDisplayMaximumHz) {
+    // above the display range exists to avoid. The bound carries a semitone of
+    // tolerance so that a note at the very edge of the range -- which lands a
+    // few cents either side of nominal, and drifts further under vibrato -- is
+    // not silenced for missing the boundary by a cent.
+    const auto tolerance = std::exp2(unified::kDisplayRangeToleranceCents / 1200.0);
+    if (frequency < unified::kDisplayMinimumHz / tolerance ||
+        frequency > unified::kDisplayMaximumHz * tolerance) {
         return std::nullopt;
     }
     return frequency;
