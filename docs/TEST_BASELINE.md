@@ -70,6 +70,41 @@ yarısı kadar delil taşır. Motor orada susar. Kullanıcı kararı: olduğu gi
 bırakılacak (çekişme eşiğini gevşetmek korumayı her yerde zayıflatır). Tuzak
 paketinde iki bölüm; üç gerçek klarnet kaydında hiç görülmedi.
 
+### Sentetik turnuva — 6 Eylül 2026
+
+| Motor | Ciddi yanlış | Ciddi eksik | Ciddi harmonik | Ciddi toplam | Gecikme | Güvenlik kapısı |
+|---|---|---|---|---|---|---|
+| yin_v1 | 54 | 13 | 498 | 658 | 16 ms | — |
+| pitch_engine_v2 | 6 | 536 | 495 | 1037 | 69 ms | — |
+| vpm_like | 15 | 54 | 34 | 115 | 16 ms | — |
+| hapt_v1 | 6 | 329 | 107 | 442 | 16 ms | — |
+| **unified_v1** | 5 | **3146** | **38** | 3192 | 160 ms | **VETO** |
+
+Harmonik hatada `yin_v1` ve `pitch_engine_v2`'nin on üçte biri. Ama
+`serious_missing_voiced_frames` yedi donmuş holdout'ta `yin_v1`'i 0,5 puandan
+fazla aşıyor ve turnuva motoru **veto ediyor**. Bu, projenin kendi güvenlik
+kuralının "hatayı sessizliğe taşıma" demesidir ve açık iştir.
+
+Kaybın kaynağı ikiye ayrılıyor:
+
+- **1964 kare** oktav tuzağı paketinden — temeli tamamen yok olan bölümler,
+  yukarıdaki bilinen sınır. Tuzak paketi vetoya girmez.
+- **1034 kare** donmuş holdout'lardan, ve neredeyse tamamı gürültülü
+  varyantlarda yoğunlaşıyor: `adverse_v5` 481 kayıp / 487 doğru, `adverse_v4`
+  333 / 712. Gürültü altında motor susuyor.
+
+Ölçülen kök neden: merdivenin sesli olasılığı gürültüde çöküyor. 294 Hz saf
+tonda beyaz gürültüyle:
+
+| SNR | voiced_prob | tespit |
+|---|---|---|
+| 20 dB | 0,99 | 294,0 Hz ✓ |
+| 12 dB | 0,83 | 293,8 Hz ✓ |
+| 6 dB | **0,20** | **294,4 Hz ✓** |
+| 0 dB | 0,01 | 73,7 Hz ✗ |
+
+6 dB'de frekans hâlâ üç sent içinde doğru; atılan şey doğru cevabın kendisi.
+
 ### Ölçülüp reddedilenler
 
 Aşağıdakiler denendi, ölçüldü ve işe yaramadı — tekrar denenmesin:
@@ -81,6 +116,20 @@ Aşağıdakiler denendi, ölçüldü ve işe yaramadı — tekrar denenmesin:
 - Ağırlığı asal-harmonik çekirdeğinden uyumsuzluk terimine kaydırmak: **daha
   kötü**. 0,15/0,85'te temeli-yok vakasında dominance 0,08'e çöküyor. Çekirdek
   gerçek bilgi taşıyor; hata çıktısının nasıl okunduğundaydı.
+- Kare emisyonlarını toplama göre normalleştirip düzgün dağılım yapmak: **daha
+  kötü** (`adverse_v5` 481 → 654). Kütleyi bir düzine adaya bölmek kazananı
+  zayıflatıyor, çünkü motor rakipleri kasten üretiyor.
+- Emisyonları en iyi adaya göre çapalamak (oranları koruyarak): nötr-kötü
+  (holdout 947 → 990, `clean_v1` harmonik 6 → 12). Kapsama kaybı emisyon
+  ölçeğinden gelmiyor.
+- Beta önselini ses ve seçim için ayırmak (seçim dar, ses geniş): **nötr**
+  (holdout 947 → 941). Kapsama kazancı ses önselinden değil, seçim
+  önselinden geliyor.
+- Seçim önselini genişletmek (`+0,25`): holdout kayıplarını yarıya indiriyor
+  (947 → 457) **ama** `ucuncu_harmonik_baskin` bölümünde onikili hatası
+  üretiyor (tuzak ciddi harmonik 0 → 6; `+0,35/0,50` ile 0 → 99). Klarnetin
+  imza tınısında harmonik hata karşılığında kapsama satın almak, D-037'nin
+  açık önceliğine aykırı. Alınmadı; takas tablosu kullanıcıya sunuldu.
 
 
 ## Çevrimdışı harmonik yol merdiveni `{1/3,1/2,2,3} -> {1/5..5}` — 31 Ağustos 2026
