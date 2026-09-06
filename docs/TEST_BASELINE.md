@@ -1,5 +1,38 @@
 # KlariVision Test Tabanı
 
+> ## Metodoloji uyarısı — 6 Eylül 2026
+>
+> **`unified_v1`'in sayısal eşikleri, donmuş holdout'ların sonuçlarına
+> bakılarak seçildi.** O manifestlerin politikası açıkça
+> `frozen-no-retuning-after-first-result`; bu kural fiilen korunamadı. Berraklık
+> tabanı ise dinleyici kararlarındaki iki kaçak görülerek 0,50'den 0,60'a
+> çekildi — yani o küme de bir ayar sinyali olarak kullanıldı.
+>
+> Değişiklikler iki sınıfa ayrılır:
+>
+> **Yapısal (gerekçeye dayanır, genellenmesi beklenir):** taramanın bantlar
+> arasında havuzlanması, emisyonun çarpım olması, seçim ile alt-örnek ince
+> ayarının ayrı pencerelere alınması, analiz sınırının adayla ölçeklenmesi,
+> gizli temelin harmonik kanıtla kabul edilmesi.
+>
+> **Ayarlanmış (bu veriye oturmuş olabilir):** `kSwipeWeight`/`kTwmWeight`
+> `0,55/0,45`, `kVoicingClarityFloor/Ceiling` `0,60/0,85`,
+> `winner_posterior_floor` `0,015`, `kHardSilenceRatio` `0,35`,
+> `kLowFundamentalPresenceFloor` `0,05`,
+> `kHarmonicContestEvidenceRatio` `0,40`, `kHiddenFundamentalTwmFloor` `0,55`.
+>
+> Spektral karışım oranının duyarlılığı bu kaygıyı somutlaştırıyor: `45:55`'te
+> 114 kayıp, `55:45`'te 40. Beş puanlık bir kayma sonucu üçe bölüyorsa, o nokta
+> olgudan çok veriden gelmiş olabilir.
+>
+> **Bu depoda artık bağımsız bir yargıç yok.** Her ölçüt bir noktada ayar
+> sinyali olarak kullanıldı. `unified_v1` varsayılan yapılmadan önce
+> `scripts/run_external_pitch_benchmark.py` yazılmalı ve hiç görülmemiş veride
+> (MDB-stem-synth, PTDB-TUG, vocadito) koşulmalıdır. **RPA − RCA** farkı tanımı
+> gereği oktav hata oranıdır ve ayarlamayla düzeltmeyi ayırt edebilecek tek
+> sayıdır.
+
+
 ## `adverse_v1` ve `adverse_v4` incelemesi — kalan vetonun tükendiği nokta — 6 Eylül 2026
 
 Üç engelleyici dosyanın diğer ikisi. Doğruluk farkı küçük:
