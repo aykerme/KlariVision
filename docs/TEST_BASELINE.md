@@ -1,5 +1,52 @@
 # KlariVision Test Tabanı
 
+## Beşinci turnuva — ayrık pencere mimarisi — 6 Eylül 2026
+
+| Motor | Ciddi yanlış | Ciddi eksik | Ciddi harmonik | Ciddi toplam | **Ort. sent** | Kapı |
+|---|---|---|---|---|---|---|
+| yin_v1 | 54 | 13 | 498 | 658 | 1,606 | — |
+| pitch_engine_v2 | 6 | 536 | 495 | 1037 | 1,532 | — |
+| vpm_like | 15 | 54 | 34 | 115 | 1,463 | — |
+| hapt_v1 | 6 | 329 | 107 | 442 | 4,842 | — |
+| **unified_v1** | 5 | 2470 | **0** | 2475 | **1,913** | VETO (3 dosya) |
+
+Harmonik hata sıfır korunuyor. Ortalama sent hatası 2,681 → **1,913**;
+`hapt_v1`'in 4,842'sinin çok altında, `yin_v1`'in 1,606'sına yaklaştı.
+
+**Ayrık pencere mimarisi.** Hangi lag'in doğru olduğu ile o lag'in tam olarak
+nereye düştüğü farklı sorulardır ve aynı pencereyi paylaşıyorlardı. Seçim
+bandın kendi penceresinde koşmalı — tiz oktavda 768 örnek, vibrato ve
+glissando ortalanmasın diye. Alt-örnek yerleştirme ise yalnızca **zaten
+seçilmiş** bir minimumun iki yanındaki eğrinin şeklini ister ve bunu daha uzun,
+daha sessiz bir pencerede çok daha iyi ölçer. İnce ayar ham fark fonksiyonunu
+kullanır: kümülatif ortalama normalizasyonu değerleri *lag'ler arasında*
+karşılaştırılabilir kılmak içindir, bu ise bir seçim meselesidir.
+
+Tiz register fikstüründe ortalama hata:
+
+| | Önce | Sonra | yin_v1 |
+|---|---|---|---|
+| adverse_v5 | 4,000 | **1,635** | 1,627 |
+| room_v5 | 3,711 | **1,577** | 1,587 |
+| clean_v5 | 4,063 | **1,537** | 1,493 |
+
+**İnce ayar penceresi uzunluğu — ölçülmüş eğri.** Uzun her zaman iyi değil;
+pencere hareket eden notanın yeterince büyük bir kısmını kapsadığında, yerini
+bulmaya çalıştığı minimumu kendisi kaydırıyor:
+
+| İnce ayar penceresi | adverse_v5 ort. sent |
+|---|---|
+| **1536 (seçilen)** | **1,64** |
+| 2048 | 2,69 |
+| 3072 (tüm geçmiş) | 5,75 — bölmemekten de kötü |
+
+İlk deneme tüm geçmişi kullandı ve tam bu yüzden başarısız oldu.
+
+Kalan veto üç dosyada ve yalnızca eksik-sesli üzerinden: `adverse_v1` 39,
+`adverse_v4` 14, `adverse_v5` 45. Donmuş holdout'ların yedisinde de ciddi
+harmonik hata sıfır; dinleyici kararları 85/85 temiz.
+
+
 ## `adverse_v5` incelemesi — kalan vetonun kaynağı — 6 Eylül 2026
 
 Tiz register fikstürü (839–1460 Hz, glissando + vibrato + derin bozulma),
