@@ -96,6 +96,18 @@ inline constexpr double kLowFundamentalPresenceFloor = 0.05;
 inline constexpr std::size_t kLowRegisterConfirmFrames = 3;
 inline constexpr double kHighPassCutoffHz = 55.0;
 
+// Below this fraction of the RMS gate a frame is treated as certainly silent
+// and skips analysis entirely. Between here and the gate the frame is analysed
+// normally but its unvoiced hypothesis is biased upward in proportion to how
+// quiet it is, so the decoder decides rather than a threshold.
+//
+// A hard energy gate cannot tell a rest from the quiet middle of a sustained
+// note, and cutting candidate generation at the gate punches holes in held
+// notes that no later stage can fill. Handing the decision to the path instead
+// bridges a brief dip -- staying voiced is cheap, switching is not -- while a
+// real rest still resolves to silence, because every frame across it agrees.
+inline constexpr double kHardSilenceRatio = 0.35;
+
 // ---------------------------------------------------------------------------
 // Harmonic family
 // ---------------------------------------------------------------------------

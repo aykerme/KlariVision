@@ -128,12 +128,20 @@ UnifiedFrameEvidence unified_frame_evidence(
         : history;
     frame.rms = window_rms(mid_window);
     frame.signal_eligible = frame.rms >= config.minimum_rms;
-    if (!frame.signal_eligible) {
-        // Below the shared energy gate there is nothing to explain. Publishing
-        // a confident silence here is correct, not a failure to decide.
+
+    const auto gate = std::max(config.minimum_rms, 1e-9);
+    const auto loudness = frame.rms / gate;
+    if (loudness < unified::kHardSilenceRatio) {
+        // Far below the gate there is genuinely nothing to explain, and saying
+        // so confidently costs nothing.
         frame.unvoiced_emission = std::log(0.99);
         return frame;
     }
+    // Between the hard-silence floor and the gate the frame is analysed like
+    // any other, but its silence hypothesis is weighted by how quiet it is.
+    // The decoder then bridges the quiet middle of a held note, while a true
+    // rest still wins because every frame across it agrees on silence.
+    const auto quietness_bias = std::clamp(1.0 - loudness, 0.0, 1.0);
 
     PyinLadderConfig ladder_config{};
     ladder_config.minimum_frequency_hz =
@@ -218,7 +226,9 @@ UnifiedFrameEvidence unified_frame_evidence(
     // unvoiced hypothesis. pYIN gets the voicing decision out of the same
     // sweep that produced the candidates, which is why it needs no separate
     // voicing heuristic to argue with.
-    const auto unvoiced = std::clamp(1.0 - ladder.voiced_probability, 1e-4, 1.0 - 1e-4);
+    const auto unvoiced = std::clamp(
+        std::max(1.0 - ladder.voiced_probability, quietness_bias), 1e-4, 1.0 - 1e-4
+    );
     frame.unvoiced_emission = std::log(unvoiced);
     return frame;
 }
