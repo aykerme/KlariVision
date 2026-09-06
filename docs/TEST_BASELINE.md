@@ -70,7 +70,42 @@ yarısı kadar delil taşır. Motor orada susar. Kullanıcı kararı: olduğu gi
 bırakılacak (çekişme eşiğini gevşetmek korumayı her yerde zayıflatır). Tuzak
 paketinde iki bölüm; üç gerçek klarnet kaydında hiç görülmedi.
 
-### Sentetik turnuva — 6 Eylül 2026
+### Sentetik turnuva — 6 Eylül 2026 (ikinci koşu, berraklık tabanlı ses kararı)
+
+| Motor | Ciddi yanlış | Ciddi eksik | Ciddi harmonik | Ciddi toplam | Gecikme | Kapı |
+|---|---|---|---|---|---|---|
+| yin_v1 | 54 | 13 | 498 | 658 | 16 ms | — |
+| pitch_engine_v2 | 6 | 536 | 495 | 1037 | 69 ms | — |
+| vpm_like | 15 | 54 | 34 | 115 | 16 ms | — |
+| hapt_v1 | 6 | 329 | 107 | 442 | 16 ms | — |
+| **unified_v1** | 5 | **2380** | **44** | 2432 | 160 ms | **VETO (6 dosya)** |
+
+Ciddi eksik 3146 → 2380, ciddi toplam 3192 → 2432. Veto 7 dosyadan 6'ya indi
+ama duruyor. Dosya bazında marj (limit: `yin_v1`'i 0,5 puandan fazla aşmamak):
+
+| Dosya | unified eksik | yin | Marj |
+|---|---|---|---|
+| adverse_v5 (tiz 840–1460 Hz, glissando + vibrato) | 189 | 0 | +17,9pp |
+| adverse_v4 | 64 | 0 | +5,6pp |
+| adverse_v1 | 44 | 0 | +1,9pp |
+| room_v1 | 24 | 0 | +1,0pp |
+| adverse_v3 | 12 | 0 | +1,1pp |
+| clean_v1 | 19 | 0 | +0,8pp |
+
+**Yapısal not:** `yin_v1` altı dosyanın hepsinde sıfır veriyor, çünkü hiç
+çekimser kalmıyor — işlediği her kareyi yayımlar. Çekimserlik mekanizması olan
+herhangi bir motor bu ölçütte tanımı gereği geriden başlar. Veto anlamlıdır ve
+geçilmelidir, ama "0,5pp içinde kal" şartı, karşılaştırılan motorun asla
+susmamasıyla birlikte okunmalıdır.
+
+`adverse_v5`'te kalan 276 kare üç kaynağa ayrılıyor: `harmonic_dominance` 86 +
+yapışkan toparlanma 52 (yani gerçek çekişme 138), `winner_posterior` 87 (taban
+zaten 0,015 — bu kareler gerçekten düz), `voiced_posterior` 65. Tiz bölgede
+alt-harmonik rakipler (840–1460 Hz'in yarısı ve üçte biri) spektral olarak iyi
+desteklenen bölgelere düştüğü için çekişme sık. Bu, tasarımın çalışması ve
+kapsamanın bedeli.
+
+### Sentetik turnuva — 6 Eylül 2026 (ilk koşu)
 
 | Motor | Ciddi yanlış | Ciddi eksik | Ciddi harmonik | Ciddi toplam | Gecikme | Güvenlik kapısı |
 |---|---|---|---|---|---|---|
