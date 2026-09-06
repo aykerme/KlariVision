@@ -1,5 +1,52 @@
 # KlariVision Test Tabanı
 
+## Dış karşılaştırma — tam koşu — 6 Eylül 2026
+
+36 dosya, üç küme, beş motor. **Oktav hata oranı (RPA − RCA)**, hiç görülmemiş
+veride:
+
+| Küme | unified_v1 | En iyi diğer | yin_v1 |
+|---|---|---|---|
+| bach10_mf0_synth (nefesli/yaylı) | **0,0002** | 0,0001 (v2) | 0,0201 |
+| mdb_stem_synth (çok enstrümanlı) | **0,0075** | 0,0077 (hapt) | 0,0522 |
+| vocadito (vokal) | 0,0016 | 0,0007 (v2) | 0,0139 |
+
+Raw pitch accuracy'de **üç kümenin üçünde de birinci**: 0,639 / 0,359 / 0,602
+(en yakın rakip 0,635 / 0,286 / 0,572). Ötüm recall'da da üçünde birinci.
+
+**Bu, harmonik hatanın sıfırlanmasının bu veriye oturma değil gerçek bir
+düzeltme olduğunun kanıtıdır.** Motor hiç görmediği enstrümanlarda, insan
+sesinde ve çok sesli karışımda da `yin_v1`'in oktav hatasının 7 ila 100'de
+birini yapıyor.
+
+Metodoloji uyarısı geçerliliğini korur: sayısal eşikler hâlâ donmuş holdout'lara
+bakılarak seçildi. Bu tablo o eşiklerin *zarar vermediğini* gösteriyor; onları
+haklı çıkarmıyor. Ve bu tabloya bakarak ayar yapılırsa elimizdeki son bağımsız
+ölçüt de kaybedilir.
+
+## Karar gecikmesi taraması — 160 ms'nin gerekçesi çürüdü — 6 Eylül 2026
+
+D-037'de canlı karar gecikmesi 15 hop (160 ms) seçilmişti; gerekçe, oktav
+hatalarının medyan 2 en fazla 9 kare sürmesi ve 5 karelik look-ahead'in çoğunun
+sonunu görememesiydi. Tarama hiç koşulmamıştı. (İlk denemem de düzdü: Python
+tarafındaki `UNIFIED_DEFAULT_LAG_FRAMES` C++ varsayılanını eziyor.)
+
+| Gecikme | Holdout eksik | adverse_v1 | Tuzak eksik | Harmonik | Ort. sent |
+|---|---|---|---|---|---|
+| 5 hop (53 ms) | **27** | **24** | 2171 | **0** | 1,834 |
+| 10 hop (107 ms) | 42 | 27 | 2007 | 0 | 1,838 |
+| 15 hop (160 ms) | 40 | 25 | **1696** | 0 | 1,838 |
+| 20 hop (213 ms) | 42 | 27 | 1683 | 0 | 1,838 |
+| 30 hop (320 ms) | 42 | 27 | 1683 | 0 | 1,838 |
+
+**Harmonik hata her gecikmede sıfır, 53 ms dahil.** Hassasiyet de fiilen aynı.
+Yani uzun look-ahead harmonik güvenlik için gerekli değil — o işi kanıt katmanı
+yapıyor. 160 ms'nin satın aldığı tek şey tuzak paketi kapsamasıdır
+(2171 → 1696), karşılığında canlı modda 107 ms tepkisellik.
+
+Bu bir ürün kararıdır ve artık ölçümle verilebilir.
+
+
 ## Altıncı turnuva — veto tek dosyaya indi — 6 Eylül 2026
 
 | Motor | Ciddi yanlış | Ciddi eksik | Ciddi harmonik | Ciddi toplam | Ort. sent | Kapı |
