@@ -72,6 +72,21 @@ Yani klarnet dışı materyalde kaçırılan ötümün baskın sebebi **sabit RM
 (0,015 / −36,5 dBFS)**, çekimserlik politikası değil: mdb'de 6 katı, vocadito'da
 7 katı. Bu, "ötüm kapsaması düşük" ifadesinden çok daha dar bir problem.
 
+**Kesilen kareler kapının hemen altında.** Kapının reddettiği ötümlü karelerin
+seviye dağılımı (geliştirme bölümü, küme başına 8 dosya), kapıya göre dB:
+
+| Küme | 0–3 dB altı | 3–10 dB altı | 10–20 dB altı | >20 dB altı | medyan |
+|---|---:|---:|---:|---:|---:|
+| mdb_stem_synth | %33,0 | %44,0 | %19,8 | %3,1 | −5,1 dB |
+| bach10_mf0_synth | %30,3 | %38,8 | %25,3 | %5,6 | −5,9 dB |
+| vocadito | %40,6 | %34,1 | %16,7 | %8,6 | −4,2 dB |
+
+Yani bu kareler sessiz değil, **sınırın az altında**: dörtte üçü kapının 10 dB
+içinde. Bu, "malzeme duyulmuyor" değil, "mutlak eşik klarnet mikrofonunun
+seviyesine göre konmuş, bu kayıtlar daha aşağıda seyrediyor" tablosudur.
+Eşiğin kendisi bir **ürün ayarıdır** (kullanıcı `−60…−20 dBFS` arasında
+değiştirir, varsayılan `−36,5 dBFS`), motor eşiği değil.
+
 Yayın aralığı bu tabloda hesaba katıldı: `kDisplayMinimumHz` 80 Hz,
 `kDisplayMaximumHz` 1760 Hz (D-037), ±100 sent toleransla 75,5–1864,7 Hz.
 Referansın aralık dışında kalan payı mdb'de %18,1, bach10'da %0,6,
