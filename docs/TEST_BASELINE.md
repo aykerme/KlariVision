@@ -1,5 +1,91 @@
 # KlariVision Test Tabanı
 
+## Dış karşılaştırmada ölçüm hatası bulundu ve düzeltildi — 6 Eylül 2026
+
+**Kayıtlı dış tablo motorun kusurunu değil, ölçen kodun kusurunu gösteriyordu.**
+`run_external_pitch_benchmark.py:on_hop_grid`, motor izini hop ızgarasına
+`int(round(t / hop))` ile oturtuyordu. Motorun zaman damgası analiz
+penceresinin *merkezi*, yani sıfır tabanlı ızgaranın **tam yarısı**; iz CSV'si
+de 8 ondalığa yuvarlanıyor. Karar böylece yuvarlamanın hangi tarafa düştüğüne
+kalıyor, ardışık iki kare aynı yuvaya yazılıyor ve aralarındaki yuva 0 Hz
+(= ötümsüz) kalıyordu.
+
+Ölçüldü: **1994 yayımlanmış kare 1336 yuvaya iniyordu** — karelerin ~%33'ü
+puanlanmadan önce siliniyor ve tabloya motorun ötüm kusuru olarak yansıyordu.
+
+**Asimetri tabloyu tek yönde bozuyordu.** pYIN referanslarının kareleri hop'un
+tam katlarında (`t % hop` kesir kısmı 0), hiç çakışmıyordu. Yani referans tam
+puan alırken motor üçte birini kaybediyordu.
+
+### Düzeltme
+
+Izgara artık izin **fazına** kilitleniyor (kareler tam bir hop aralıklı olduğu
+için `(t - faz) / hop` tam sayıdır) ama yine dosyanın başından sonuna uzanıyor.
+İki ara hata da ölçülerek yakalandı ve teste bağlandı:
+
+1. Izgarayı ilk *ötümlü* kareye demirlemek baştaki sessizliği kapsam dışı
+   bırakıyor; mir_eval o bölgeyi ötümlü sayıyor ve yanlış alarm, hatadan hiç
+   etkilenmeyen pYIN'de bile `0,025 -> 0,124`'e çıkıyordu.
+2. Zaten ızgarada olan bir iz faz olarak `3,5e-18` veriyor. Sıfır saymazsak
+   mir_eval başa bir `t=0` örneği ekliyor, zamanları 10 ondalığa yuvarlıyor ve
+   iki sıfır yan yana geliyor: `Expect x to not have duplicates`.
+
+`tests/test_external_pitch_benchmark.py` ölçen kodu ölçer: düzeltme geri
+alındığında testlerin üçü kırmızıya döner.
+
+### Düzeltilmiş tablo (aynı 24 dosya, aynı seçim)
+
+| Küme | Ölçüt | Kayıtlı (hatalı) | Düzeltilmiş |
+|---|---|---:|---:|
+| bach10 | `unified_v1` RPA | 0,6353 | **0,9492** |
+| bach10 | `unified_v1` ötüm recall | 0,6412 | **0,9544** |
+| mdb | `unified_v1` RPA | 0,3148 | **0,4735** |
+| mdb | `unified_v1` ötüm recall | 0,3461 | **0,5139** |
+| vocadito | `unified_v1` RPA | ~0,63 | **0,9223** |
+| vocadito | `unified_v1` ötüm recall | ~0,63 | **0,9428** |
+
+pYIN referansları **değişmedi** (bach10 librosa RPA 0,9865 / recall 0,9949 /
+yanlış alarm 0,0650 — üçü de birebir aynı; en büyük fark 0,0012). Bu, hatanın
+yalnız motor tarafını vurduğunun kanıtıdır.
+
+`fingerprint=b6dfba30414ce4586fa682801272fc8ba4d70e9ca254990a00ca0425e5945567`
+
+### Oktav iddiası ayakta, ama büyüklüğü değişti
+
+En zor kümede (`mdb_stem_synth`) oktav hatası: `unified_v1` **0,0193**,
+`pyin_vamp` 0,0661, `pyin_librosa` 0,1390. Yani çevrimdışı referansın
+**3,4–7,2 katı daha az** oktav hatası. D-038'in metni bunu hatalı sayılarla
+"5–10 kat" diye kaydetmişti; iddia korunuyor, çarpan düzeltildi.
+
+### Kalan açık, artık nicel
+
+Geliştirme bölümünün tamamında (96 dosya), aralık **içindeki** ötümlü
+referans karelerinin motor tarafından ne yapıldığı:
+
+| Küme | Yayımlandı | RMS kapısı | Çekimserlik (hepsi) |
+|---|---:|---:|---:|
+| mdb_stem_synth | %69,2 | **%26,6** | %4,2 |
+| bach10_mf0_synth | %93,7 | %4,0 | %2,3 |
+| vocadito | %83,2 | **%14,6** | %2,0 |
+
+Yani klarnet dışı materyalde kaçırılan ötümün baskın sebebi **sabit RMS kapısı
+(0,015 / −36,5 dBFS)**, çekimserlik politikası değil: mdb'de 6 katı, vocadito'da
+7 katı. Bu, "ötüm kapsaması düşük" ifadesinden çok daha dar bir problem.
+
+Yayın aralığı bu tabloda hesaba katıldı: `kDisplayMinimumHz` 80 Hz,
+`kDisplayMaximumHz` 1760 Hz (D-037), ±100 sent toleransla 75,5–1864,7 Hz.
+Referansın aralık dışında kalan payı mdb'de %18,1, bach10'da %0,6,
+vocadito'da %0.
+
+### Bölme
+
+`data/benchmarks/external-pitch-split-v1.json` (`afe1d9abdb40bbc2`):
+geliştirme 96, holdout 72, yedek 142 dosya. Sonucu daha önce görülmüş 24 dosya
+geliştirmededir. **Dürüstlük kaydı:** `--split` bağlantısını denerken tek bir
+holdout dosyasının (`vocadito_10.wav`) sayıları ekrana geldi; hiçbir eşik o
+sayılara bakılarak seçilmedi.
+
+
 ## Faz 7: `swipe_prime` `FrameSpectrum` üstüne katlandı — 6 Eylül 2026
 
 `swipe_prime.cpp` kendi pencere/FFT/interpolasyon kopyasını taşıyordu ve aynı

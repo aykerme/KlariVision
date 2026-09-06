@@ -2,6 +2,54 @@
 
 Son güncelleme: 6 Eylül 2026
 
+## Dış karşılaştırmada ölçüm hatası — 6 Eylül 2026
+
+**Sonraki oturum bu bölümden başlamalı.** Klarnet dışı ötüm kapsaması iş
+kalemine girildi ve kalemin dayanağının büyük kısmının ölçüm hatası olduğu
+bulundu. Ayrıntı ve sayılar `TEST_BASELINE.md`'nin en üstünde, karar notu
+D-038'in altında.
+
+Özetle: `on_hop_grid` motorun karelerinin ~%33'ünü puanlamadan önce siliyordu;
+pYIN referansları etkilenmiyordu, yani tablo tek yönde bozuktu. Düzeltilmiş
+tabloda `unified_v1` RPA bach10'da 0,64 → **0,95**, vocadito'da ~0,63 →
+**0,92**, mdb'de 0,31 → **0,47**. Oktav iddiası ayakta (mdb'de pYIN'in
+3,4–7,2 katı daha az), çarpanı düzeltildi.
+
+### Kalan açık, artık dar ve nicel
+
+Geliştirme bölümünün tamamında (96 dosya), aralık içi ötümlü karelerin
+kaderi: kaçırmanın baskın sebebi **sabit RMS kapısı (0,015)**, çekimserlik
+değil — mdb'de %26,6'ya karşı %4,2, vocadito'da %14,6'ya karşı %2,0.
+
+Sıradaki iş bu kapıdır ve **iki tarafı vardır**:
+
+1. Kapı ürünün kendi ayarı: kullanıcı Ayarlar'da `−60…−20 dBFS` arasında
+   değiştirebiliyor, varsayılan `−36,5 dBFS`. Yani bu bir motor eşiği değil,
+   bir ürün varsayılanı — ve klarnet mikrofonuna göre seçilmiş.
+2. Dış kümeler yeniden sentezlenmiş stem'ler; seviyeleri gerçek bir mikrofon
+   kaydının seviyesi değil. Kapıyı bu kümelere bakarak düşürmek, **tam da
+   yapılmaması gereken şey** olur (D-038'in kaydettiği kural). Doğru soru
+   "kapı mutlak RMS yerine neye bakmalı" olmalı; ölçüm geliştirme bölümünde
+   yapılır, iddia holdout'ta bir kez kaydedilir.
+
+### Bölme hazır
+
+`data/benchmarks/external-pitch-split-v1.json` (`afe1d9abdb40bbc2`):
+geliştirme 96 / holdout 72 / yedek 142. Koşucu `--split` alır ve hangi bölümden
+üretildiğini tabloya yazar. Ayar yalnız `--split development` ile yapılır.
+
+### Sonraki oturumun bilmesi gerekenler
+
+- **Ölçüm hattı da ölçülmeli.** Bu turda üç ayrı ızgara hatası çıktı ve üçü de
+  motorun kusuru gibi görünüyordu (çakışan yuvalar, kapsam dışı kalan baştaki
+  sessizlik, `3,5e-18` faz artığı). `tests/test_external_pitch_benchmark.py`
+  bunları bağladı; yeni bir ölçüt eklenirken aynısı yapılmalı.
+- `unified_trace --diagnostic` kare başına ret gerekçesi verir; bir "neden bu
+  nota yok" sorusu doğrudan buradan cevaplanır.
+- Diğer açık maddeler değişmedi: iPad `xcodebuild` (bu makinede iOS platformu
+  kurulu değil), `adverse_v1` vetosu (23 kare, mimari iş gerekir),
+  `pitch_candidate.hpp`'nin `v2` ad alanının yeniden adlandırılması.
+
 ## Faz 7 tamamlandı — `swipe_prime` `FrameSpectrum` üstüne katlandı — 6 Eylül 2026
 
 `swipe_prime.cpp` kendi pencere/FFT/interpolasyon kopyasını taşıyordu (216 →

@@ -167,22 +167,52 @@ def vamp_pyin_frames(audio_path: Path) -> list[tuple[float, float | None]] | Non
 def on_hop_grid(frames, duration: float) -> tuple[np.ndarray, np.ndarray]:
     """Motor izini düzenli bir hop ızgarasına oturtur, boşlukları 0 Hz yapar.
 
-    Bu adım şart. Eski motorlar sessiz bir kareyi hiç yayımlamaz -- izlerinde o
-    kare yoktur, sıfır olarak değil. `mir_eval` böyle bir izi ara değerlerken
+    Bu adım şart. Motor sessiz bir kareyi hiç yayımlamaz -- izinde o kare
+    yoktur, sıfır olarak değil. `mir_eval` böyle bir izi ara değerlerken
     boşluğun iki ucunu birleştirir ve arada kalan her şeyi ötümlü sayar, ki bu
     da ötüm yanlış-alarmını neredeyse 1,0 gösterir ve karşılaştırmayı anlamsız
-    kılar. Izgaraya oturtmak, "kare yok" ile "kare sessiz"i aynı şeye çevirir --
-    ki iki motorun karşılaştırılabilmesi için olması gereken de budur.
+    kılar. Izgaraya oturtmak, "kare yok" ile "kare sessiz"i aynı şeye çevirir.
+
+    **Izgara motorun ilk karesine demirlenir, sıfıra değil.** Bu bir üslup
+    tercihi değil: motorun zaman damgası analiz penceresinin *merkezi*, yani
+    sıfır tabanlı hop ızgarasının tam yarısıdır. `round(t / hop)` böyle bir
+    değeri yuvarlarken karar, izin metinde 8 ondalığa yuvarlanmasının hangi
+    tarafa düştüğüne kalır; ardışık iki kare aynı yuvaya düşer ve aralarındaki
+    yuva 0 Hz (= ötümsüz) kalır. Ölçüldü: 1994 yayımlanmış kare 1336 yuvaya
+    iniyordu, yani her üç kareden biri **puanlanmadan önce** siliniyordu ve
+    tabloya motorun kusuru gibi yansıyordu (bkz. docs/TEST_BASELINE.md).
+    Kareler tam bir hop aralıklı olduğu için `(t - t0) / hop` tam sayıdır ve
+    demirlenmiş ızgarada belirsizlik kalmaz.
     """
-    count = max(1, int(np.floor(duration / HOP_SECONDS)) + 1)
-    times = np.arange(count) * HOP_SECONDS
+    # Motor izleri (zaman, hz, güven), pYIN izleri (zaman, hz) verir; ikisi de
+    # buradan geçtiği için indeksle okunur, açarak değil.
+    voiced = [(float(frame[0]), float(frame[1])) for frame in frames if frame[1]]
+    if not voiced:
+        count = max(1, int(np.floor(duration / HOP_SECONDS)) + 1)
+        return np.arange(count) * HOP_SECONDS, np.zeros(count)
+
+    # Izgara izin FAZINA kilitlenir, ilk karesine değil. Faza kilitlemek
+    # indeksi tam sayı yapar; ızgarayı yine de sıfırdan başlatmak, dosyanın
+    # başındaki sessizliğin kapsam içinde kalmasını sağlar. İlk *ötümlü*
+    # kareden başlatmak ikisini karıştırır: ölçüldü, baştaki sessizlik
+    # ızgaradan düşünce mir_eval o bölgeyi ötümlü sayıyor ve yanlış alarm
+    # pYIN referansında bile 0,025'ten 0,124'e çıkıyordu.
+    phase = voiced[0][0] % HOP_SECONDS
+    # Zaten ızgarada olan bir iz (pYIN referansları böyle) faz olarak
+    # 3e-18 gibi bir kayan nokta artığı verir. Sıfır saymazsak mir_eval
+    # başa bir t=0 örneği ekler, sonra zamanları 10 ondalığa yuvarlar ve
+    # iki sıfır yan yana gelir: "Expect x to not have duplicates". Bir
+    # nanosaniye, gerçek hiçbir damga farkının altında, her artığın üstünde.
+    if phase < 1e-9 or HOP_SECONDS - phase < 1e-9:
+        phase = 0.0
+    span = max(duration, voiced[-1][0]) - phase
+    count = max(1, int(np.floor(span / HOP_SECONDS)) + 1)
+    times = phase + np.arange(count) * HOP_SECONDS
     hz = np.zeros(count)
-    for frame in frames:
-        if not frame[1]:
-            continue
-        index = int(round(frame[0] / HOP_SECONDS))
+    for time, frequency in voiced:
+        index = int(round((time - phase) / HOP_SECONDS))
         if 0 <= index < count:
-            hz[index] = frame[1]
+            hz[index] = frequency
     return times, hz
 
 

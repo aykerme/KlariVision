@@ -75,8 +75,16 @@ elimizdeki tek ayarlanmamış ölçütü korur.
 
 Dayanak ölçümler `TEST_BASELINE.md`'de: sentetik turnuvada ciddi harmonik hata
 sıfır, yedi donmuş holdout'ta sıfır, 85/85 donmuş dinleyici kararı temiz, üç
-dış veri kümesinde oktav hatası çevrimdışı pYIN referansının **altında** (en zor
-kümede 5–10 kat).
+dış veri kümesinde oktav hatası çevrimdışı pYIN referansının **altında**.
+
+> **Düzeltme (6 Eylül 2026).** Bu paragraf en zor kümedeki farkı "5–10 kat"
+> diye kaydetmişti; o sayılar, dış karşılaştırma koşucusundaki bir ızgara
+> hatasıyla üretilmişti (motorun karelerinin üçte biri puanlanmadan siliniyordu;
+> pYIN etkilenmiyordu). Düzeltilmiş ölçümde `mdb_stem_synth` oktav hatası
+> `unified_v1` 0,0193, `pyin_vamp` 0,0661, `pyin_librosa` 0,1390 — yani
+> **3,4–7,2 kat**. Kararın dayanağı ayakta, çarpanı düzeltildi; ayrıntı
+> `TEST_BASELINE.md`'nin en üstündedir. Karar metni tarihçe olduğu için
+> silinmedi, üstüne not düşüldü.
 
 - Yeni kurulum varsayılanı `yin_v1` → **`unified_v1`** (macOS
   `PitchEngineSettings.initialEngine`, iPad `iPadAppState.engine(_:)` yedeği).
@@ -86,10 +94,13 @@ kümede 5–10 kat).
 - Bilinen ve **kabul edilen** açık: `holdout_adverse_v1.wav` vetosu (ciddi eksik
   ötüm 24 kare, sınır 12). Kullanıcı bunu şimdilik kabul etti. Veto satırı
   raporda görünmeye devam eder — susturulmadı.
-- Bilinen ve **açık** ikinci konu: klarnet dışı materyalde ötüm kapsaması
-  (dış karşılaştırmada RPA 0,315–0,635, pYIN 0,66–0,99; fark neredeyse tamamen
-  recall). Bu, dış karşılaştırma tablosuna bakılarak ayarlanamaz; ayrı bir
-  doğrulama kümesi ayrılmadan bu konuya girilmez.
+- Bilinen ve **açık** ikinci konu: klarnet dışı materyalde ötüm kapsaması.
+  (Buradaki "RPA 0,315–0,635" rakamları yukarıdaki ızgara hatasından etkilenmiş
+  sayılardır; düzeltilmiş hâli 0,47–0,95'tir ve kalan açığın baskın sebebi
+  ölçüldü: sabit RMS kapısı. Bkz. `TEST_BASELINE.md`.) Bu, dış karşılaştırma
+  tablosuna bakılarak ayarlanamaz; ayrı bir doğrulama kümesi ayrılmadan bu
+  konuya girilmez — o bölme artık `data/benchmarks/external-pitch-split-v1.json`
+  içinde hazırdır.
 - Dört eski motorun koddan çıkarılması (D-037'nin nihai hedefi) bu kararla
   **tetiklenmez**; ayrı bir turda yapılır. ABI numaraları 0–3 her hâlükârda
   kalıcıdır.
