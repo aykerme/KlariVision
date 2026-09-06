@@ -1,5 +1,54 @@
 # KlariVision Test Tabanı
 
+## `adverse_v5` incelemesi — kalan vetonun kaynağı — 6 Eylül 2026
+
+Tiz register fikstürü (839–1460 Hz, glissando + vibrato + derin bozulma),
+kalan üç veto dosyasının en zoru. Bölüm bazında kayıp, **frekansla artıyor**:
+1089,7 Hz demirinde %32, 1433,8 Hz'de %20, 941,3 Hz'de %5.
+
+**Bu bir metrik yapaylığı değil.** Aynı dosyada doğru kare sayıları:
+
+| Motor | Doğru | Eksik | Harmonik | Ortalama sent |
+|---|---|---|---|---|
+| yin_v1 | 980 | 0 | 0 | 1,627 |
+| pitch_engine_v2 | 986 | 0 | 0 | 1,491 |
+| vpm_like | 979 | 0 | 0 | 1,868 |
+| hapt_v1 | 988 | 0 | 0 | 12,539 |
+| **unified_v1** | **901** | 47 | 0 | 4,000 |
+
+`yin_v1` burada hata yapmıyor; gerçekten doğru izliyor ve biz susuyoruz.
+Vetonun "asla çekimser kalmayan bir motorla kıyaslıyor" savunması **bu dosya
+için geçerli değil** — 79 doğru kare gerçekten kaybediliyor, üstelik
+hassasiyet de daha düşük.
+
+Sinyal geniş bantlı: enerji tepe değerin %10'u üzerinde 6–8 kHz'e uzanıyor ve
+1433,8 Hz'deki tonun genliği spektral tepenin yüzde biri. Yani ton gürültünün
+altında; kanıt gerçekten zayıf.
+
+Kapı dağılımı (1041 uygun kareden 900'ü yayımlanıyor): `voiced_posterior` 65,
+`harmonic_dominance` 29 + yapışkan toparlanma 27, `winner_posterior` 19.
+
+### Tiz bant penceresi — ölçülmüş takas
+
+Şüpheli, üç bantlı tasarımın tiz bandıydı: 1434 Hz için 768 örneklik pencere
+kullanılıyor, `yin_v1` ise 1536. Gürültü ortalaması yarı yarıya az.
+
+| `kHighWindowSamples` | adverse_v5 doğru | clean_v5 doğru | Ortalama sent |
+|---|---|---|---|
+| **768** (seçilen) | **901** | 978 | 4,00 |
+| 1024 | 889 | 982 | 2,88 |
+| 1536 | 823 | **989** | **1,95** |
+
+Uzun pencere hassasiyeti iki katına çıkarıyor ve temiz/oda materyalinde daha
+çok kare kazandırıyor, ama vetoyu tıkayan dosyada 78 kare kaybettiriyor. 768'de
+kalındı, çünkü veto marjı açık iş. Ancak **tiz bölgede 4 sentlik ortalama hata,
+`yin_v1`'in 1,6'sına karşı, akort uygulaması için gerçek bir kalite farkıdır**
+ve bu takas kullanıcı kararı olarak açık bırakılıyor.
+
+Doğru çözüm muhtemelen ikisini ayırmaktır: aday üretimi için kısa pencere,
+seçilen lag'in ince ayarı için uzun pencere. Hassasiyet CMND penceresinin
+uzunluğundan geliyor, aday aramasından değil.
+
 ## Dördüncü turnuva — harmonik hata sıfır — 6 Eylül 2026
 
 | Motor | Ciddi yanlış | Ciddi eksik | **Ciddi harmonik** | Ciddi toplam | Gecikme | Kapı |
