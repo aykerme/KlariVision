@@ -170,9 +170,25 @@ int index_of_minimum(const std::vector<double>& cmnd, int lo, int hi, int max_la
 // entirely, computed on the wrong window size. Without this clamp, step 6
 // can wander out of the band it was asked to refine within and answer a
 // completely different octave.
+/// Raw difference function at one lag, over the longest extent the window
+/// allows. No cumulative-mean normalisation: this is only ever used for the
+/// shape around a minimum that has already been chosen.
+double difference_at(const std::span<const float> window, const int tau) {
+    const auto span = static_cast<std::ptrdiff_t>(window.size()) - tau;
+    if (span <= 0) return 0.0;
+    auto total = 0.0;
+    for (std::ptrdiff_t j = 0; j < span; ++j) {
+        const auto delta = static_cast<double>(window[static_cast<std::size_t>(j)]) -
+                           static_cast<double>(window[static_cast<std::size_t>(j + tau)]);
+        total += delta * delta;
+    }
+    return total / static_cast<double>(span);
+}
+
 RefinedLag refine_lag(
     const std::vector<double>& cmnd, int tau, int max_lag, double sample_rate,
-    const PyinLadderConfig& config, int band_lo, int band_hi
+    const PyinLadderConfig& config, int band_lo, int band_hi,
+    std::span<const float> refinement_window
 ) {
     int refined_tau = tau;
     if (config.best_local_window_seconds > 0.0) {
@@ -209,10 +225,30 @@ RefinedLag refine_lag(
         );
     }
 
-    // Sub-sample parabolic interpolation around the final integer lag, same
-    // technique used throughout the other engines in this repo.
+    // Sub-sample parabolic interpolation around the final integer lag.
+    //
+    // Which lag is right and where exactly it falls are separate questions and
+    // want separate windows. Selection has to run on the band's own window,
+    // whose length is chosen to follow vibrato and glissando in that register.
+    // Placing the minimum between two samples asks only for the shape of the
+    // curve either side of it, and a longer window measures that shape with
+    // less noise on it -- which is the whole of the sub-sample accuracy. The
+    // vertex of a parabola is unchanged by a smooth scaling, so the raw
+    // difference function serves here and the cumulative-mean normalisation,
+    // which is what makes values comparable across lags for *selection*, is
+    // not needed and would only reintroduce the short window it came from.
     double correction = 0.0;
-    if (refined_tau - 1 >= 1 && refined_tau + 1 <= max_lag) {
+    const auto long_enough =
+        refinement_window.size() > static_cast<std::size_t>(refined_tau) * 2 + 2;
+    if (long_enough && refined_tau - 1 >= 1) {
+        const double previous = difference_at(refinement_window, refined_tau - 1);
+        const double current = difference_at(refinement_window, refined_tau);
+        const double next = difference_at(refinement_window, refined_tau + 1);
+        const double denominator = previous - 2.0 * current + next;
+        if (std::abs(denominator) > 1e-12) {
+            correction = std::clamp(0.5 * (previous - next) / denominator, -0.5, 0.5);
+        }
+    } else if (refined_tau - 1 >= 1 && refined_tau + 1 <= max_lag) {
         const double previous = cmnd[static_cast<std::size_t>(refined_tau - 1)];
         const double current = cmnd[static_cast<std::size_t>(refined_tau)];
         const double next = cmnd[static_cast<std::size_t>(refined_tau + 1)];
@@ -362,7 +398,8 @@ struct SweepOutcome {
 /// aperiodic to total power, which makes values from windows of different
 /// lengths comparable on the same threshold scale.
 SweepOutcome pooled_sweep(
-    std::span<const BandMeasurement> bands, double sample_rate, const PyinLadderConfig& config
+    std::span<const BandMeasurement> bands, double sample_rate, const PyinLadderConfig& config,
+    std::span<const float> refinement_window
 ) {
     SweepOutcome outcome;
 
@@ -481,7 +518,7 @@ SweepOutcome pooled_sweep(
         outcome.voiced_fraction += mass;
         const auto refined = refine_lag(
             band.cmnd, winner.tau, band.max_lag, sample_rate, config,
-            band.search_lo, band.search_hi
+            band.search_lo, band.search_hi, refinement_window
         );
         const double frequency = sample_rate / refined.lag;
         const bool is_absolute_minimum =
@@ -567,7 +604,12 @@ PyinLadderResult pyin_ladder(
         measurements[index] = measure_band(working, sample_rate, band_specs[index], config);
     }
 
-    const auto swept = pooled_sweep(measurements, sample_rate, config);
+    // Refinement window: long enough to quieten the curve, short enough not to
+    // smear a note that is moving. Sized in kRefinementWindowSamples.
+    const auto refinement = working.size() >= unified::kRefinementWindowSamples
+        ? working.last(unified::kRefinementWindowSamples)
+        : working;
+    const auto swept = pooled_sweep(measurements, sample_rate, config, refinement);
     const auto all_candidates = swept.candidates;
     const bool classic_valid = swept.classic.valid;
     const double classic_frequency = swept.classic.frequency_hz;
