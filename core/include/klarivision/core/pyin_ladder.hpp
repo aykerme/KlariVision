@@ -31,6 +31,18 @@ struct PyinLadderResult {
     /// voicing decision out of the same sweep rather than from a separate
     /// energy heuristic.
     double voiced_probability{};
+    /// How far the best dip stands below the difference function's own
+    /// typical level across the search range, as a fraction of that level.
+    ///
+    /// The threshold sweep answers "is the best dip below 0.15", which is a
+    /// question about absolute aperiodicity and therefore a question about the
+    /// recording's noise floor as much as about the note. d'(T) *is* the
+    /// aperiodic power fraction, so at 6 dB SNR a perfectly clear note reads
+    /// 0.2 and fails almost every threshold the prior puts mass on. Measuring
+    /// the dip against the curve's own baseline instead is scale-free: noise
+    /// lifts the baseline and the dip together, and only genuine aperiodicity
+    /// closes the gap between them.
+    double periodicity_contrast{};
     /// What single-threshold YIN at s = 0.10 would have answered. It is always
     /// present in `candidates` as well -- that property is why a candidate
     /// ladder can never score worse than the classic estimator it contains.

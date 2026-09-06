@@ -341,6 +341,7 @@ struct PooledMinimum {
 struct SweepOutcome {
     std::vector<PyinCandidate> candidates{};
     double voiced_fraction{0.0};
+    double contrast{0.0};
     ClassicPick classic{};
 };
 
@@ -442,6 +443,28 @@ SweepOutcome pooled_sweep(
     }
 
     bool fallback_used = false;
+    // Contrast between the winning dip and the curve's own typical level. The
+    // median is taken over each band's designated lag range, which is where a
+    // period could actually be reported from.
+    {
+        std::vector<double> levels;
+        for (const auto& band : bands) {
+            if (!band.valid) continue;
+            for (int tau = band.search_lo; tau <= band.search_hi; ++tau) {
+                levels.push_back(band.cmnd[static_cast<std::size_t>(tau)]);
+            }
+        }
+        double best_value = 1.0;
+        if (have_best) best_value = best.value;
+        else if (have_fallback) best_value = fallback.value;
+        if (!levels.empty()) {
+            const auto middle = levels.begin() + static_cast<std::ptrdiff_t>(levels.size() / 2);
+            std::nth_element(levels.begin(), middle, levels.end());
+            const auto baseline = std::max(*middle, 1e-6);
+            outcome.contrast = std::clamp((baseline - best_value) / baseline, 0.0, 1.0);
+        }
+    }
+
     if (any_failed && have_fallback) {
         accumulate(fallback, config.absolute_minimum_prior);
         fallback_used = true;
@@ -550,6 +573,7 @@ PyinLadderResult pyin_ladder(
     const double classic_frequency = swept.classic.frequency_hz;
 
     result.voiced_probability = std::min(swept.voiced_fraction, 1.0);
+    result.periodicity_contrast = swept.contrast;
     result.classic_yin_frequency_hz = classic_frequency;
 
     // Merge candidates across bands, de-duplicating within

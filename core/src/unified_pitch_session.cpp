@@ -156,14 +156,20 @@ UnifiedFrameEvidence unified_frame_evidence(
         merge_candidate(merged, candidate.frequency_hz, candidate.period_probability);
     }
 
-    // The McLeod peaks are a second opinion from a different periodicity
-    // measure. Where they agree with the ladder the merge simply keeps the
-    // stronger score; where they disagree the extra hypothesis costs one more
-    // state and gives the path decoder something to reject explicitly.
+    // The McLeod peaks serve twice over. As candidates they are a second
+    // opinion from a different periodicity measure: where they agree with the
+    // ladder the merge keeps the stronger score, and where they disagree the
+    // extra hypothesis costs one state and gives the path decoder something to
+    // reject explicitly. The clarity of the strongest peak, taken unfiltered,
+    // is also this frame's voicing evidence -- see kVoicingClarityFloor.
     const auto mpm = v2::mpm_candidates(
-        mid_window, sample_rate, unified::kEstimatorMinimumHz, unified::kEstimatorMaximumHz
+        mid_window, sample_rate, unified::kEstimatorMinimumHz,
+        unified::kEstimatorMaximumHz, 0.0
     );
+    auto clarity = 0.0;
     for (const auto& candidate : mpm) {
+        clarity = std::max(clarity, candidate.periodicity);
+        if (candidate.periodicity < 0.55) continue;
         merge_candidate(merged, candidate.frequency_hz, candidate.periodicity * 0.5);
     }
 
@@ -226,8 +232,19 @@ UnifiedFrameEvidence unified_frame_evidence(
     // unvoiced hypothesis. pYIN gets the voicing decision out of the same
     // sweep that produced the candidates, which is why it needs no separate
     // voicing heuristic to argue with.
+    // Voicing from clarity, which tracks the note rather than the noise floor.
+    // The sweep's own estimate is kept as a floor: on clean material both
+    // agree, and where the sweep is confident there is no reason to overrule
+    // it. Neither can override the quietness bias, which is what keeps a true
+    // rest silent.
+    const auto clarity_voiced = std::clamp(
+        (clarity - unified::kVoicingClarityFloor) /
+            (unified::kVoicingClarityCeiling - unified::kVoicingClarityFloor),
+        0.0, 1.0
+    );
+    const auto voiced = std::max(clarity_voiced, ladder.voiced_probability);
     const auto unvoiced = std::clamp(
-        std::max(1.0 - ladder.voiced_probability, quietness_bias), 1e-4, 1.0 - 1e-4
+        std::max(1.0 - voiced, quietness_bias), 1e-4, 1.0 - 1e-4
     );
     frame.unvoiced_emission = std::log(unvoiced);
     return frame;
