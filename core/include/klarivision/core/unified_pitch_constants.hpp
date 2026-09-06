@@ -262,8 +262,26 @@ inline constexpr double kDisplayRangeToleranceCents = 100.0;
 // *within* the spectral term; periodicity multiplies the result rather than
 // being averaged into it, so a speculative harmonic competitor cannot buy its
 // way back to the fundamental's score on spectral evidence alone.
-inline constexpr double kSwipeWeight = 0.45;
-inline constexpr double kTwmWeight = 0.55;
+//
+// The balance between the two matters far more than its size suggests, and the
+// measured curve is steep on one side. Serious missing-voiced frames across the
+// frozen holdouts, at otherwise identical settings:
+//
+//     60:40 -> 31, but 23 harmonic errors appear on the octave traps
+//     55:45 -> 40, no harmonic errors anywhere        <- here
+//     50:50 -> 47
+//     45:55 -> 114
+//     40:60 -> 281, and harmonic errors return
+//
+// The two terms disagree about subharmonics in opposite directions: the
+// prime-harmonic kernel is what refuses them, the mismatch is what tolerates a
+// partial that is merely absent. Leaning too far toward the kernel starts
+// refusing real notes with weak fundamentals; too far toward the mismatch and
+// subharmonic rivals stop looking wrong, contests multiply, and the engine
+// declines frames it had measured correctly. Both failures show up as lost
+// coverage, which is why the curve has a floor rather than a slope.
+inline constexpr double kSwipeWeight = 0.55;
+inline constexpr double kTwmWeight = 0.45;
 
 // ---------------------------------------------------------------------------
 // Spectral parity (adaptive odd/even harmonic tolerance)
