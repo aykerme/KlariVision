@@ -31,9 +31,12 @@ V2_ANALYSIS_MAX_FREQUENCY = 1_650.0
 V2_LAG_FRAMES = int(os.environ.get("KLARIVISION_V2_LAG_FRAMES", "5"))
 if V2_LAG_FRAMES not in {2, 3, 4, 5}:
     raise ValueError("KLARIVISION_V2_LAG_FRAMES must be one of 2, 3, 4 or 5")
-# Mirrors kv_unified_lag_frames() / unified::kDefaultLagFrames: 15 hops x
-# 512 / 48000 = 160 ms of fixed decision latency, not v2's 5-hop/53 ms figure.
-UNIFIED_DEFAULT_LAG_FRAMES = 15
+# Mirrors kv_unified_lag_frames() / unified::kDefaultLagFrames: 5 hops x
+# 512 / 48000 = 53 ms of fixed decision latency. This value SHADOWS the C++
+# default -- unified_frames() always passes it explicitly -- so it must be
+# changed together with unified::kDefaultLagFrames or the tournament will
+# silently measure a different engine than the one that ships.
+UNIFIED_DEFAULT_LAG_FRAMES = 5
 
 
 @dataclass(frozen=True)
@@ -853,8 +856,8 @@ def run_engines(
     # unified_v1's own fixed-lag decoder already IS its whole constant decision
     # latency (see unified::kDefaultLagFrames's doc comment): unlike the other
     # engines above, no separate half-window term is added on top, so
-    # decision_latency_ms == lag_frames * HOP / rate * 1000 exactly (160.0 ms
-    # for the production default of 15 hops).
+    # decision_latency_ms == lag_frames * HOP / rate * 1000 exactly (53.3 ms
+    # for the production default of 5 hops).
     lags = unified_lag_frames if unified_lag_frames else [UNIFIED_DEFAULT_LAG_FRAMES]
     for lag in lags:
         key = "unified_v1" if len(lags) == 1 and unified_lag_frames is None else f"unified_v1@lag{lag}"

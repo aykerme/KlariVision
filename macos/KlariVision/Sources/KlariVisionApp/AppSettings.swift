@@ -73,9 +73,17 @@ enum PitchEngineSettings {
     static let studyEngineKey = "klarivision-study-pitch-engine-v1"
     static let liveEngineKey = "klarivision-live-pitch-engine-v1"
     static let togetherEngineKey = "klarivision-together-pitch-engine-v1"
-    /// Kept only so existing installs open with their prior behaviour; this
-    /// does not express a quality ranking or a recommended engine.
-    static let initialEngine = "yin_v1"
+    /// The engine a FRESH install opens with. Existing installs are untouched:
+    /// every surface reads its own @AppStorage key, so anyone who has already
+    /// launched the app keeps whatever they were using until they change it.
+    ///
+    /// Moved from "yin_v1" to "unified_v1" on 6 September 2026 (D-038). This is
+    /// a product decision, not the tournament's automatic ranking: that ranking
+    /// scores serious errors of every class together and still names vpm_like,
+    /// because unified_v1 buys its zero harmonic errors with silence. The
+    /// product requirement is the asymmetric one -- a silent point is preferred
+    /// over a harmonic error -- and unified_v1 is the only engine that meets it.
+    static let initialEngine = "unified_v1"
     static let userChoices = [
         PitchEngineChoice(id: "yin_v1", title: "YIN v1"),
         PitchEngineChoice(id: "pitch_engine_v2", title: "Pitch Engine v2"),

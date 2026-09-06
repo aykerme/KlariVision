@@ -25,7 +25,7 @@ PCM_WINDOW_SAMPLES = 1_536
 PCM_HOP_SAMPLES = 512
 # Mirrors kv_unified_lag_frames() from the C ABI — unified_v1's own decision
 # latency, separate from kv_pitch_contract_v1.v2_fixed_lag_frames (v2 only).
-UNIFIED_DEFAULT_LAG_FRAMES = 15
+UNIFIED_DEFAULT_LAG_FRAMES = 5
 
 
 def executable() -> Path:

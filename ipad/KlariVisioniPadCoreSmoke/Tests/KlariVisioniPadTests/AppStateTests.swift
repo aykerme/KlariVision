@@ -8,7 +8,7 @@ final class AppStateTests: XCTestCase {
     }
 
     func testInvalidStoredEngineFallsBackToYINv1() {
-        XCTAssertEqual(iPadAppState.engine("unexpected"), .yinV1)
+        XCTAssertEqual(iPadAppState.engine("unexpected"), .unifiedV1)
     }
 
     func testStudyAndLiveEngineKeysAreIndependent() {

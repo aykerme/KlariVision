@@ -3,6 +3,42 @@
 Bu dosya yalnızca sonraki çalışmaları etkileyen kararları tutar. Günlük ilerleme
 notları `CODEX_HANDOFF.md`, sayısal durum `TEST_BASELINE.md` içindedir.
 
+## D-038 — `unified_v1` kazanan motordur; yeni kurulumların varsayılanı
+
+Kullanıcı kararı, 6 Eylül 2026. D-037'nin "eski motorlar ölçümle geçilene kadar
+kodda kalır" şartı karşılandı sayılır ve `unified_v1` projenin kazanan motoru
+ilan edilir.
+
+**Turnuvanın otomatik çıktısı değiştirilmedi.** Turnuva hâlâ
+`benchmark_winner=vpm_like` ve `outcome=candidate_requires_parity` diyor; bu
+kasten öyle bırakıldı. Sıralama her sınıftan ciddi hatayı eşit ağırlıkla sayar,
+ürünün şartı ise asimetrik: **sessiz bir nokta harmonik hataya yeğdir.** Bu
+şartı karşılayan tek motor `unified_v1` (ciddi harmonik hata 0; en yakın rakip
+34, üretim varsayılanı 498). Karar bu yüzden ölçümü yeniden yazarak değil,
+ölçümün üstüne konan bir ürün hükmü olarak veriliyor. İkisini ayrı tutmak,
+elimizdeki tek ayarlanmamış ölçütü korur.
+
+Dayanak ölçümler `TEST_BASELINE.md`'de: sentetik turnuvada ciddi harmonik hata
+sıfır, yedi donmuş holdout'ta sıfır, 85/85 donmuş dinleyici kararı temiz, üç
+dış veri kümesinde oktav hatası çevrimdışı pYIN referansının **altında** (en zor
+kümede 5–10 kat).
+
+- Yeni kurulum varsayılanı `yin_v1` → **`unified_v1`** (macOS
+  `PitchEngineSettings.initialEngine`, iPad `iPadAppState.engine(_:)` yedeği).
+  **Mevcut kurulumlar etkilenmez:** her yüzey kendi `@AppStorage`/`UserDefaults`
+  anahtarını okur, dolayısıyla uygulamayı bir kez açmış olan herkes seçimini
+  korur. Beş motor da kullanıcı seçeneği olarak kalır (D-020).
+- Bilinen ve **kabul edilen** açık: `holdout_adverse_v1.wav` vetosu (ciddi eksik
+  ötüm 24 kare, sınır 12). Kullanıcı bunu şimdilik kabul etti. Veto satırı
+  raporda görünmeye devam eder — susturulmadı.
+- Bilinen ve **açık** ikinci konu: klarnet dışı materyalde ötüm kapsaması
+  (dış karşılaştırmada RPA 0,315–0,635, pYIN 0,66–0,99; fark neredeyse tamamen
+  recall). Bu, dış karşılaştırma tablosuna bakılarak ayarlanamaz; ayrı bir
+  doğrulama kümesi ayrılmadan bu konuya girilmez.
+- Dört eski motorun koddan çıkarılması (D-037'nin nihai hedefi) bu kararla
+  **tetiklenmez**; ayrı bir turda yapılır. ABI numaraları 0–3 her hâlükârda
+  kalıcıdır.
+
 ## D-037 — Birleşik motor (`unified_v1`) tek motor hedefiyle eklendi
 
 Kullanıcı kararı: dört motor tek bir genel amaçlı motorla değiştirilecek,
@@ -25,9 +61,14 @@ Mimari ve kalıcı kararlar:
 - Gecikme `kv_unified_lag_frames()` ile açılır, `kv_pitch_contract_v1`'e alan
   **eklenmez**: struct yerleşimi kalıcı sözleşmedir ve iPad sert doğrular.
   `v2_fixed_lag_frames` yalnız v2'yi tanımlamaya devam eder.
-- Canlı karar gecikmesi 15 hop ≈ **160 ms** (v2'nin 5 hop / 53 ms'i yerine).
-  Gerekçe: bu projenin kendi ölçümlerinde oktav hataları medyan 2, en fazla 9
-  kare sürüyor; 5 karelik look-ahead çoğunun sonunu göremez.
+- Canlı karar gecikmesi **5 hop ≈ 53 ms** — v2 ile aynı. Başlangıçta 15 hop
+  (160 ms) seçilmişti; gerekçesi "oktav hataları medyan 2, en fazla 9 kare
+  sürüyor, 5 karelik look-ahead çoğunun sonunu göremez" idi. **Bu gerekçe
+  ölçümle çürüdü:** gecikme taramasında ciddi harmonik hata 5'ten 25'e kadar
+  her değerde sıfır, sent hassasiyeti üç ondalığa kadar aynı. 160 ms'nin satın
+  aldığı tek şey tuzak paketi kapsamasıydı (2171'e karşı 1696 yayımlanan kare),
+  bedeli 107 ms canlı tepkisellik. Kullanıcı kararı: tepkiselliği al.
+  Tarama `TEST_BASELINE.md`'de.
 - Çekimserlik birinci sınıf bir sonuçtur. Sessiz durum yolun üzerinde bir
   durumdur, yoldaki bir boşluk değil — bu sayede çevrimdışı kod çözücü voicing'i
   yeniden ziyaret edebilir. Mevcut çevrimdışı iyileştirme bunu yapamaz: yalnız

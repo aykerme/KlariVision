@@ -41,7 +41,7 @@ def test_reads_the_v1_cli_contract(monkeypatch, tmp_path: Path) -> None:
         "window_size": 1536,
         "hop_size": 512,
         "engines": ["yin_v1", "pitch_engine_v2", "vpm_like", "hapt_v1", "unified_v1"],
-        "unified_lag_frames": 15,
+        "unified_lag_frames": 5,
     }
 
     class Completed:

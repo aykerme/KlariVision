@@ -368,8 +368,11 @@ final class iPadAppState {
         komaIntervals = Self.validKomaIntervals(storedIntervals) ? storedIntervals : Self.defaultKomaIntervals
     }
 
+    /// Fresh installs and unreadable stored values fall back to unified_v1
+    /// (D-038). A stored value that still names another engine is honoured, so
+    /// existing installs keep their selection.
     static func engine(_ value: String?) -> iPadPitchEngine {
-        iPadPitchEngine(rawValue: value ?? "") ?? .yinV1
+        iPadPitchEngine(rawValue: value ?? "") ?? .unifiedV1
     }
 
     static func clampedGate(_ dbFS: Double) -> Double { min(-20, max(-60, dbFS)) }

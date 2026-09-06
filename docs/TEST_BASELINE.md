@@ -1,5 +1,60 @@
 # KlariVision Test Tabanı
 
+## `unified_v1` kazanan ilan edildi, gecikme 53 ms — 6 Eylül 2026
+
+Kullanıcı kararı (D-038): `unified_v1` projenin kazanan motorudur ve karar
+gecikmesi 15 hop (160 ms) yerine **5 hop (53,3 ms)** olur. `adverse_v1` vetosu
+şimdilik kabul edilmiş durumda.
+
+Gecikme düşürüldükten sonra **tam turnuva yeniden koşuldu**
+(`fingerprint=00a55e421e523b3befead9f5ed755a859f225183bd6f0885877206605f982453`).
+Bu tablo 15 hop'luk koşuyla aynı derlemeden değil, yeni değerle üretilmiştir:
+
+| Motor | ciddi harmonik | ciddi toplam | doğru perde ort. sent | gecikme |
+|---|---|---|---|---|
+| **unified_v1** | **0** | 2239 | 1,908 | 53,3 ms |
+| yin_v1 | 498 | 658 | 1,606 | 16,0 ms |
+| pitch_engine_v2 | 495 | 1037 | 1,532 | 69,3 ms |
+| vpm_like | 34 | 115 | ~1,6 | 16,0 ms |
+| hapt_v1 | 107 | 442 | 4,842 | 16,0 ms |
+
+Ciddi harmonik hata **hâlâ tam sıfır** — 53 ms'de de. Gecikme taramasının
+öngördüğü gibi. `unified_v1`'in ciddi toplam hatasının tamamına yakını
+(2234/2239) *eksik ötüm*, yani sessizlik: ürünün istediği takas tam olarak
+budur.
+
+Bedeli ölçüldü ve kabul edildi: 15 hop'a göre yaklaşık **540 kare daha fazla
+sessizlik**, karşılığında **107 ms daha hızlı canlı tepki**.
+
+### Veto tek dosyada kaldı
+
+53 ms'ye inmek **yeni veto dosyası eklemedi**. Otomatik seçim hâlâ:
+
+- `unified_v1`: `eligible=false`, tek veto — `holdout_adverse_v1.wav`,
+  ciddi eksik ötüm 24 kare (yin_v1: 0), sınır ≈ 12 kare (2365 sesli karenin
+  %0,5'i).
+- `benchmark_winner=vpm_like`, `outcome=candidate_requires_parity`.
+
+**Bu iki satır kasten değiştirilmedi.** Turnuvanın sıralaması her sınıftan ciddi
+hatayı eşit sayar; ürünün şartı ise asimetriktir (sessizlik harmonik hataya
+yeğdir). Kazanan ilanı bu yüzden turnuvanın çıktısını yeniden yazarak değil,
+D-038'de kayıtlı bir ürün kararı olarak verildi. Ölçüm ne diyorsa öyle duruyor.
+
+### Bu koşuda düzeltilen üç bayat kayıt
+
+Gecikme değişikliği üç yerin senkron tutulmasını gerektirdi ve bunu yaparken
+üç bağımsız bozukluk ortaya çıktı:
+
+1. `scripts/pitch_tournament_engines.py:UNIFIED_DEFAULT_LAG_FRAMES` C++
+   varsayılanını **gölgeliyor** — `unified_frames()` değeri her zaman açıkça
+   geçiriyor. İkisi ayrı düşerse turnuva, gönderilenden farklı bir motoru ölçer.
+   Sabitin başına bu uyarı yazıldı.
+2. `macos/.../LiveNotationTests.swift` beş motor eklendiğinden beri **kırmızıydı**
+   ve fark edilmemişti (dört motor bekliyordu). Düzeltildi; `swift test`
+   50 test / 0 hata.
+3. `scripts/build_beta_app.sh` `unified_*` kaynaklarını derlemiyordu, yani beta
+   paketi `unified_v1` eklendiğinden beri link edemezdi. Beş kaynak eklendi.
+
 ## Dış karşılaştırma — pYIN referansıyla — 6 Eylül 2026
 
 24 dosya, üç küme, beş motor + iki çevrimdışı pYIN referansı.

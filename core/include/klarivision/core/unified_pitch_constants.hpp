@@ -95,10 +95,18 @@ inline constexpr double kContractSampleRateHz = 48'000.0;
 inline constexpr std::size_t kHopSamples = 512;
 inline constexpr double kDefaultMinimumRms = 0.015;
 
-// 15 hops at 512 samples / 48 kHz = 160 ms of constant decision latency.
-// Octave errors in this project's own measurements last a median of 2 frames
-// and at most 9 (96 ms); a 5-frame window cannot see the end of most of them.
-inline constexpr std::size_t kDefaultLagFrames = 15;
+// 5 hops at 512 samples / 48 kHz = 53 ms of constant decision latency, the
+// same figure pitch_engine_v2 ships with.
+//
+// This was 15 (160 ms) until the lag sweep in docs/TEST_BASELINE.md measured
+// what the longer window actually buys. The original argument -- octave errors
+// last a median of 2 frames and at most 9, so a 5-frame window cannot see the
+// end of most of them -- did not survive the measurement: serious harmonic
+// errors are zero at every lag from 5 to 25, and cent accuracy is identical to
+// three decimals. The only thing 160 ms bought was trap-suite coverage
+// (2171 vs 1696 published frames), paid for with 107 ms of live latency. The
+// product decision was to take the responsiveness.
+inline constexpr std::size_t kDefaultLagFrames = 5;
 inline constexpr double kTransitionWidthCents = 700.0;
 
 // ---------------------------------------------------------------------------

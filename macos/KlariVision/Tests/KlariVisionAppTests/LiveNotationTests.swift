@@ -3,18 +3,18 @@ import XCTest
 @testable import KlariVisionApp
 
 final class LiveNotationTests: XCTestCase {
-    func testPitchEngineSettingsKeepsFourNeutralUserChoices() {
+    func testPitchEngineSettingsKeepsFiveNeutralUserChoices() {
         XCTAssertEqual(
             PitchEngineSettings.userChoices.map(\.id),
-            ["yin_v1", "pitch_engine_v2", "vpm_like", "hapt_v1"]
+            ["yin_v1", "pitch_engine_v2", "vpm_like", "hapt_v1", "unified_v1"]
         )
         XCTAssertEqual(
             PitchEngineSettings.userChoices.map(\.title),
-            ["YIN v1", "Pitch Engine v2", "VPM-benzeri", "Harmonik-Faz (HAPT)"]
+            ["YIN v1", "Pitch Engine v2", "VPM-benzeri", "Harmonik-Faz (HAPT)", "Birleşik (Unified v1)"]
         )
-        XCTAssertEqual(PitchEngineSettings.initialEngine, "yin_v1")
-        XCTAssertEqual(PitchEngineSettings.resolvedSelection(nil), "yin_v1")
-        XCTAssertEqual(PitchEngineSettings.resolvedSelection("not-a-pitch-engine"), "yin_v1")
+        XCTAssertEqual(PitchEngineSettings.initialEngine, "unified_v1")
+        XCTAssertEqual(PitchEngineSettings.resolvedSelection(nil), "unified_v1")
+        XCTAssertEqual(PitchEngineSettings.resolvedSelection("not-a-pitch-engine"), "unified_v1")
         for engine in PitchEngineSettings.userChoices {
             XCTAssertEqual(PitchEngineSettings.resolvedSelection(engine.id), engine.id)
             XCTAssertFalse(engine.title.localizedCaseInsensitiveContains("deneysel"))

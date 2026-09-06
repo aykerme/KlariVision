@@ -649,7 +649,7 @@ def main() -> None:
             "Comma-separated unified_v1 decoder lag values in hops (e.g. 5,10,15). "
             "Each value is run separately and reported as its own row "
             "(unified_v1@lag5, ...). Defaults to a single run at the production "
-            "value (15 hops = 160 ms)."
+            "value (5 hops = 53 ms)."
         ),
     )
     arguments = parser.parse_args()

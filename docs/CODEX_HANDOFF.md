@@ -1,6 +1,6 @@
 # Codex Görev Devri
 
-Son güncelleme: 20 Ağustos 2026
+Son güncelleme: 6 Eylül 2026
 
 ## Dokümantasyon ve kaynak açıklama turu — 20 Ağustos
 
@@ -39,6 +39,69 @@ sıfır-parametreli closure'a geçirildi. C++ `scripts/test_core.sh`, Python
 Xcode derlemesi ve evrensel iOS Simulator `build-for-testing` geçti. HTML parse,
 yerel Markdown bağlantıları ve `git diff --check` temizdir. Sıradaki tek ürün
 işi değişmedi: gerçek iPhone VoiceOver odak/ad/değer/ipucu kabul turu.
+
+## `unified_v1` kazanan ilan edildi — 6 Eylül 2026 (oturum sonu)
+
+Karar D-038, sayılar `TEST_BASELINE.md`'nin en üst bölümünde. Sonraki oturum bu
+bölümden başlamalı.
+
+### Bu oturumda yapılanlar
+
+- **Karar gecikmesi 15 hop (160 ms) → 5 hop (53,3 ms).** 160 ms'nin gerekçesi
+  ölçümle çürüdü: harmonik hata 5–25 hop arasında her değerde sıfır, sent
+  hassasiyeti üç ondalığa kadar aynı. Değer **üç yerde birden** durur ve üçü
+  ayrı düşerse turnuva gönderilenden başka bir motoru ölçer:
+  `unified::kDefaultLagFrames`, `scripts/pitch_tournament_engines.py`
+  (`UNIFIED_DEFAULT_LAG_FRAMES` — C++ varsayılanını **gölgeler**) ve
+  `src/klarivision/pitch/cpp_engine.py`. Üçü de güncellendi, uyarı yorumları
+  yazıldı.
+- **Tam turnuva yeni değerle yeniden koşuldu.** Ciddi harmonik hata hâlâ 0;
+  veto hâlâ tek dosya. `fingerprint=00a55e42…`.
+- **Yeni kurulum varsayılanı `unified_v1`.** macOS `PitchEngineSettings.initialEngine`
+  ve iPad `iPadAppState.engine(_:)` yedeği. Mevcut kurulumlar kendi kayıtlı
+  seçimlerini korur.
+- **Üç bayat kayıt düzeltildi:** `LiveNotationTests.swift` beş motor eklendiğinden
+  beri kırmızıydı; `scripts/build_beta_app.sh` `unified_*` kaynaklarını
+  derlemiyordu (beta paketi link edemezdi); `tests/test_cpp_engine.py`
+  sözleşme stub'ı 15'i sabitlemişti.
+
+Doğrulandı: `scripts/test_core.sh` temiz, `pytest` 127 geçti / 1 atlandı,
+`swift test` (macos/KlariVision) 50 test / 2 atlandı / **0 hata**, tam sentetik
+turnuva koşuldu.
+
+### Sonraki oturumun işleri — öncelik sırasıyla
+
+1. **Klarnet dışı ötüm kapsaması.** Dış karşılaştırmada RPA 0,315–0,635, pYIN
+   0,66–0,99; fark neredeyse tamamen voicing recall. Perde doğru ölçülüyor,
+   yayımlanmıyor. **Uyarı:** bu, dış tabloya bakılarak ayarlanamaz — o tablo
+   elimizdeki tek ayarlanmamış ölçüt. Önce ayrı bir doğrulama kümesi ayrılmalı,
+   sonra girilmeli.
+2. **`adverse_v1` vetosu.** Kullanıcı şimdilik kabul etti ama kapanmadı: ciddi
+   eksik ötüm 24 kare, sınır 12. `TEST_BASELINE.md`'de ölçülüp reddedilen altı
+   kol kayıtlı (düşük register onayı, geçiş genişliği, yapışkan kurtarma,
+   gecikme, ötüm tabanları, emisyon kalibrasyonu) — hiçbiri kımıldatmıyor.
+   Ucuz ayar yok; mimari iş gerekir. Kollar tekrar denenmemeli.
+3. **Faz 6 — dört eski motorun silinmesi** (D-037'nin nihai hedefi) ve
+   `analysis_engine.cpp:538-689` ölü kodu. ABI numaraları 0–3 kalıcıdır,
+   yeniden numaralandırılmaz.
+4. **Faz 7 —** `swipe_prime.cpp`'nin `FrameSpectrum` üstüne katlanması,
+   ardından `graphify update .`.
+
+### Sonraki oturumun bilmesi gereken tuzaklar
+
+- Sayısal eşikler donmuş holdout'lara bakılarak seçildi. Dış tablo onların
+  **zarar vermediğini** gösterir, onları haklı çıkarmaz. Hangi sabitin
+  `frozen-no-retuning-after-first-result`, hangisinin `diagnostic-may-be-retuned`
+  olduğu `TEST_BASELINE.md`'de yazılı — yeni bir ayar turuna girmeden önce
+  okunmalı.
+- Turnuvanın `benchmark_winner=vpm_like` / `outcome=candidate_requires_parity`
+  satırları **kasten** öyle bırakıldı. Kazanan ilanı ürün kararıdır (D-038),
+  ölçümün üstüne konur; ölçümü yeniden yazmak bu ayrımı yok eder.
+- `KLARIVISION_PITCH_TRACK_CLI` ayarlı değilse `build/klarivision-pitch-track-cli`
+  kullanılır ve **bayat kalabilir**. Sabitler değiştiğinde yeniden derlenmeli;
+  `pytest` sözleşme testi bunu yakalamaz (stub kullanır).
+- `outputs/` altındaki motor izleri farklı derlemelerden kalmış olabilir;
+  kıyaslamadan önce tazelenir.
 
 ## Birleşik motor `unified_v1` — 6 Eylül 2026
 
