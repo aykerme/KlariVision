@@ -34,7 +34,9 @@ std::size_t harmonic_count(const double f, const double maximum_hz) {
 // consecutive pair of harmonics is exactly `f` apart, so either all of them
 // clear the resolution guard or none do.
 double spectral_parity_index(const FrameSpectrum& spectrum, const double f) {
-    const auto K = harmonic_count(f, unified::kSpectralAnalysisMaximumHz);
+    const auto K = harmonic_count(
+        f, std::min(f * static_cast<double>(unified::kMinimumScoredPartials * 2),
+                    unified::kSpectralAnalysisMaximumHz));
     if (K < 2 || f <= 1.5 * spectrum.resolution_half_width_hz()) {
         return 0.0;  // too few harmonics representable, or they'd blur into each other
     }
@@ -291,6 +293,22 @@ void note_unvoiced_frame(ParityEstimate& parity) {
     parity.samples = (parity.samples > 0) ? parity.samples - 1 : 0;
 }
 
+namespace {
+
+/// Per-candidate analysis ceiling: enough headroom for kMinimumScoredPartials
+/// of this candidate, never below the shared floor and never above what the
+/// sample rate can actually resolve.
+double analysis_limit_for(
+    const double frequency_hz, const double base_limit_hz, const double sample_rate
+) {
+    const auto nyquist = 0.5 * sample_rate * unified::kSpectralAnalysisHeadroom;
+    const auto wanted =
+        frequency_hz * static_cast<double>(unified::kMinimumScoredPartials);
+    return std::min(std::max(base_limit_hz, wanted), nyquist);
+}
+
+}  // namespace
+
 std::vector<HarmonicEvidence> score_harmonic_evidence(
     const std::span<const float> history,
     const MultiResolutionSpectra& spectra,
@@ -309,9 +327,15 @@ std::vector<HarmonicEvidence> score_harmonic_evidence(
     // bands no matter how many candidates (or harmonic-family competitors,
     // below) get scored against them, so it happens exactly once per band
     // per call.
-    const auto low_peaks = pick_spectral_peaks(spectra.low, maximum_analysis_frequency_hz);
-    const auto mid_peaks = pick_spectral_peaks(spectra.mid, maximum_analysis_frequency_hz);
-    const auto high_peaks = pick_spectral_peaks(spectra.high, maximum_analysis_frequency_hz);
+    auto peak_limit = maximum_analysis_frequency_hz;
+    for (const auto frequency : candidate_frequencies_hz) {
+        peak_limit = std::max(
+            peak_limit, analysis_limit_for(frequency, maximum_analysis_frequency_hz, sample_rate)
+        );
+    }
+    const auto low_peaks = pick_spectral_peaks(spectra.low, peak_limit);
+    const auto mid_peaks = pick_spectral_peaks(spectra.mid, peak_limit);
+    const auto high_peaks = pick_spectral_peaks(spectra.high, peak_limit);
     const auto peaks_for = [&](const FrameSpectrum& band) -> const std::vector<double>& {
         if (&band == &spectra.low) {
             return low_peaks;
@@ -357,7 +381,8 @@ std::vector<HarmonicEvidence> score_harmonic_evidence(
         out.swipe_prime_support = combined_supports[i];
 
         const auto& primary_band = spectra.for_frequency(f);
-        out.twm_score = twm_score_at(f, maximum_analysis_frequency_hz, peaks_for(primary_band), parity);
+        const auto limit = analysis_limit_for(f, maximum_analysis_frequency_hz, sample_rate);
+        out.twm_score = twm_score_at(f, limit, peaks_for(primary_band), parity);
         out.fundamental_presence = fundamental_presence_at(primary_band, f);
         // Diagnostic only: measured at this *candidate*, never fed back
         // into the running ParityEstimate. An f/3 ghost sees the real
@@ -372,7 +397,7 @@ std::vector<HarmonicEvidence> score_harmonic_evidence(
         if (out.band_blended) {
             const auto& partner_band = spectra.blend_partner(f);
             const double partner_twm = twm_score_at(
-                f, maximum_analysis_frequency_hz, peaks_for(partner_band), parity
+                f, limit, peaks_for(partner_band), parity
             );
             const double partner_presence = fundamental_presence_at(partner_band, f);
             const double partner_parity = spectral_parity_index(partner_band, f);
@@ -381,7 +406,7 @@ std::vector<HarmonicEvidence> score_harmonic_evidence(
             out.parity_index = 0.5 * (out.parity_index + partner_parity);
         }
 
-        out.ghost_penalty = ghost_penalty_at(history, sample_rate, f, maximum_analysis_frequency_hz);
+        out.ghost_penalty = ghost_penalty_at(history, sample_rate, f, limit);
 
         // family_margin = score(f) - max over the harmonic family of
         // score(f * ratio), with score = swipe_prime_support * twm_score --
@@ -398,7 +423,9 @@ std::vector<HarmonicEvidence> score_harmonic_evidence(
             const double related_hz = combined_frequencies[static_cast<std::size_t>(position)];
             const auto& related_band = spectra.for_frequency(related_hz);
             const double related_twm = twm_score_at(
-                related_hz, maximum_analysis_frequency_hz, peaks_for(related_band), parity
+                related_hz,
+                analysis_limit_for(related_hz, maximum_analysis_frequency_hz, sample_rate),
+                peaks_for(related_band), parity
             );
             const double related_score =
                 combined_supports[static_cast<std::size_t>(position)] * related_twm;

@@ -39,6 +39,17 @@ inline constexpr double kEstimatorMaximumHz = 2400.0;  // ~ +540 cents of guard
 // 1760 Hz a 5000 Hz analysis limit leaves only two partials.
 inline constexpr double kSpectralAnalysisMaximumHz = 8000.0;
 
+// A candidate is scored on how well its predicted harmonic series explains the
+// spectrum, so how many of its partials are visible decides how much evidence
+// it can possibly carry. A fixed ceiling spends that budget unevenly: at 294 Hz
+// an 8 kHz limit shows 27 partials, at 1460 Hz it shows five. Thin evidence is
+// what lets a subharmonic rival look comparable, and the top of the range is
+// exactly where those rivals -- a note's own half and third -- fall into
+// well-supported parts of the spectrum. The limit therefore scales with the
+// candidate, so every candidate is judged on a similar number of partials.
+inline constexpr std::size_t kMinimumScoredPartials = 10;
+inline constexpr double kSpectralAnalysisHeadroom = 0.90;  // fraction of Nyquist
+
 // ---------------------------------------------------------------------------
 // Multi-resolution analysis bands
 // ---------------------------------------------------------------------------

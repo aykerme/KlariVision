@@ -126,7 +126,13 @@ int main() {
             missing_2f, missing_spectra, kSampleRate, candidates, cold_parity
         );
         const double gap_cold = full_evidence_cold[0].twm_score - missing_evidence_cold[0].twm_score;
-        assert(gap_cold > 0.03);
+        // A missing partial costs less than it used to at this frequency, and
+        // deliberately so: the analysis ceiling now scales with the candidate,
+        // so a 1400 Hz hypothesis is judged on ten partials rather than five
+        // and no single one of them dominates. The property under test is the
+        // sign and the ordering against the warm case below, not the size of
+        // the gap -- which is a function of how many partials are in view.
+        assert(gap_cold > 0.005);
 
         ParityEstimate warm_parity;
         while (warm_parity.index < 0.85) {
