@@ -1,5 +1,53 @@
 # KlariVision Test Tabanı
 
+## Altıncı turnuva — veto tek dosyaya indi — 6 Eylül 2026
+
+| Motor | Ciddi yanlış | Ciddi eksik | Ciddi harmonik | Ciddi toplam | Ort. sent | Kapı |
+|---|---|---|---|---|---|---|
+| yin_v1 | 54 | 13 | 498 | 658 | 1,606 | — |
+| pitch_engine_v2 | 6 | 536 | 495 | 1037 | 1,532 | — |
+| vpm_like | 15 | 54 | 34 | 115 | 1,463 | — |
+| hapt_v1 | 6 | 329 | 107 | 442 | 4,842 | — |
+| **unified_v1** | **5** | **1784** | **0** | **1789** | 1,899 | VETO (1 dosya) |
+
+Veto seyri: 7 → 6 → 5 → 3 → **1 dosya**. Kalan tek engel `adverse_v1`,
+yalnızca eksik-sesli üzerinden: 25 kare, limit 12.
+
+Ciddi harmonik hata sıfırda; yanlış-sesli beş motorun en düşüğü.
+
+## Dış karşılaştırma — ilk bağımsız ölçüm — 6 Eylül 2026
+
+`scripts/run_external_pitch_benchmark.py` yazıldı ve koşuldu. Bu takım bir
+**iddia kapısıdır, ayar hedefi değildir**; buradan sabit seçmek tablonun tek
+işlevini yok eder.
+
+Çevrimdışı pYIN (native Vamp ve librosa) **referans tavanı** olarak eklendi —
+rakip değil, mesafe ölçüsü.
+
+Vocadito (vokal) ilk dosyada, raw pitch accuracy:
+
+| Motor | RPA | Ötüm recall |
+|---|---|---|
+| yin_v1 | 0,362 | 0,364 |
+| pitch_engine_v2 | 0,358 | 0,359 |
+| vpm_like | 0,403 | 0,404 |
+| hapt_v1 | 0,408 | 0,410 |
+| **unified_v1** | **0,577** | **0,591** |
+| pyin_vamp (referans) | 0,977 | 0,978 |
+| pyin_librosa (referans) | 0,992 | 0,998 |
+
+**Projenin beş motorunun tamamı klarnet dışı materyalde pYIN'in çok
+gerisinde.** `unified_v1` beşinin en iyisi ve ikincisinden %41 önde, ama açık
+büyük ve neredeyse tamamı ötüm recall'dan geliyor: motorlar sesli karelerin
+çoğunda susuyor.
+
+Bu bir `unified_v1` kusuru değil, proje çapında bir açık — ve depodaki hiçbir
+yargıç bunu söyleyemezdi. Bağımsız ölçütün varlık sebebi tam olarak budur.
+
+**Uyarı:** ötüm recall'ı bu tabloya bakarak yükseltmek, elimizdeki son
+bağımsız ölçütü de ayar sinyaline çevirir. Klarnet dışı kapsama üzerinde
+çalışılacaksa, ölçüt yine bu küme olmamalı.
+
 > ## Metodoloji uyarısı — 6 Eylül 2026
 >
 > **`unified_v1`'in sayısal eşikleri, donmuş holdout'ların sonuçlarına
