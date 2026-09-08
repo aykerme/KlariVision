@@ -57,17 +57,41 @@ struct HarmonicEvidence {
     double parity_index{};
     /// True when the band-edge blend was applied to this candidate.
     bool band_blended{false};
+    /// True when this candidate's own predicted partials go silent for
+    /// several consecutive harmonics and then carry real energy again
+    /// further up the series -- the signature of a common-subharmonic
+    /// ghost explaining two different notes' partials at once, not of any
+    /// single physical source (see `has_series_incoherence` for the
+    /// measured case). A candidate flagged this way is dropped outright at
+    /// candidate generation, the same way a low-register candidate with no
+    /// fundamental energy and no supporting series is.
+    bool series_incoherent{false};
 };
 
 /// Scores every candidate against the spectrum. Output is positionally
 /// parallel to `candidate_frequencies_hz`.
+///
+/// `lookahead_samples` is optional and empty by default; see
+/// `series_incoherent` on `HarmonicEvidence` and
+/// `kSeriesCoherenceLookaheadSamples` for what it is used for and why it is
+/// the one piece of evidence here that is allowed to reach past `history`'s
+/// newest sample.
+///
+/// The series-coherence veto that `lookahead_samples` feeds is evaluated
+/// only for the first `kSeriesCoherenceCandidateLimit` entries of
+/// `candidate_frequencies_hz` -- seek that constant before reordering
+/// `candidate_frequencies_hz` at a call site, since it assumes what
+/// `unified_frame_evidence` already guarantees its caller: candidates
+/// arrive sorted by descending prior probability, so the leading entries
+/// really are the frame's leading hypotheses.
 [[nodiscard]] std::vector<HarmonicEvidence> score_harmonic_evidence(
     std::span<const float> history,
     const MultiResolutionSpectra& spectra,
     double sample_rate,
     std::span<const double> candidate_frequencies_hz,
     const ParityEstimate& parity,
-    double maximum_analysis_frequency_hz = unified::kSpectralAnalysisMaximumHz
+    double maximum_analysis_frequency_hz = unified::kSpectralAnalysisMaximumHz,
+    std::span<const float> lookahead_samples = {}
 );
 
 /// Folds one committed, high-posterior frame into the running parity estimate.
@@ -86,6 +110,19 @@ void note_unvoiced_frame(ParityEstimate& parity);
 
 /// Signed cents from `reference_hz` to `frequency_hz`.
 [[nodiscard]] double cents_between(double reference_hz, double frequency_hz);
+
+/// True when `f`'s own predicted harmonic series, measured against
+/// `spectrum`, goes silent across a run of kSeriesCoherenceMinimumGapRun or
+/// more consecutive partials and then carries real energy again -- the
+/// common-subharmonic-ghost signature described on `HarmonicEvidence::
+/// series_incoherent`. `spectrum` must already be the lookahead-only
+/// low-band transform (see kSeriesCoherenceLookaheadSamples); this function
+/// does not build one. Exposed so a caller holding a decoded candidate and a
+/// genuinely-arrived lookahead span -- rather than a full evidence pass --
+/// can apply the identical criterion `score_harmonic_evidence` uses offline.
+[[nodiscard]] bool has_series_incoherence(
+    const FrameSpectrum& spectrum, double f, double maximum_hz
+);
 
 /// True when `signed_cents` lands within unified::kHarmonicToleranceCents of
 /// any target in unified::kHarmonicTargetCents. Shared by the evidence layer

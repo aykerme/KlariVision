@@ -133,7 +133,7 @@ def test_frequency_viewer_uses_physical_hertz_grid(tmp_path) -> None:
     assert "klarivision-tooltip" in html
     assert "transport-more" not in html
     assert "graphAppearanceKey='klarivision-graph-appearance-v1'" in html
-    assert "defaultGraphAppearance={pitchHex:'#0A84FF',noteGuideHex:'#8E8E93'}" in html
+    assert "defaultGraphAppearance={pitchHex:'#0A84FF',noteGuideHex:'#8E8E93',kararHex:'#E75A5A'}" in html
     assert "function setGraphAppearance(value" in html
     assert "setGraphAppearance," in html
     assert "settingsSnapshot()" in html
@@ -310,3 +310,81 @@ def test_frequency_viewer_chart_palette_includes_microphone_color(tmp_path) -> N
     html = output.read_text(encoding="utf-8")
     # chartPalette() üç temanın hepsinde mic: alanını veriyor
     assert "mic:graphAppearance.micHex" in html
+
+
+def test_frequency_viewer_includes_karar_color_defaults(tmp_path) -> None:
+    pitch_json = tmp_path / "pitch.json"
+    pitch_json.write_text(json.dumps({"frames": []}), encoding="utf-8")
+    output = tmp_path / "viewer.html"
+    build_frequency_viewer(pitch_json, "audio.wav", output)
+
+    html = output.read_text(encoding="utf-8")
+    # Karar sesi varsayılan rengi tanımlanmalı
+    assert "kararHex:'#E75A5A'" in html
+    assert "defaultGraphAppearance={pitchHex:'#0A84FF',noteGuideHex:'#8E8E93',kararHex:'#E75A5A'}" in html
+
+
+def test_frequency_viewer_karar_appears_in_normalizeGraphAppearance(tmp_path) -> None:
+    pitch_json = tmp_path / "pitch.json"
+    pitch_json.write_text(json.dumps({"frames": []}), encoding="utf-8")
+    output = tmp_path / "viewer.html"
+    build_frequency_viewer(pitch_json, "audio.wav", output)
+
+    html = output.read_text(encoding="utf-8")
+    # normalizeGraphAppearance kararHex alanını işlemeli
+    assert "kararHex:validGraphColor(value?.kararHex)||defaultGraphAppearance.kararHex" in html
+
+
+def test_frequency_viewer_chart_palette_includes_karar_color(tmp_path) -> None:
+    pitch_json = tmp_path / "pitch.json"
+    pitch_json.write_text(json.dumps({"frames": []}), encoding="utf-8")
+    output = tmp_path / "viewer.html"
+    build_frequency_viewer(pitch_json, "audio.wav", output)
+
+    html = output.read_text(encoding="utf-8")
+    # chartPalette() üç temanın hepsinde karar: alanını veriyor
+    assert "karar:graphAppearance.kararHex" in html
+
+
+def test_frequency_viewer_karar_color_settings_ui(tmp_path) -> None:
+    pitch_json = tmp_path / "pitch.json"
+    pitch_json.write_text(json.dumps({"frames": []}), encoding="utf-8")
+    output = tmp_path / "viewer.html"
+    build_frequency_viewer(pitch_json, "audio.wav", output)
+
+    html = output.read_text(encoding="utf-8")
+    # Grafik renkleri ayarlarında karar sesi rengi input'u
+    assert "karar.id='graph-karar-color'" in html
+    assert "kararLabel.textContent='Karar sesi'" in html
+
+
+def test_frequency_viewer_scale_notes_includes_karar_flag(tmp_path) -> None:
+    pitch_json = tmp_path / "pitch.json"
+    pitch_json.write_text(json.dumps({"frames": []}), encoding="utf-8")
+    output = tmp_path / "viewer.html"
+    build_frequency_viewer(pitch_json, "audio.wav", output)
+
+    html = output.read_text(encoding="utf-8")
+    # scaleNotes() fonksiyonu karar bayrağı ile tuples döndürmeli
+    assert "for(const [name,hz,isKarar] of scaleNotes())" in html
+    # makamNotes karar mantığı: degree === 0
+    assert "isKarar=degree===0" in html
+    # notesForMode karar mantığı: midi%12 === soundingTonic
+    assert "isKarar=midi%12===soundingTonic" in html
+    # turkishNotes: karar yok
+    assert "return turkishReference.map(note=>[note.display_notation,note.frequency_hz,false])" in html
+
+
+def test_frequency_viewer_karar_drawing_with_distinct_style(tmp_path) -> None:
+    pitch_json = tmp_path / "pitch.json"
+    pitch_json.write_text(json.dumps({"frames": []}), encoding="utf-8")
+    output = tmp_path / "viewer.html"
+    build_frequency_viewer(pitch_json, "audio.wav", output)
+
+    html = output.read_text(encoding="utf-8")
+    # Çizim döngüsünde karar çizgisi farklı stil ile çizilmeli
+    assert "ctx.strokeStyle=colorWithAlpha(palette.karar,.75)" in html
+    assert "ctx.lineWidth=2" in html
+    assert "ctx.fillStyle=colorWithAlpha(palette.karar,1)" in html
+    # Döngüden sonra lineWidth sıfırlanmalı
+    assert "ctx.lineWidth=1;" in html

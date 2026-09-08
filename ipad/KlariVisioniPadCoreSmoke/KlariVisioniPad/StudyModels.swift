@@ -17,6 +17,17 @@ struct iPadStudy: Identifiable, Equatable, Codable {
     let engine: iPadPitchEngine
     var context: iPadMusicContext
     let analyzedAt: Date
+    /// Identifies the pitch pipeline that produced `frames`. `nil` means the
+    /// record predates this field: it was analyzed through the causal
+    /// live/Çalma session (`iPadProductionPitchSession`) that Study used to
+    /// reuse before this offline path existed, and its frames are not
+    /// directly comparable to a fresh offline_track analysis. New studies
+    /// stamp `iPadOfflinePitchAnalyzer.pipelineRevision`, mirroring macOS's
+    /// `OFFLINE_TRACK_REVISION` (src/klarivision/pitch/cpp_engine.py) so a
+    /// future pipeline change can tell old and new results apart the same
+    /// way. Nothing currently re-analyzes automatically on a mismatch —
+    /// this field only makes the distinction visible.
+    var pipelineRevision: String? = nil
 
     /// Whether the source file has a video track to show, as opposed to
     /// audio-only. Drives the native graph/video fullscreen toggle button in
@@ -70,7 +81,11 @@ enum iPadStudyImportError: LocalizedError, Equatable {
     case noAudioTrack
     case decodeFailed
     case coreContract
-    case coreProcessing
+    /// Carries the underlying `iPadPitchABIError`'s message (which itself
+    /// carries `kv_pitch_engine_last_error` verbatim for an offline-engine
+    /// failure) so a failed offline analysis is diagnosable in the UI
+    /// instead of collapsing to one generic string.
+    case coreProcessing(String)
 
     var errorDescription: String? {
         switch self {
@@ -80,7 +95,7 @@ enum iPadStudyImportError: LocalizedError, Equatable {
         case .noAudioTrack: "Dosyada analiz edilecek bir ses kanalı bulunamadı."
         case .decodeFailed: "Ses akışı 48 kHz çalışma biçimine dönüştürülemedi."
         case .coreContract: "Pitch çekirdeği beklenen mobil sözleşmeyle uyuşmuyor."
-        case .coreProcessing: "Yerel pitch analizi tamamlanamadı."
+        case let .coreProcessing(message): "Yerel pitch analizi tamamlanamadı: \(message)"
         }
     }
 }
@@ -128,12 +143,25 @@ enum iPadStudyImportService {
 }
 
 enum iPadOfflinePitchAnalyzer {
+    /// Identifies the pipeline that produced a Study's persisted frames.
+    /// Mirrors macOS's `OFFLINE_TRACK_REVISION`
+    /// (src/klarivision/pitch/cpp_engine.py = "offline-unified-path-r2"):
+    /// both go through the same underlying C++ offline_track_v1 pass
+    /// (`PitchEngine::analyse`/`finish`, unified_v1), so they share its
+    /// cache-invalidation key. See `iPadStudy.pipelineRevision`.
+    static let pipelineRevision = "offline-unified-path-r2"
+
+    /// Runs Study/Dinleme's whole-file, offline_track profile analysis (see
+    /// `iPadOfflineTrackSession`) — never the live/causal
+    /// `iPadProductionPitchSession` path that Çalma (live) mode uses. A
+    /// failure here throws `iPadStudyImportError.coreProcessing` carrying
+    /// the C ABI's own error message; it must never be swallowed into a
+    /// silent fallback to the live path, which would make the failure
+    /// invisible to both the user and this analyzer.
     static func analyze(fileURL: URL, engine: iPadPitchEngine, progress: @escaping @Sendable (Double) -> Void) async throws -> [iPadPitchFrame] {
-        let contract: kv_pitch_contract_v1
-        let session: iPadProductionPitchSession
+        let session: iPadOfflineTrackSession
         do {
-            contract = try iPadPitchABIAdapter.contract()
-            session = try iPadProductionPitchSession(engine: engine)
+            session = try iPadOfflineTrackSession(engine: engine)
         } catch { throw iPadStudyImportError.coreContract }
 
         let asset = AVURLAsset(url: fileURL)
@@ -156,12 +184,14 @@ enum iPadOfflinePitchAnalyzer {
         guard reader.startReading() else { throw iPadStudyImportError.decodeFailed }
 
         let duration = max((try await asset.load(.duration)).seconds, 0.001)
-        let windowSize = Int(contract.window_size)
-        let hopSize = Int(contract.hop_size)
-        var pending: [Float] = []
-        var sourceOffset = 0
-        var frames: [iPadPitchFrame] = []
+        var sourceSamples = 0
 
+        // Unlike the old causal path, this API takes the whole file: chunks
+        // are only pushed into the engine's internal buffer here (fast —
+        // no per-window analysis happens yet), so this loop's progress is
+        // decode/read progress, not analysis progress. It is capped below
+        // 0.9 so the remaining range is visibly left for `finish()` below,
+        // which is where the actual whole-track pass runs.
         while let sampleBuffer = output.copyNextSampleBuffer() {
             guard let block = CMSampleBufferGetDataBuffer(sampleBuffer) else { throw iPadStudyImportError.decodeFailed }
             let length = CMBlockBufferGetDataLength(block)
@@ -170,24 +200,33 @@ enum iPadOfflinePitchAnalyzer {
                 CMBlockBufferCopyDataBytes(block, atOffset: 0, dataLength: length, destination: buffer.baseAddress!)
             }
             guard status == kCMBlockBufferNoErr else { throw iPadStudyImportError.decodeFailed }
-            raw.withUnsafeBytes { bytes in
-                pending.append(contentsOf: bytes.bindMemory(to: Float.self))
-            }
-            while pending.count >= windowSize {
-                let time = Double(sourceOffset + windowSize / 2) / 48_000
-                do {
-                    let window = analysisWindow(from: pending, windowSize: windowSize)
-                    let output = try window.withUnsafeBufferPointer { try session.process(samples: $0, sourceTime: time) }
-                    frames.append(contentsOf: output)
-                } catch { throw iPadStudyImportError.coreProcessing }
-                pending.removeFirst(hopSize)
-                sourceOffset += hopSize
-                progress(min(time / duration, 0.99))
-            }
+            do {
+                try raw.withUnsafeBytes { bytes in
+                    try session.push(samples: bytes.bindMemory(to: Float.self), sampleRate: 48_000)
+                }
+            } catch let error as iPadPitchABIError {
+                throw iPadStudyImportError.coreProcessing(error.errorDescription ?? "bilinmeyen hata")
+            } catch { throw iPadStudyImportError.coreProcessing("\(error)") }
+            sourceSamples += length / MemoryLayout<Float>.size
+            let readSeconds = Double(sourceSamples) / 48_000
+            progress(min(readSeconds / duration, 0.9))
         }
         guard reader.status == .completed else { throw iPadStudyImportError.decodeFailed }
-        do { frames.append(contentsOf: try session.finish()) }
-        catch { throw iPadStudyImportError.coreProcessing }
+
+        // The whole-track pass: everything above was preparation, and this
+        // single call is where the time goes (~50 s for a 191 s recording).
+        // kv_pitch_engine_set_progress reports real frame-level progress from
+        // inside it, so the remaining 0.9...1.0 of the bar advances instead of
+        // holding while the user waits.
+        let frames: [iPadPitchFrame]
+        do {
+            frames = try session.finish { fraction in
+                progress(0.9 + 0.1 * fraction)
+            }
+        }
+        catch let error as iPadPitchABIError {
+            throw iPadStudyImportError.coreProcessing(error.errorDescription ?? "bilinmeyen hata")
+        } catch { throw iPadStudyImportError.coreProcessing("\(error)") }
         progress(1)
         return frames
     }
@@ -231,7 +270,7 @@ enum iPadStudyPlaybackRate {
 
 enum iPadStudyCommand: Equatable {
     case load(URL, [iPadPitchFrame])
-    case context(iPadMusicContext, pitchColor: String, guideColor: String, komaOverride: [Int])
+    case context(iPadMusicContext, pitchColor: String, guideColor: String, kararColor: String, komaOverride: [Int])
     case playPause, pause, seek(Double), rate(Double), markA, markB, loop, follow
     /// Which side (graph or video) fills the stage. Driven by the native
     /// floating toggle button so it stays tappable regardless of the

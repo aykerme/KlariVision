@@ -272,5 +272,64 @@ int main() {
         assert(parity.samples == 0);
     }
 
+    // 8. Series coherence veto: a common-subharmonic ghost of a perfect
+    // fifth (3:2) is rejected once its own future partials are visible,
+    // while a genuine low fundamental with an ordinary odd-only series is
+    // not. Mirrors the measured case at 164.68s of
+    // sukru-tunar-ussak-taksim-on-clarinet-pitch-contour-only-*.wav: a
+    // fading note and an entering note a fifth above it share a common
+    // subharmonic (here 149.4 Hz, GCD of 298.8 and 448.2), and the ghost's
+    // own predicted series is present at 2 and 3, silent across 4-8, and
+    // present again at 9 -- a multi-partial hole with a recovery, never
+    // produced by any single physical source's own decaying series (see
+    // kSeriesCoherenceMinimumGapRun in unified_pitch_constants.hpp).
+    //
+    // `history` plays no part in this check (only `lookahead_samples`
+    // does, since the causal window has already been measured not to show
+    // the pattern yet -- see kSeriesCoherenceLookaheadSamples), so it is
+    // left silent for both cases here.
+    {
+        const std::vector<float> silent_history(klarivision::core::unified::kHistorySamples, 0.0F);
+        const auto silent_spectra = compute_multi_resolution_spectra(silent_history, kSampleRate);
+        ParityEstimate parity;
+
+        constexpr double ghost_f = 149.4;
+        const auto ghost_lookahead = harmonic_signal(
+            ghost_f, {{2, 0.3}, {3, 1.0}, {9, 0.5}},
+            klarivision::core::unified::kSeriesCoherenceLookaheadSamples
+        );
+        const std::array<double, 1> ghost_candidate{ghost_f};
+        const auto ghost_evidence = score_harmonic_evidence(
+            silent_history, silent_spectra, kSampleRate, ghost_candidate, parity,
+            klarivision::core::unified::kSpectralAnalysisMaximumHz, ghost_lookahead
+        );
+        assert(ghost_evidence[0].series_incoherent);
+
+        // Same check, same candidate frequency, but the lookahead now shows
+        // an ordinary stopped-pipe series (odd partials only, monotonically
+        // fading out toward the top rather than holing out and recovering):
+        // must not be flagged.
+        constexpr double real_f = 140.0;
+        const auto real_lookahead = harmonic_signal(
+            real_f, {{1, 1.0}, {3, 0.6}, {5, 0.4}, {7, 0.3}},
+            klarivision::core::unified::kSeriesCoherenceLookaheadSamples
+        );
+        const std::array<double, 1> real_candidate{real_f};
+        const auto real_evidence = score_harmonic_evidence(
+            silent_history, silent_spectra, kSampleRate, real_candidate, parity,
+            klarivision::core::unified::kSpectralAnalysisMaximumHz, real_lookahead
+        );
+        assert(!real_evidence[0].series_incoherent);
+
+        // Without a lookahead span at all -- the live path's default -- the
+        // veto never fires, even for the ghost's own frequency and even
+        // though this reuses the exact same (silent) history. This is what
+        // keeps the live decision path unaffected by this whole mechanism.
+        const auto live_evidence = score_harmonic_evidence(
+            silent_history, silent_spectra, kSampleRate, ghost_candidate, parity
+        );
+        assert(!live_evidence[0].series_incoherent);
+    }
+
     std::cout << "KlariVision Core harmonic evidence tests passed.\n";
 }

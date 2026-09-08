@@ -36,12 +36,23 @@ struct UnifiedFrameDiagnostic {
 /// Profile-independent on purpose. The live decoder and the offline decoder
 /// consume exactly the same records and differ only in how much of the
 /// sequence they are allowed to look at -- never in what they are looking at.
+///
+/// `lookahead_samples` is that difference made concrete: samples
+/// immediately after `history`'s newest one, used only by the series-
+/// coherence veto (see kSeriesCoherenceLookaheadSamples) to tell a
+/// common-subharmonic ghost from a real low-register fundamental. Live
+/// callers have no future samples yet and pass the default empty span,
+/// which leaves every candidate's `series_incoherent` false -- identical to
+/// this function's behaviour before that veto existed. Only
+/// `collect_unified_evidence`, which already holds the whole track, passes
+/// a real one.
 [[nodiscard]] UnifiedFrameEvidence unified_frame_evidence(
     std::span<const float> history,
     double sample_rate,
     double source_time_seconds,
     const PitchEngineConfig& config,
-    const ParityEstimate& parity
+    const ParityEstimate& parity,
+    std::span<const float> lookahead_samples = {}
 );
 
 /// Causal, frame-at-a-time driver for the live path.
@@ -77,12 +88,14 @@ private:
 [[nodiscard]] std::vector<UnifiedFrameEvidence> collect_unified_evidence(
     std::span<const float> mono_samples,
     double sample_rate,
-    const PitchEngineConfig& config
+    const PitchEngineConfig& config,
+    PitchProgressCallback on_progress = {}
 );
 
 [[nodiscard]] std::vector<EngineFrame> decode_unified_offline_track(
     std::span<const UnifiedFrameEvidence> evidence,
-    const PitchEngineConfig& config
+    const PitchEngineConfig& config,
+    PitchProgressCallback on_progress = {}
 );
 
 }  // namespace klarivision::core

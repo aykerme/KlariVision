@@ -7,6 +7,7 @@
 #include <array>
 #include <cmath>
 #include <limits>
+#include <optional>
 #include <vector>
 
 namespace klarivision::core {
@@ -92,6 +93,70 @@ double ghost_penalty_at(
     );
     return kGhostMaxPenalty * severity;
 }
+
+}  // namespace
+
+// A candidate's own predicted series is internally incoherent when it goes
+// silent across a run of kSeriesCoherenceMinimumGapRun or more consecutive
+// partials and then carries real energy again further up -- see
+// unified_pitch_constants.hpp for the measured GCD-ghost case this exists
+// to catch and the two design constraints (run length, relative threshold)
+// that keep a clarinet's ordinary alternating odd/even series out of it.
+// k = 1 (the fundamental) is excluded from the scan for the same reason
+// TWM forgives it in `twm_error`: its absence is a property of the source's
+// radiation, not evidence against the candidate.
+//
+// Exposed publicly (rather than kept file-local) so the live path can apply
+// this exact same check to an already-decoded candidate once its lookahead
+// audio has genuinely arrived -- see UnifiedPitchSession's lookahead buffer
+// in unified_pitch_session.cpp, which retroactively vetoes a low-register
+// winner the fixed-lag decoder already chose, using the same criterion
+// `score_harmonic_evidence` applies offline.
+bool has_series_incoherence(const FrameSpectrum& spectrum, const double f, const double maximum_hz) {
+    const auto K = std::min(harmonic_count(f, maximum_hz), unified::kSeriesCoherenceCheckPartials);
+    // Need at least a present partial, a qualifying gap, and a present
+    // partial afterwards -- five slots (k = 2..6) is the smallest window
+    // that can represent that.
+    if (K < 5) {
+        return false;
+    }
+
+    std::vector<double> amplitude(K + 1, 0.0);
+    double loudest = 0.0;
+    for (std::size_t k = 2; k <= K; ++k) {
+        amplitude[k] = spectrum.amplitude_at(static_cast<double>(k) * f);
+        loudest = std::max(loudest, amplitude[k]);
+    }
+    if (loudest <= 1e-12) {
+        return false;  // nothing measurable in the checked window at all
+    }
+
+    // A GCD ghost's loudest "partial" is another real note, so it towers over
+    // the ghost's own fundamental. A genuine low note does not behave that
+    // way. Requiring this before the gap scan is what keeps the veto off the
+    // innocent low notes that overlapping sources fill with holes -- see
+    // kSeriesCoherenceFundamentalDominanceRatio for the measurement.
+    const double fundamental = spectrum.amplitude_at(f);
+    if (loudest < unified::kSeriesCoherenceFundamentalDominanceRatio * fundamental) {
+        return false;
+    }
+
+    const double floor = unified::kSeriesCoherencePresenceRatio * loudest;
+    std::size_t silent_run = 0;
+    for (std::size_t k = 2; k <= K; ++k) {
+        if (amplitude[k] < floor) {
+            ++silent_run;
+            continue;
+        }
+        if (silent_run >= unified::kSeriesCoherenceMinimumGapRun) {
+            return true;  // a real partial reappeared after a multi-partial hole
+        }
+        silent_run = 0;
+    }
+    return false;
+}
+
+namespace {
 
 // ---------------------------------------------------------------------------
 // Two-way mismatch (Maher & Beauchamp, JASA 1994)
@@ -315,7 +380,8 @@ std::vector<HarmonicEvidence> score_harmonic_evidence(
     const double sample_rate,
     const std::span<const double> candidate_frequencies_hz,
     const ParityEstimate& parity,
-    const double maximum_analysis_frequency_hz
+    const double maximum_analysis_frequency_hz,
+    const std::span<const float> lookahead_samples
 ) {
     const std::size_t candidate_count = candidate_frequencies_hz.size();
     std::vector<HarmonicEvidence> evidence(candidate_count);
@@ -382,6 +448,35 @@ std::vector<HarmonicEvidence> score_harmonic_evidence(
         spectra.low, combined_frequencies, unified::kSpectralAnalysisMaximumHz
     );
 
+    // Built at most once per call, and only if a low-register candidate
+    // actually needs it: the series-coherence veto is the one piece of
+    // evidence in this function allowed to look past `history`'s newest
+    // sample (see kSeriesCoherenceLookaheadSamples), so it gets its own
+    // spectrum rather than reusing spectra.low, which is causal by
+    // construction. Low-register only, matching the measured failure mode
+    // -- a common subharmonic of two higher notes only lands as low as
+    // kLowRegisterHz in the first place, and mid/high candidates already
+    // have enough partials in view for TWM's own averaging to catch a
+    // comparable inconsistency.
+    //
+    // Built from `lookahead_samples` alone, not history + lookahead: the
+    // whole reason this spectrum exists is that the causal window has
+    // already been measured (see kSeriesCoherenceLookaheadSamples) to not
+    // show the gap-and-recovery pattern yet, so folding it back in bought
+    // nothing but a second, larger transform -- halving the FFT size here
+    // was worth about half the added cost of this check on the frozen
+    // holdout.
+    std::optional<FrameSpectrum> coherence_spectrum;
+    const auto coherence_spectrum_for = [&](const double f) -> const FrameSpectrum* {
+        if (f >= unified::kLowRegisterHz || lookahead_samples.empty()) {
+            return nullptr;
+        }
+        if (!coherence_spectrum) {
+            coherence_spectrum = compute_frame_spectrum(lookahead_samples, sample_rate, AnalysisBand::low);
+        }
+        return &*coherence_spectrum;
+    };
+
     for (std::size_t i = 0; i < candidate_count; ++i) {
         const double f = candidate_frequencies_hz[i];
         HarmonicEvidence& out = evidence[i];
@@ -399,6 +494,18 @@ std::vector<HarmonicEvidence> score_harmonic_evidence(
         // avoid, which is why it is only ever updated from a committed,
         // high-posterior frequency (see update_parity_estimate).
         out.parity_index = spectral_parity_index(primary_band, f);
+        // See coherence_spectrum_for above: nullptr (so series_incoherent
+        // stays false) for any mid/high candidate, and for every candidate
+        // at all when no lookahead was supplied -- i.e. always, on the live
+        // path. Also bounded to the first kSeriesCoherenceCandidateLimit
+        // entries -- see that constant for why an FFT-per-candidate cost is
+        // not affordable here and why the callers' probability-descending
+        // order makes that bound safe.
+        if (i < unified::kSeriesCoherenceCandidateLimit) {
+            if (const auto* coherence = coherence_spectrum_for(f)) {
+                out.series_incoherent = has_series_incoherence(*coherence, f, limit);
+            }
+        }
 
         out.band_blended = spectra.is_band_edge(f);
         if (out.band_blended) {

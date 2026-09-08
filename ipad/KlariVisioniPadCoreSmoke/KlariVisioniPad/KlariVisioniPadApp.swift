@@ -53,8 +53,8 @@ struct iPadRootView: View {
     }
 
     private func configureGraphs() {
-        live.configure(graphPitchColor: state.graphPitchColor, guideColor: state.graphGuideColor, makamIntervals: state.makamIntervals)
-        study.configure(graphPitchColor: state.graphPitchColor, guideColor: state.graphGuideColor, makamIntervals: state.makamIntervals)
+        live.configure(graphPitchColor: state.graphPitchColor, guideColor: state.graphGuideColor, kararColor: state.graphKararColor, makamIntervals: state.makamIntervals)
+        study.configure(graphPitchColor: state.graphPitchColor, guideColor: state.graphGuideColor, kararColor: state.graphKararColor, makamIntervals: state.makamIntervals)
     }
 
     @ViewBuilder private var regularBody: some View {

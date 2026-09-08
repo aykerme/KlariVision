@@ -5,7 +5,13 @@
 > yaşam döngüsü kapıları tek motor kimliği için okunmalıdır. ABI kimlikleri
 > 0–3 rezervedir ve Android bağı onları kullanmaz.
 
-Son güncelleme: 13 Ağustos 2026
+Son güncelleme: 8 Eylül 2026
+
+> **Not (D-043, 8 Eylül 2026): bu belgenin kapısı kapandı.** Aşağıdaki
+> "araç kurulmadı / smoke çalıştırılmadı" tespitleri **tarihçedir**. Araç
+> zinciri kuruldu, `arm64-v8a` smoke yeşil geçti ve kullanıcı yetkisiyle tam
+> Android ürünü başlatıldı. Güncel durum en altta, "8 Eylül 2026 sonucu"
+> bölümündedir.
 
 Bu belge Android ürünü, ekranı veya dağıtımı başlatmaz. Kullanıcı ayrıca istemeden
 macOS davranışını genişletmeden, C ABI v1'e dayalı en küçük Android teknik
@@ -117,7 +123,7 @@ derlenmiş masaüstü `ctest` ikilisi host üzerinde çalıştırılmaz.
 | C++ regresyon | NDK'da çekirdek test kaynakları derlenir; çalıştırılabilir kontroller emulator/cihaz üzerinde JNI instrumentation veya `adb` native runner ile yürür. Masaüstü C++/Swift kapıları da yeşil kalır. |
 | Web/veri | Yalnız yerel HTML/medya, köken doğrulanmış mesaj köprüsü, SAF kopya hata metni ve uygulama sandbox dışına yazmama denetlenir. |
 
-## En küçük sonraki derlenebilir spike (henüz uygulanmadı)
+## En küçük sonraki derlenebilir spike (aşıldı — bkz. D-043)
 
 Kullanıcı açıkça yetki verirse yalnız şu hedef eklenir: `arm64-v8a`
 `klarivision_core` + küçük JNI kontrat test kütüphanesi + cihaz/emulator
@@ -125,3 +131,76 @@ instrumentation testi. Compose ekranı, `WebView`, AudioRecord, izin diyaloğu,
 dosya picker, kayıt, ağ ve dağıtım içermez. Giriş kapısı NDK smoke'ın yeşil
 olmasıdır; çıkış kapısı C ABI v1 ve üç eşit motor kimliğinin değişmeden
 bağlanmasıdır. Bu teknik kanıt tam Android ürününü başlatma yetkisi vermez.
+
+---
+
+## 8 Eylül 2026 sonucu
+
+Araç zinciri kuruldu (JDK 21, Android SDK 35, NDK 27.3.13750724, CMake 3.31.6,
+Gradle 8.14.3) ve bu belgenin tarif ettiği smoke **birebir aynı komutlarla**
+koşuldu.
+
+### Kapı sonuçları
+
+| Kapı | Sonuç |
+|---|---|
+| `arm64-v8a` compile/link smoke | **Yeşil.** 14/14 kaynak, **tek satır C++ değişikliği olmadan**. `libklarivision_core.a`, `elf64-littleaarch64`. |
+| C ABI paketi | 26 `kv_*` sembolünün tamamı dışa açık; Accelerate'e çözülmemiş referans yok (skaler yol devrede). |
+| ABI + yaşam döngüsü | **56/56 enstrümantasyon testi**, fiziksel SM-A736B / Android 16 / arm64-v8a. |
+| JVM birim testleri | **246/246** (müzik teorisi, kalıcılık, ayarlar, canlı akış, köprüler, orkestrasyon). |
+| Mevcut platform regresyonu | C++ çekirdek testleri, Python paketi (100 passed / 1 skipped), imzasız macOS Debug — hepsi yeşil. |
+| RTF / gecikme | Aşağıda. |
+| Fiziksel kullanıcı kabulü | **NOT RUN** — akış kabulü (mikrofon, kayıt, SAF, A/B, rota/kesinti, yön) kullanıcı turudur. |
+
+### Ölçülen gerçek zaman çarpanı
+
+SM-A736B, `unified_v1` canlı yol, 48 kHz / 1536 pencere / 512 hop,
+20 s sentetik klarnet benzeri sinyal (1., 3., 5. harmonikler). Hop bütçesi
+10,667 ms.
+
+| Derleme | pencere p50 | RTF | bütçe doluluğu |
+|---|---|---|---|
+| NDK debug varsayılanı (`-O0`) | 82,09 ms | 7,68 | %770 |
+| Optimize, skaler `dot_product` | 10,71 ms | 1,004 | %100,4 |
+| Optimize + NEON `dot_product` | 9,18 ms | **0,86** | %86 |
+
+İki sonuç:
+
+1. **En büyük kaldıraç optimizasyondu, NEON değil.** NDK debug varyantı `-O`
+   bayrağı hiç vermez; DSP çekirdeği o hâlde gerçek zamanın ~8 katı yavaştır ve
+   canlı yol hiç sınanamaz. Bu yüzden `:core` debug varyantı da
+   `CMAKE_BUILD_TYPE=RelWithDebInfo` ile derlenir.
+2. **NEON olmadan canlı yol sınırın yanlış tarafındadır** (%100,4). NEON yolu
+   `core/src/pyin_ladder.cpp`'ye `__aarch64__` korumalı olarak eklendi; Apple
+   `vDSP_dotpr` yolu ve skaler taşınabilir yol değişmedi.
+
+**Payın darlığı açık risktir:** %86, orta segment bir cihazda tek çalıştırmada,
+sentetik sinyalle ölçüldü. Termal kısıtlama, düşük pil modu ve daha zayıf
+cihazlar bu payı yiyebilir. Masaüstü RTF rakamlarının Android kabulü olmadığı
+kuralı burada da geçerlidir: bu sayı **bu cihaza** aittir.
+
+### Sözleşmede kapatılan açık: PCM byte sırası
+
+Bu belge baştan beri "doğrudan olmayan buffer, **yanlış byte sırası**, örnek
+sayısı veya 48 kHz dışı giriş açık hatadır" diyordu; ilk JNI katmanı yalnız
+ilk ve üçüncüsünü doğruluyordu. Cihaz testi bunu şöyle ortaya çıkardı: 440 Hz
+sinüs **160 Hz** olarak okundu. Aynı sinyal host çekirdeğinde 440,00 Hz verdi.
+
+Sebep, Java'da `ByteBuffer.allocateDirect` varsayılanının BIG_ENDIAN, arm64'ün
+little-endian olmasıdır. Üretim kodu doğruydu (`LiveAudioCapture` ve
+`OfflinePitchAnalyzer` `ByteOrder.nativeOrder()` kullanır); doğrulama eksikti.
+Artık `LivePitchSession` ve `OfflineTrackSession` yerel olmayan byte sırasını
+açık hatayla reddeder ve regresyon testi vardır.
+
+Bu kusurun imzası çökme değil, **makul görünen yanlış bir pitch**tir — sessiz
+kabul edilseydi ürün "çalışıyor" görünürken yanlış nota gösterirdi.
+
+### Ürün durumu
+
+Android artık teknik spike değil, `android/` altında Gradle/Compose ürünüdür:
+`:core` (NDK ile derlenen paylaşılan C++ + JNI) ve `:app` (Compose kabuk,
+AudioRecord canlı yol, MediaCodec çevrimdışı yol, SAF içe aktarma, WebView
+grafikleri). Grafik sayfaları `ipad/.../Resources/` altındaki kanonik
+kaynaklardan kopyalanır; tek ortak değişiklik `StudyViewer.html`'deki köprü
+soyutlamasıdır (WebKit yolu bozulmadan Android `@JavascriptInterface`
+desteklenir).

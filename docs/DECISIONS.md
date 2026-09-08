@@ -3,6 +3,189 @@
 Bu dosya yalnızca sonraki çalışmaları etkileyen kararları tutar. Günlük ilerleme
 notları `CODEX_HANDOFF.md`, sayısal durum `TEST_BASELINE.md` içindedir.
 
+## D-042 — D-041'in canlı yola taşınması; gecikme 53 → 85 ms
+
+Kullanıcı kararı: Şükrü Tunar hatası Çalma Modu'nda (canlı yol) duruyordu,
+çünkü D-041 kasten yalnız çevrimdışı yola eklenmişti. Kullanıcı, canlı yolda
+alt-harmonik hatasının çözülmesini tepkiselliğe **açıkça tercih etti** ve
+gecikme artışını (5 hop / 53,3 ms → 8 hop / 85,3 ms) onayladı. D-037'nin
+gecikme kararı böylece kısmen geri alınıyor.
+
+**Üç değişiklik:**
+
+1. `kRealtimeAbstention`'daki kanıt-oranı tavanı `+sonsuz` yerine
+   `kHarmonicEvidenceRatioAbstainCeiling` (offline ile aynı, 1,0). Ölçüm:
+   Şükrü hedef penceresinde (canlı iz, `unified_trace`) 9 yanlış kareyi 6'ya
+   indiriyor, maliyeti 14337 sesli karenin 20'si (%0,14).
+2. `unified::kDefaultLagFrames`: 5 → 8 (53,3 → 85,3 ms). Üç aynası da
+   güncellendi: `core/include/klarivision/core/unified_pitch_constants.hpp`,
+   `src/klarivision/pitch/cpp_engine.py:UNIFIED_DEFAULT_LAG_FRAMES`,
+   `scripts/pitch_tournament_engines.py:UNIFIED_DEFAULT_LAG_FRAMES`. 8 hop
+   seçildi çünkü 8 × 512 örnek = 4096 örnek = tam olarak
+   `kSeriesCoherenceLookaheadSamples` — bkz. madde 3.
+3. Seri tutarlılık vetosu artık canlı yolda da çalışıyor.
+   `UnifiedPitchSession`, gelen her hopun ham örneklerini
+   `kSeriesCoherenceLookaheadSamples` (4096 örnek) kapasiteli bir tampona
+   yazıyor; fixed-lag decoder bir kareyi tam `lag_frames` hop sonra çözdüğü
+   için, o an tampon o karenin kendi sınırından **hemen sonraki** 4096
+   örneği tutuyor -- çevrimdışı yolun `collect_unified_evidence`'ta verdiği
+   look-ahead ile örnek örnek aynı. `has_series_incoherence`
+   (`core/src/harmonic_evidence.cpp` / `.hpp`) bu amaçla dosya-yerel
+   olmaktan çıkarılıp public yapıldı, çünkü çözülmüş kareyi yeniden
+   puanlamak (tüm `unified_frame_evidence`'ı tekrar koşmak) her hop'un
+   maliyetini ikiye katlardı; kontrol yalnız `lookahead_samples`'tan
+   kurulan spektruma bakıyor, `history`'ye hiç ihtiyaç duymuyor.
+
+**Hedef ölçüm (canlı iz, `unified_trace`, 164,55–164,90 sn):** 9 → 6 (yalnız
+oran kapısı) → **4** (oran kapısı + seri vetosu). Sıfıra inmedi. Kalan 4 kare,
+etkilenen serinin en erken kareleri; aynı 4096 örneklik look-ahead'e karşı
+bağımsız bir kontrol (offline'ın kullandığı örneklerin birebir aynısıyla)
+de bu kareleri tutarlı okuyor -- yani bu bir hizalama hatası değil, ölçülmüş
+bir gerçek. Offline'ın aynı pencerede 0 yanlış vermesinin sebebi seri
+vetosunun bu 4 karede tetiklenmesi değil, **bütün-dizi Viterbi'sinin**
+sonraki, doğru vetolanmış karelerin çektiği yolu geriye doğru
+etkilemesi -- 8 hop'luk sabit-gecikmeli pencere bunu üretemiyor, çünkü
+herhangi bir karenin TAM look-ahead'i hazır olduğu an, o kare zaten
+çözülüyor olur; komşu bir kareye erken ödünç verilemez. Canlı kapsama
+kaybolmadı: aynı izde toplam sesli kare 14337 → 14438 (+101, kayıp yok).
+
+**Kapılar:**
+- `./scripts/test_core.sh`: temiz (kv_unified_lag_frames() == 8 sözleşme
+  doğrulaması dahil).
+- Çevrimdışı yol bozulmadı: `pitch_track_cli`, Şükrü'de 164,63–164,80 sn'de
+  hâlâ 0 yanlış kare, kapsama %81,79 (değişmedi).
+- Turnuva: `serious_harmonic_error_frames` her kayıtta 0 (korunuyor).
+  `holdout_adverse_v1` vetosu **23 → 24 kare** (2365 sesli karenin
+  %1,01'i) -- kabul edilen istisna 1 kare kötüleşti.
+  `tests/test_pitch_engine_tournament.py::test_unified_v1_missing_voiced_stays_inside_the_safety_bound[write_holdout-v1]`
+  bu yüzden **düşüyor** (`assert 24 <= 23`); bu dosya görev kapsamının
+  dışında olduğu için düzeltilmedi. Diğer tüm dondurulmuş holdout'lar
+  (v1 clean/room, v2–v5) 0 kayıpla temiz kaldı.
+- `.venv/bin/python -m pytest tests/ -q`: 99 geçti, 1 atlandı, **1 düştü**
+  (yukarıdaki test). Sözleşme doğrulama testleri (`test_cpp_engine.py`)
+  etkilenmedi.
+- Dış karşılaştırma (development bölmesi, canlı yol, aynı komut):
+  bach10 recall 0,9558 → 0,9400 (−1,58 puan), oktav 0,0004 → 0,0013;
+  vocadito recall 0,9412 → 0,9310 (−1,02 puan), oktav 0,0006 → 0,0004;
+  mdb recall 0,6974 → 0,6928 (−0,46 puan), oktav 0,0070 → 0,0025. Genel
+  materyalde ötüm kaybı 0,5–1,6 puan; oktav hatası mdb ve vocadito'da
+  belirgin iyileşti, bach10'da hafif kötüleşti. D-041'in offline ölçümüyle
+  aynı yönde ve aynı büyüklük mertebesinde bir bedel.
+
+**Sonuç:** hedef sıfıra inmedi (4 kare kaldı, gerekçesi ölçüldü); bir kabul
+edilen istisna 1 kare kötüleşti ve buna bağlı pytest testi düşüyor; genel
+materyalde 0,5–1,6 puan ötüm kaybı var. Kullanıcı 85 ms'yi zaten onaylamıştı
+ama bu bedelleri bilerek onaylamış olmalı -- kayıt buradadır.
+
+### Kabul edilmiş vetonun büyümesi (23 → 24) ayrıca onaylandı
+
+`holdout_adverse_v1.wav`'da geri tutulan kare sayısı bu değişiklikle 23'ten
+24'e çıktı ve `test_unified_v1_missing_voiced_stays_inside_the_safety_bound`
+kırıldı. Bu testin varlık sebebi tam olarak budur: istisna **ölçülen değerinde**
+savlanır ki sessizce büyüyemesin.
+
+Sayı kullanıcıya tam bedeliyle sunuldu ve kullanıcı kabul etti. Karşılığında
+alınan ölçülmüş kazanç:
+
+| Ölçüt | 53 ms | 85 ms |
+|---|---:|---:|
+| Şükrü canlı iz, hedef pencerede yanlış kare | 9 | **4** |
+| mdb_stem_synth oktav hatası (canlı yol) | 0,0070 | **0,0025** |
+| vocadito oktav hatası (canlı yol) | 0,0006 | 0,0004 |
+| bach10 oktav hatası (canlı yol) | 0,0004 | 0,0013 |
+| bach10 / vocadito / mdb ötüm recall | 0,9558 / 0,9412 / 0,6974 | 0,9400 / 0,9310 / 0,6928 |
+
+Yani en zor dış kümede oktav hatası **2,8 kat azaldı**; bedeli 0,5–1,6 puan
+ötüm kaybı, bach10'da küçük bir oktav artışı ve bu bir kare.
+
+**Hedef sıfırlanmadı ve sıfırlanamaz.** Canlı yolda 4 kare kaldı. Sebebi pencere
+darlığı değil mimari: çevrimdışı yolun 0'a inmesi bütün-dizi Viterbi'sinin yolu
+sonraki doğru-vetolanmış karelerden geriye yansıtmasından geliyor. Sabit
+gecikmeli bir çözücü bunu üretemez — bir karenin tam ileri bakışı hazır olduğu
+an o kare zaten çözülmüştür, komşusuna ödünç veremez. **Daha fazla gecikme bu
+4 kareyi çözmez;** çözmek için canlı yolun sabit-gecikmeli olmaktan çıkması
+gerekir, ki bu ayrı ve çok daha büyük bir karardır.
+
+## D-041 — Çevrimdışı yola iki çekimserlik kuralı; canlı yol dokunulmadı
+
+Kullanıcı bildirimi: Şükrü Tunar uşşak taksiminde `2:44,621`'de motor alt
+harmoniğe düşüyor. Ölçüldü ve doğrulandı: `164,629–164,800 sn` arası 17 kare
+`~149,4 Hz`, güven 0,99–1,00.
+
+**Teşhis — klasik oktav hatası değil, EBOB (greatest common divisor) tuzağı.**
+`298,8 Hz` notası sönerken `448,2 Hz` notası giriyor; oran tam beşli (3:2) ve
+ortak alt katları `149,4 Hz` (= 298,8/2 = 448,2/3). Örtüşme boyunca toplam
+sinyal gerçekten o periyotta periyodiktir, dolayısıyla ACF/pYIN haklı olarak
+orada mükemmele yakın bir tepe görür — güvenin 1,000 olması bundandır. Ayrıca
+`149,4` hem önceki notaya `f/2` hem yeni notaya `f/3` düştüğü için **süreklilik
+cezası onu cezalandırmaz, ödüllendirir.** Bütün-dizi Viterbi'si çalışıyordu ve
+bu hatayı hiç düzeltmiyordu (hizalanmış karşılaştırmada oktav düzeltmesi: 0).
+
+**İki kural eklendi, ikisi de yalnız `offline_track` profilinde:**
+
+1. `kHarmonicEvidenceRatioAbstainCeiling = 1.0` — `harmonic_dominance`
+   *posterior*'dan okunur ve yoldan miras kalan atalet taşır; bir aday, ham
+   kanıtı her karede rakibinden kötüyken bile bu tabanı birkaç kare geçebilir.
+   `harmonic_evidence_ratio` bu ataleti taşımaz, ham karşılaştırmadır. Ölçüm:
+   hedef karelerde oran 1,32–1,85 iken dominance 0,75 tabanının üstünde asılı
+   kalıyordu.
+2. Çevrimdışı düşük-register onayı — canlı yoldaki `low_register_confirmations`
+   korumasının çevrimdışı eşdeğeri. Canlı yol beklemek zorundadır; çevrimdışı
+   yol diziyi zaten görmüştür, bu yüzden komşuluğa tek geçişte bakar.
+3. Seri tutarlılık vetosu (`has_series_incoherence`) — bir adayın kendi
+   partiyel dizisinde ≥2 ardışık delik olup partiyelin geri dönmesi **ve**
+   en güçlü partiyelin adayın kendi temelini `kSeriesCoherenceFundamentalDominanceRatio`
+   (3,0) katından fazla aşması.
+
+**İkinci koşul sonradan eklendi ve kararın özüdür.** Yalnız "delik-sonra-dönüş"
+koşuluyla veto, dış development bölmesinde (96 dosya) ötüm kapsamasını 1,5–3,2
+puan düşürüyor ve o kümelerde oktav hatasını **iyileştirmek yerine kötüleştiriyordu**
+— çok sesli/vokal materyalde üst üste binen kaynaklar neredeyse her düşük
+adayın serisine delik açıyor. EBOB hayaletini ayıran şey delik değil, enerjinin
+nerede olduğudur: hayaletin "partiyelleri" başka gerçek notalardır, bu yüzden en
+güçlüsü nominal temelini kat kat aşar (ölçüm: 0,0014 → 0,0067, 4,8 kat). Ek
+koşulla kapsama kaybının %38–87'si geri alındı ve vocadito'daki oktav gerilemesi
+tamamen giderildi.
+
+**Sonuç (aynı 96 dosya, çevrimdışı yol, r1 → r3):**
+
+| Küme | Kapsama r1 → r3 | Oktav r1 → r3 | GPE r1 → r3 |
+|---|---|---|---|
+| bach10 | 0,9709 → 0,9614 | 0,0002 → 0,0002 | 0,0312 → 0,0330 |
+| mdb | 0,7168 → 0,7082 | 0,0088 → **0,0084** | 0,1294 → **0,1263** |
+| vocadito | 0,9263 → 0,9226 | 0,0002 → 0,0002 | 0,1141 → **0,1127** |
+
+Kapsama kaybı 0,4–1,0 puan (r2'de 1,4–2,4 idi). **Oktav hatası üç kümede de r1
+seviyesinde veya altında**; mdb'de r1'in de altına indi. GPE üçte ikisinde
+iyileşti, bach10'da hafif kötüleşti.
+
+> Kayıt için: bu satırlar önce küme başına 8 dosyalık bir alt kümeyle
+> yazılmıştı ve mdb'de `0,0021 → 0,0026` gibi bir oktav gerilemesi
+> gösteriyordu. Tam 96 dosyalık koşu bunu çürüttü — o gerileme alt küme
+> gürültüsüydü. Bu mekanizmanın etkileri küçük olduğu için alt kümeyle
+> ölçülmemelidir.
+Hedef kayıtta 17 yanlış karenin **tamamı** gitti (10 kare sessiz, 6 kare gerçek
+`~448 Hz` perdeye döndü) ve kapsama `%82,03 → %81,79`.
+
+**Kapılar:** turnuvada ciddi harmonik hata 30 kaydın hepsinde 0;
+`holdout_adverse_v1` vetosu 23 kare (kötüleşmedi); `test_core.sh` ve oktav
+tuzağı paketi temiz.
+
+**Canlı yol kasten değiştirilmedi.** `kRealtimeAbstention`'daki oran tavanı
+`+sonsuz` (hiç tetiklenmez) ve seri vetosu ileri bakış istediği için canlıda
+yapısal olarak kapalıdır. Dolayısıyla **Çalma Modu'nda bu hata durmaktadır**;
+canlı gecikme sözleşmesi (5 hop / 53,3 ms) korunsun diye böyle bırakıldı.
+Taşınması ayrı bir karardır ve dış ölçüm bu mekanizmanın genel materyalde
+bedava olmadığını gösterdiği için gerekçesi ayrıca kurulmalıdır.
+
+**Ölçüm aracı düzeltildi:** dış karşılaştırma o güne dek yalnız **canlı** yolu
+ölçüyordu (`unified_trace` → `process_frame`), yani çevrimdışı bir değişiklik
+hakkında yapısal olarak kör. `--offline` bayrağı ve `unified_offline_frames()`
+adaptörü eklendi; çıktı JSON'una hangi yolun ölçüldüğünü söyleyen `path` alanı
+kondu. Bundan önce çevrimdışı yol için kaydedilmiş hiçbir dış sayı yoktur.
+
+`OFFLINE_TRACK_REVISION`: `offline-unified-path-r1` → `offline-unified-path-r2`.
+
 ## D-040 — RMS kapısı dış veri kümelerine bakılarak değiştirilmez
 
 Kullanıcı kararı, 6 Eylül 2026. "Klarnet dışı ötüm kapsaması" kalemi ölçüldü
@@ -586,3 +769,60 @@ sonucunu geçersiz kılar. Sentetik turnuvalar, parite ve gerçek-zaman ölçüm
 bir motor öneren karar mekanizması değildir. Motor kimliği ile
 `offline_track` profil sürümünün çalışma önbelleği anahtarında kalması
 zorunludur.
+
+## D-043 — Android ürünü başlatıldı; taşınabilirlik kanıtlandı
+
+Kullanıcı kararı: Android'e **tam ürün paritesi** hedefiyle geçilmesi, araç
+zincirinin kurulması ve kabulün fiziksel cihazda yapılması. D-034'ün
+iOS/iPadOS için verdiği yetkinin Android karşılığıdır. `docs/ANDROID_FEASIBILITY.md`
+"yalnız teknik spike için koşullu go" konumundaydı; bu karar onu aşar.
+
+**Çekirdek taşınabilirliği artık ölçüm, akıl yürütme değil.** 13 Ağustos'tan
+beri açık duran `arm64-v8a` compile/link smoke koşuldu ve **tek satır C++
+değişikliği olmadan** geçti. Ön koşullar zaten yerindeydi: sıfır üçüncü parti
+bağımlılık, elde yazılmış FFT, `if(APPLE)` ile sınırlı Accelerate bağlantısı ve
+`pyin_ladder.cpp`'deki tek `vDSP_dotpr` çağrısının hazır skaler `#else` yolu.
+
+**Üç kalıcı değişiklik:**
+
+1. `core/src/pyin_ladder.cpp`'ye `__aarch64__` korumalı NEON iç çarpım yolu.
+   Gerekçe ölçümdür: optimize skaler yol SM-A736B'de pencere başına p50
+   10,71 ms üretiyordu ve hop bütçesi 10,667 ms'dir — yani canlı yol gerçek
+   zamanın **üstündeydi** (RTF 1,004). NEON ile p50 9,18 ms, RTF 0,86.
+   Apple `vDSP_dotpr` yolu ve taşınabilir skaler yol değişmedi. Sayısal not:
+   vektör toplama sırası skalerden farklıdır, ancak `vDSP_dotpr` zaten
+   vektör toplaması yapar — NEON, Android'i macOS'tan uzaklaştırmaz,
+   ona yaklaştırır.
+
+2. `android/core` debug varyantı da `CMAKE_BUILD_TYPE=RelWithDebInfo` ile
+   derlenir. NDK debug varsayılanı `-O` bayrağı vermez; DSP çekirdeği o hâlde
+   RTF **7,68** ile çalışır ve canlı yol hiç sınanamaz. Ölçümdeki en büyük
+   kaldıraç NEON değil, native kodun optimize edilmesiydi (7,68 → 1,004).
+
+3. `StudyViewer.html`'deki oynatma köprüsü platformdan bağımsız hâle getirildi:
+   WebKit `messageHandlers` yoksa Android `@JavascriptInterface` global'ine
+   düşer ve nesneyi `JSON.stringify` ile taşır. Bu, tüm ağaçtaki tek WebKit'e
+   bağımlı satırdı. iOS yolu `||` kısa devresiyle birebir korunur; macOS
+   Debug derlemesi ve C++/Python kapıları değişiklikten sonra yeniden geçti.
+
+**C ABI v1 dondurulmuş kalır.** Android yalnız `KV_ENGINE_UNIFIED_V1` (4)
+kullanır; 0–3 rezervedir. 48 kHz mono Float32, `1536/512` pencere/hop ve
+pencere merkezi kaynak zamanı sözleşmesi değişmedi.
+
+**Sözleşmede kapatılan açık:** fizibilite belgesi baştan beri "yanlış byte
+sırası açık hatadır" diyordu; ilk JNI katmanı bunu doğrulamıyordu. Kusur
+cihazda ortaya çıktı — 440 Hz sinüs 160 Hz okundu, aynı sinyal host
+çekirdeğinde 440,00 Hz verdi. Sebep Java `ByteBuffer.allocateDirect`
+varsayılanının BIG_ENDIAN olmasıdır. Üretim kodu doğruydu; doğrulama eksikti.
+Artık yerel olmayan byte sırası açık hatayla reddedilir ve regresyon testi
+vardır. Bu kusurun imzası çökme değil, **makul görünen yanlış bir pitch**tir.
+
+**Açık risk:** RTF payı %14'tür (bütçenin %86'sı), tek cihazda, sentetik
+sinyalle, tek çalıştırmada ölçüldü. Termal kısıtlama ve daha zayıf cihazlar bu
+payı yiyebilir. Masaüstü rakamlarının Android kabulü olmadığı kuralı bu sayı
+için de geçerlidir: ölçüm **SM-A736B'ye** aittir.
+
+**Kapsanmayan:** fiziksel kullanıcı akış kabulü (mikrofon, kayıt, SAF içe
+aktarma, A/B döngüsü, rota/kesinti, yön değişimi) **NOT RUN**'dır — başarısızlık
+değil, yapılmamış turdur. `x86_64` emülatör ABI'si eklenmedi; 32-bit ABI
+eklenmez. Ağ, bulut, paylaşım ve puanlama kapsam dışıdır.

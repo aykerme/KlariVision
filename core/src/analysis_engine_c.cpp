@@ -22,6 +22,12 @@ struct kv_pitch_engine {
     klarivision::core::PitchEngine engine;                       // the real offline/causal engine wrapper
     std::vector<klarivision::core::EngineFrame> frames;           // cached result of the last finish() call
     std::string error;                                            // last exception message, if any
+    // Optional progress hook (see kv_pitch_engine_set_progress). Held as the
+    // plain C pair rather than a std::function so this struct stays trivially
+    // reasoned about from the C side; it is wrapped into the C++ callback only
+    // for the duration of the finish() call.
+    kv_pitch_progress_fn progress{nullptr};
+    void *progress_context{nullptr};
     kv_pitch_engine(klarivision::core::PitchEngineId id, klarivision::core::PitchEngineProfile profile) : engine(id, profile) {}
 };
 struct kv_production_pitch_session {
@@ -80,7 +86,31 @@ int kv_pitch_engine_push(kv_pitch_engine *engine, const float *samples, size_t c
 }
 // Runs the full pitch-tracking analysis over everything pushed so far and
 // caches the resulting frames for kv_pitch_engine_frame to read.
-size_t kv_pitch_engine_finish(kv_pitch_engine *engine) { if (!engine) return 0; try { engine->frames = engine->engine.finish(); return engine->frames.size(); } catch (const std::exception& error) { engine->error = error.what(); return 0; } }
+size_t kv_pitch_engine_finish(kv_pitch_engine *engine) {
+    if (!engine) return 0;
+    try {
+        klarivision::core::PitchProgressCallback hook{};
+        if (engine->progress) {
+            // Captured by value: the engine owns both, and the callback never
+            // outlives this call.
+            hook = [callback = engine->progress, context = engine->progress_context](
+                std::size_t done, std::size_t total
+            ) { callback(done, total, context); };
+        }
+        engine->frames = engine->engine.finish(std::move(hook));
+        return engine->frames.size();
+    } catch (const std::exception& error) { engine->error = error.what(); return 0; }
+}
+int kv_pitch_engine_set_progress(
+    kv_pitch_engine *engine,
+    kv_pitch_progress_fn callback,
+    void *context
+) {
+    if (!engine) return 0;
+    engine->progress = callback;
+    engine->progress_context = context;
+    return 1;
+}
 // Reads one cached output frame by index into the plain-C output struct.
 int kv_pitch_engine_frame(const kv_pitch_engine *engine, size_t index, kv_pitch_frame *out) { if (!engine || !out || index >= engine->frames.size()) return 0; const auto& f = engine->frames[index]; out->time_seconds=f.time_seconds; out->frequency_hz=f.frequency_hz.value_or(0); out->confidence=f.confidence; out->voiced=f.frequency_hz.has_value(); return 1; }
 const char *kv_pitch_engine_last_error(const kv_pitch_engine *engine) { return engine ? engine->error.c_str() : "invalid engine"; }

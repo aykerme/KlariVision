@@ -208,6 +208,19 @@ struct SettingsView: View {
                     ))
                     .frame(width: 60)
                 }
+                HStack {
+                    Text("Karar sesi")
+                    Spacer()
+                    ColorPicker("", selection: Binding(
+                        get: { GraphAppearance.color(hex: graphAppearance.kararHex) },
+                        set: { color in
+                            if let hex = GraphAppearance.hex(from: color) {
+                                graphAppearance.kararHex = hex
+                            }
+                        }
+                    ))
+                    .frame(width: 60)
+                }
                 Text("Bu renkler hem Dinleme hem Birlikte Çal grafiğinde kullanılır. Mikrofon eğrisi, çalınan dosyanın eğrisinden ayırt edilebilsin diye ayrı bir renk taşır.")
                     .font(.caption)
                     .foregroundStyle(.secondary)

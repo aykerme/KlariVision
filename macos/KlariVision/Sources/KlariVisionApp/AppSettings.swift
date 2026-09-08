@@ -131,18 +131,22 @@ struct GraphAppearance: Codable, Equatable {
     static let pitchColorKey = "klarivision-graph-pitch-color-v1"
     static let noteGuideColorKey = "klarivision-graph-note-guide-color-v1"
     static let micColorKey = "klarivision-graph-mic-color-v1"
+    static let kararColorKey = "klarivision-graph-karar-color-v1"
     static let defaultPitchHex = "#0A84FF"
     static let defaultNoteGuideHex = "#8E8E93"
     static let defaultMicHex = "#FF9F0A"
+    static let defaultKararHex = "#E75A5A"
 
     var pitchHex: String
     var noteGuideHex: String
     var micHex: String
+    var kararHex: String
 
-    init(pitchHex: String = Self.defaultPitchHex, noteGuideHex: String = Self.defaultNoteGuideHex, micHex: String = Self.defaultMicHex) {
+    init(pitchHex: String = Self.defaultPitchHex, noteGuideHex: String = Self.defaultNoteGuideHex, micHex: String = Self.defaultMicHex, kararHex: String = Self.defaultKararHex) {
         self.pitchHex = Self.normalizedHex(pitchHex) ?? Self.defaultPitchHex
         self.noteGuideHex = Self.normalizedHex(noteGuideHex) ?? Self.defaultNoteGuideHex
         self.micHex = Self.normalizedHex(micHex) ?? Self.defaultMicHex
+        self.kararHex = Self.normalizedHex(kararHex) ?? Self.defaultKararHex
     }
 
     static func normalizedHex(_ value: String?) -> String? {
@@ -157,7 +161,8 @@ struct GraphAppearance: Codable, Equatable {
         Self(
             pitchHex: defaults.string(forKey: pitchColorKey) ?? defaultPitchHex,
             noteGuideHex: defaults.string(forKey: noteGuideColorKey) ?? defaultNoteGuideHex,
-            micHex: defaults.string(forKey: micColorKey) ?? defaultMicHex
+            micHex: defaults.string(forKey: micColorKey) ?? defaultMicHex,
+            kararHex: defaults.string(forKey: kararColorKey) ?? defaultKararHex
         )
     }
 
@@ -165,6 +170,7 @@ struct GraphAppearance: Codable, Equatable {
         defaults.set(pitchHex, forKey: Self.pitchColorKey)
         defaults.set(noteGuideHex, forKey: Self.noteGuideColorKey)
         defaults.set(micHex, forKey: Self.micColorKey)
+        defaults.set(kararHex, forKey: Self.kararColorKey)
     }
 
     static func reset(in defaults: UserDefaults = .standard) {
@@ -192,6 +198,7 @@ struct GraphAppearance: Codable, Equatable {
     var pitchColor: Color { Self.color(hex: pitchHex) }
     var noteGuideColor: Color { Self.color(hex: noteGuideHex) }
     var micColor: Color { Self.color(hex: micHex) }
+    var kararColor: Color { Self.color(hex: kararHex) }
 }
 
 enum MicrophoneSettings {

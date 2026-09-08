@@ -14,10 +14,13 @@ Decision latency is metadata: it is never removed by shifting a trace.
 from __future__ import annotations
 
 import csv
+import json
+import os
 import resource
 import subprocess
 import tempfile
 import time
+import wave
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -32,12 +35,14 @@ ROOT = Path(__file__).resolve().parents[1]
 # regression suite, which was removed with yin_v1 (D-039).
 LIVE_WINDOW = 1_536
 HOP = 512
-# Mirrors kv_unified_lag_frames() / unified::kDefaultLagFrames: 5 hops x
-# 512 / 48000 = 53 ms of fixed decision latency. This value SHADOWS the C++
+# Mirrors kv_unified_lag_frames() / unified::kDefaultLagFrames: 8 hops x
+# 512 / 48000 = 85.3 ms of fixed decision latency (raised from 5 / 53 ms by
+# D-042, docs/DECISIONS.md, so the live fixed-lag buffer doubles as the
+# series-coherence veto's look-ahead window). This value SHADOWS the C++
 # default -- unified_frames() always passes it explicitly -- so it must be
 # changed together with unified::kDefaultLagFrames or the tournament will
 # silently measure a different engine than the one that ships.
-UNIFIED_DEFAULT_LAG_FRAMES = 5
+UNIFIED_DEFAULT_LAG_FRAMES = 8
 
 
 @dataclass(frozen=True)
@@ -128,11 +133,68 @@ def unified_frames(
     ]
 
 
+def unified_offline_frames(
+    audio: np.ndarray,
+    rate: int,
+    minimum_rms: float = DEFAULT_MINIMUM_RMS,
+) -> list[tuple[float, float, float]]:
+    """Production adapter for the OFFLINE (Dinleme Modu) publication path.
+
+    `unified_frames` above drives `UnifiedPitchSession::process_frame` -- the
+    causal path, the one that ships in Çalma Modu. The offline profile is a
+    different decoder over the same evidence (`PitchEngine::analyse` with
+    PitchEngineProfile::offline_track), and measuring one tells you nothing
+    about the other: an abstention rule keyed to `kOfflineAbstention`, or any
+    evidence term that needs look-ahead, is structurally invisible to the
+    causal trace. This adapter exists so the external claim gate can score the
+    path Dinleme Modu actually uses.
+
+    `minimum_rms` is accepted for signature parity with `unified_frames` but
+    the offline CLI takes its gate from PitchEngineConfig's default; a
+    non-default value is therefore rejected rather than silently ignored.
+
+    The binary is `build/klarivision-pitch-track-cli`, overridable with
+    KLARIVISION_PITCH_TRACK_CLI (the same variable cpp_engine.executable()
+    honours) so a baseline build can be scored without touching the tree.
+    """
+    if minimum_rms != DEFAULT_MINIMUM_RMS:
+        raise ValueError(
+            "offline yol RMS kapısını CLI üzerinden almıyor; "
+            "varsayılan dışında bir değer sessizce yok sayılırdı."
+        )
+    configured = os.environ.get("KLARIVISION_PITCH_TRACK_CLI")
+    executable = Path(configured) if configured else ROOT / "build/klarivision-pitch-track-cli"
+    if not executable.is_file():
+        raise RuntimeError(f"Çevrimdışı motor bulunamadı: {executable}")
+
+    with tempfile.TemporaryDirectory() as work:
+        wav_path = Path(work) / "input.wav"
+        json_path = Path(work) / "track.json"
+        clipped = np.clip(np.asarray(audio, dtype=np.float32), -1.0, 1.0)
+        with wave.open(str(wav_path), "wb") as handle:
+            handle.setnchannels(1)
+            handle.setsampwidth(2)
+            handle.setframerate(rate)
+            handle.writeframes((clipped * 32767.0).astype("<i2").tobytes())
+        subprocess.run(
+            [str(executable), str(wav_path), "--engine", "unified_v1", "--output", str(json_path)],
+            check=True, capture_output=True, text=True,
+        )
+        payload = json.loads(json_path.read_text(encoding="utf-8"))
+
+    return [
+        (float(row["time_seconds"]), float(row["frequency_hz"]), float(row.get("confidence") or 0.0))
+        for row in payload.get("frames", [])
+        if row.get("voiced") and row.get("frequency_hz")
+    ]
+
+
 def run_engines(
     audio: np.ndarray,
     rate: int,
     minimum_rms: float = DEFAULT_MINIMUM_RMS,
     unified_lag_frames: list[int] | None = None,
+    offline: bool = False,
 ) -> dict[str, EngineTrace]:
     # Compilation is setup, not pitch-analysis CPU time.
     _unified_runner()
@@ -144,7 +206,19 @@ def run_engines(
     # engines above, no separate half-window term is added on top, so
     # decision_latency_ms == lag_frames * HOP / rate * 1000 exactly (53.3 ms
     # for the production default of 5 hops).
-    lags = unified_lag_frames if unified_lag_frames else [UNIFIED_DEFAULT_LAG_FRAMES]
+    if offline:
+        # The offline decoder has no fixed-lag publication delay to report:
+        # it sees the whole file before publishing anything, so a decision
+        # latency figure would be meaningless rather than zero-by-accident.
+        definitions["unified_v1"] = (
+            "Production C++ core offline_track profile (Dinleme Modu)",
+            (lambda: unified_offline_frames(audio, rate, minimum_rms=minimum_rms)),
+            0.0,
+            0.0,
+        )
+        lags = []
+    else:
+        lags = unified_lag_frames if unified_lag_frames else [UNIFIED_DEFAULT_LAG_FRAMES]
     for lag in lags:
         key = "unified_v1" if len(lags) == 1 and unified_lag_frames is None else f"unified_v1@lag{lag}"
         definitions[key] = (

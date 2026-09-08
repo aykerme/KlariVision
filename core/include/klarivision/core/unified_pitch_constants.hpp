@@ -95,8 +95,7 @@ inline constexpr double kContractSampleRateHz = 48'000.0;
 inline constexpr std::size_t kHopSamples = 512;
 inline constexpr double kDefaultMinimumRms = 0.015;
 
-// 5 hops at 512 samples / 48 kHz = 53 ms of constant decision latency, the
-// same figure pitch_engine_v2 ships with.
+// 8 hops at 512 samples / 48 kHz = 85.3 ms of constant decision latency.
 //
 // This was 15 (160 ms) until the lag sweep in docs/TEST_BASELINE.md measured
 // what the longer window actually buys. The original argument -- octave errors
@@ -105,8 +104,32 @@ inline constexpr double kDefaultMinimumRms = 0.015;
 // errors are zero at every lag from 5 to 25, and cent accuracy is identical to
 // three decimals. The only thing 160 ms bought was trap-suite coverage
 // (2171 vs 1696 published frames), paid for with 107 ms of live latency. The
-// product decision was to take the responsiveness.
-inline constexpr std::size_t kDefaultLagFrames = 5;
+// product decision (D-037) was to take the responsiveness, landing on 5
+// (53 ms).
+//
+// D-042 (docs/DECISIONS.md) partially reverses that: 8 was picked not for
+// Viterbi smoothing -- the sweep above already showed 5 to 25 are
+// interchangeable for that -- but because 8 hops is exactly
+// kSeriesCoherenceLookaheadSamples (4096 samples). The live path's own
+// audio stream, arriving while a frame sits in the fixed-lag decoder's
+// buffer, is reused as that frame's series-coherence look-ahead once it
+// resolves (see UnifiedPitchSession's lookahead buffer in
+// unified_pitch_session.cpp) -- the one piece of offline-only evidence that
+// needs genuine future samples, not merely more decoding patience.
+//
+// Measured on the sukru-tunar-ussak-taksim holdout at 164.55-164.90s: 53 ms
+// leaves 6 wrong frames (after the evidence-ratio ceiling above already cut
+// 9 to 6), 85 ms leaves 4. The remaining 4 are the earliest frames of the
+// affected run and are not a look-ahead shortfall -- a bit-identical
+// standalone check against the same 4096-sample span offline would use
+// also reads them as coherent; offline's own 0-wrong result on this holdout
+// comes from its *global* Viterbi pass letting a handful of later, clearly-
+// vetoed frames pull the whole path away from the ghost, a propagation the
+// fixed-lag decoder's necessarily local window (bounded by this same
+// lag_frames) cannot reproduce without more total latency than the user
+// approved. The user chose the correctness this constant does buy over the
+// extra 32 ms; the honest remainder is reported, not hidden.
+inline constexpr std::size_t kDefaultLagFrames = 8;
 inline constexpr double kTransitionWidthCents = 700.0;
 
 // ---------------------------------------------------------------------------
@@ -231,15 +254,60 @@ struct AbstentionPolicy {
     // right, and it buys nothing: harmonic ambiguity is already priced by the
     // dominance floor above.
     double family_margin_floor{};
+    // Independent of the dominance floor above, which is read from the
+    // *posterior* -- a quantity the path can carry forward as inertia from
+    // frames the winner legitimately won. A GCD ghost of two overlapping real
+    // notes can inherit enough posterior mass from its neighbours to clear the
+    // dominance floor for several frames running while its own *raw* emission
+    // evidence is, every one of those frames, worse than the harmonic relative
+    // it beat. `harmonic_evidence_ratio` is exactly that raw comparison and
+    // carries no such inertia, so it is the gate that catches what dominance
+    // misses. See `kHarmonicEvidenceRatioAbstainCeiling` for where the line
+    // sits and why.
+    double harmonic_evidence_ratio_ceiling{};
 };
+
+// The line for the independent evidence-ratio gate above: past this, the best
+// harmonic relative's own raw emission is at least as strong as the winner's,
+// not merely comparable to it. Measured on a GCD trap where a fifth's two
+// notes (3:2) overlap and their common subharmonic wins the path for 17
+// frames (the sukru-tunar-ussak-taksim holdout, 164.63-164.80s): the true
+// note's emission beat the GCD ghost's by a factor of 1.32-1.85 on every one
+// of those frames, while `harmonic_dominance` stayed above the 0.75 offline
+// floor throughout on inherited posterior mass. 1.0 is the natural line
+// because it asks the one question dominance cannot: whose raw evidence is
+// actually better. Below 1.0 a rival's evidence can still be real -- a
+// missing-fundamental partial routinely runs at a fraction of the winner's --
+// which is exactly what `kHarmonicContestEvidenceRatio` at 0.40 already prices
+// as a contest rather than a veto; this ceiling is deliberately steeper
+// because crossing it means the *decoder itself* would have preferred the
+// rival on the evidence alone.
+inline constexpr double kHarmonicEvidenceRatioAbstainCeiling = 1.0;
 
 // Realtime abstains harder: with look-ahead bounded, a genuine register change
 // and a one-frame octave slip can look alike, and a silent frame is preferred
 // over a harmonic error. Offline decodes the whole file, so a contest that
 // survives global decoding is real evidence rather than a look-ahead shortage;
 // abstaining as hard there would only manufacture dropouts.
-inline constexpr AbstentionPolicy kRealtimeAbstention{0.40, 0.015, 0.90, 0.00};
-inline constexpr AbstentionPolicy kOfflineAbstention{0.50, 0.010, 0.75, 0.00};
+//
+// D-042 (docs/DECISIONS.md): the evidence-ratio ceiling used to be the
+// exception to "offline abstains less readily", left at +infinity on the
+// realtime profile because `low_register_confirmations` was believed to
+// already cover this failure and opening the gate live was out of scope for
+// the fix that added it. Measured directly on the live sukru-tunar trace
+// (unified_trace, 164.63-164.80s): `low_register_confirmations` does not, in
+// fact, cover it -- the ghost holds its confirmation window too. Setting
+// this to the same finite ceiling as offline cut the target window from 9
+// wrong frames to 6 at a cost of 20 voiced frames out of 14337 on that trace
+// (0.14%); the remaining 6 needed the series-coherence veto below, not this
+// gate. Cheap and partial, so it stays on rather than being reserved for
+// offline alone.
+inline constexpr AbstentionPolicy kRealtimeAbstention{
+    0.40, 0.015, 0.90, 0.00, kHarmonicEvidenceRatioAbstainCeiling
+};
+inline constexpr AbstentionPolicy kOfflineAbstention{
+    0.50, 0.010, 0.75, 0.00, kHarmonicEvidenceRatioAbstainCeiling
+};
 
 // Applied only after a frame was withheld for *harmonic* ambiguity, never
 // after an ordinary quiet or low-confidence one. Flicker between silence and a
@@ -316,6 +384,141 @@ inline constexpr double kMinimumEvenWeight = 0.15;
 // by its *other* odd partials: a ghost at f/3 predicts energy at 5f/3 and 7f/3,
 // where a real signal has none, and those carry full weight.
 inline constexpr double kFundamentalPartialWeight = 0.25;
+
+// ---------------------------------------------------------------------------
+// Series-internal coherence (common-subharmonic ghost defence)
+// ---------------------------------------------------------------------------
+//
+// TWM and SWIPE'-prime both ask whether *a* candidate explains the measured
+// peaks; neither asks whether the candidate's *own* predicted series holds
+// together as one physical source. That gap is what lets a common
+// subharmonic of two overlapping, harmonically-unrelated-to-it notes win: a
+// perfect fifth (3:2) sitting at a boundary shares a subharmonic at 1/6th of
+// the higher note (1/3 of a 3:2 pair reduces to a shared f/3, f/2 relative to
+// each note respectively -- see docs/DECISIONS.md and the case measured
+// below), and the combined spectrum really is periodic at that subharmonic,
+// so ACF/pYIN are not wrong to find it. What they cannot see is that the
+// ghost's own harmonic series is really two interleaved combs, each
+// belonging to one of the real notes, with nothing of its own in between.
+//
+// Measured at 164.68s of
+// data/audio/sukru-tunar-ussak-taksim-on-clarinet-pitch-contour-only-*.wav,
+// where a fading 298.8 Hz note and an entering 448.2 Hz note (exact 3:2,
+// common subharmonic 149.4 Hz) hand the frame to the 149.4 Hz ghost for 11
+// frames (164.6293-164.7360s): a Hann-windowed DFT (N=8192) at the ghost's
+// own predicted partials k=1..9 reads
+//
+//     k:      1        2        3        4        5        6        9
+//     A(k*f): 0.00140  0.00210  0.00673  0.00027  0.00005  0.00049  0.00155
+//
+// -- present at 2 and 3 (the fading note's own fundamental and the entering
+// note's fundamental), a silent stretch across 4-8, and partial 9 (an exact
+// multiple of the *entering* note's own fundamental, 448.2 = 3*149.4) loud
+// again. No stopped-pipe, string, or voice partial series does this: a
+// register's weak partials (see ParityEstimate, ~15 lines up) are weak
+// *everywhere* they occur in the series, never weak across a multi-partial
+// stretch and then loud again higher up -- decay curves fold back on
+// themselves in real resonators, they do not have holes with recoveries.
+//
+// Both design constraints from the false-positive side are load-bearing:
+//
+// - The gap has to span *several consecutive* partials before it counts.
+//   A single missing partial is completely ordinary (any candidate can lose
+//   one to a spectral null or measurement noise -- TWM already prices that),
+//   and a clarinet's alternating odd/even series would otherwise trip this
+//   on every note: present, absent, present, absent, ... is exactly what a
+//   healthy odd-only series looks like one partial at a time. Only a run of
+//   kSeriesCoherenceMinimumGapRun (2) or more consecutive silent partials
+//   followed by a real one is treated as a hole with a recovery.
+// - Presence is judged relative to the candidate's *own* loudest partial in
+//   the checked window, not an absolute level, so the check works the same
+//   whether the note is loud or soft, and a genuinely weak-but-real
+//   fundamental (see kFundamentalPartialWeight, k = 1 is excluded from the
+//   scan entirely) never enters into it.
+inline constexpr std::size_t kSeriesCoherenceCheckPartials = 9;
+inline constexpr double kSeriesCoherencePresenceRatio = 0.15;
+inline constexpr std::size_t kSeriesCoherenceMinimumGapRun = 2;
+
+// Second, independent condition on the same veto: the loudest partial in the
+// checked window must exceed the candidate's OWN fundamental by this factor.
+//
+// The gap-then-return pattern alone proved far too broad on general material.
+// Measured on the external development split (96 files): the veto with only
+// that condition cost 1.5-3.2 points of voicing recall and, on those sets,
+// made the octave error slightly WORSE rather than better -- overlapping
+// sources put holes in almost every low candidate's series, so the pattern
+// fires on innocent notes constantly.
+//
+// What actually distinguishes a GCD ghost is not the hole but where the energy
+// sits: the ghost's "partials" are other real notes, so the loudest one dwarfs
+// its nominal fundamental. On the measured trap (sukru-tunar-ussak-taksim,
+// 164.63-164.80s) the ghost at 149.4 Hz carried 0.0014 at its fundamental and
+// 0.0067 at k=3 -- the incoming 448.2 Hz note -- a ratio of 4.8. A genuine low
+// note radiates most strongly at or near its own fundamental; a clarinet's
+// third partial can rival the fundamental but does not tower over it, which is
+// why the bar is set at 3.0 rather than just above 1.
+inline constexpr double kSeriesCoherenceFundamentalDominanceRatio = 3.0;
+
+// The table above was read from a window *centred* on 164.68s -- half past,
+// half future. Measured again from the causal low-band window the engine
+// actually scores a candidate against (kLowWindowSamples, ending on the
+// frame's own newest sample, nothing later), the same instant shows no such
+// gap: the entering note has not yet grown loud enough within the last 64ms
+// alone to stand out from ordinary leakage, so k = 3 and k = 9 read as noise
+// next to k = 1 and k = 2 rather than as a second comb. The signature this
+// check depends on is real, but it is not yet *visible* to a purely causal
+// window at the frames where it matters most -- confirmed by re-deriving
+// the table above from the causal window at the same timestamp and finding
+// k = 3 buried under k = 1/k = 2 leakage instead of standing above the
+// noise floor the way it does once the entering note has had another
+// ~40-70 ms to develop.
+//
+// Offline already holds the whole track before this check ever runs
+// (`collect_unified_evidence` receives it up front), so it can afford to
+// look past the current instant the same way a human editing the track
+// offline could -- something a live callback genuinely cannot do, since
+// those samples have not arrived yet. This is the one piece of evidence in
+// the whole harmonic-evidence layer that reaches past `history`'s newest
+// sample, and it does so only for the offline profile: `unified_frame_
+// evidence`'s `lookahead_samples` defaults to empty, which leaves `series_
+// incoherent` false everywhere the live path calls it, identically to
+// before this check existed. Only `collect_unified_evidence` passes a real
+// span.
+//
+// 85 ms (4096 samples at 48 kHz) is enough to reach the point in this
+// measured case (164.6293-164.736s) where every one of the 11 affected
+// frames' own future already shows the gap-and-recovery pattern above the
+// noise floor, averaged across the lookahead window as a whole -- the
+// latest-starting frame in the run needs the least of it and the earliest
+// needs the most, and 85 ms covers the earliest with headroom to spare
+// without paying for a larger transform than this check needs. A longer
+// window (128 ms, one FFT size class up) bought no additional frames fixed
+// on the same holdout and cost measurably more of the whole-file decode
+// budget, which is why this is the smaller of the two rather than the more
+// cautious-looking round number.
+inline constexpr std::size_t kSeriesCoherenceLookaheadSamples = 4096;
+
+// The coherence spectrum above is deliberately not built for every
+// low-register entry in a frame's candidate list. `kHarmonicFamilyRatios`
+// alone puts a sub-160 Hz relative into most frames' candidate set (any
+// proposal at or above 320 Hz spawns one at 0.2x or 0.25x), so checking
+// every one of them measured at 73 s for the whole holdout file against a
+// 48-50 s baseline -- an unbounded FFT-per-candidate cost this check has no
+// business paying, because a family relative injected at a twentieth of its
+// parent's periodicity (see unified_frame_evidence) essentially never wins
+// a frame outright regardless of what its own series looks like. Only the
+// first kSeriesCoherenceCandidateLimit entries of `candidate_frequencies_hz`
+// are checked, relying on the one ordering guarantee `unified_frame_
+// evidence` already provides its caller: candidates arrive sorted by
+// descending prior probability, so index 0 is always the frame's actual
+// leading hypothesis and this is exactly the candidate the veto exists to
+// police. Measured at 1 on the same holdout: checking the runner-up too
+// (limit 2) reclassified none of the file's frames beyond what checking
+// only the leader already did, and cost enough of the whole-file decode
+// budget on its own (50.6s -> 56.7s, against a 48-50s baseline) to matter,
+// so the second slot bought nothing this measurement could find and is not
+// spent.
+inline constexpr std::size_t kSeriesCoherenceCandidateLimit = 1;
 
 inline constexpr double kTwmMeasuredWeight = 0.5;
 inline constexpr double kTwmPredictedWeight = 0.5;

@@ -93,6 +93,7 @@ final class iPadStudyState {
     private var retryableCompletedRecording: URL?
     private var pitchColor = "#67d5ff"
     private var guideColor = "#b7d8ff"
+    private var kararColor = "#E75A5A"
     private var makamIntervals = iPadMakamIntervalsStore()
 
     init(
@@ -146,7 +147,7 @@ final class iPadStudyState {
             }.value
             let asset = AVURLAsset(url: copied)
             let duration = max(((try? await asset.load(.duration))?.seconds) ?? 0, 0)
-            let study = iPadStudy(id: UUID(), sourceURL: copied, title: source.deletingPathExtension().lastPathComponent, duration: duration, frames: frames, engine: engine, context: iPadMusicContext(), analyzedAt: Date())
+            let study = iPadStudy(id: UUID(), sourceURL: copied, title: source.deletingPathExtension().lastPathComponent, duration: duration, frames: frames, engine: engine, context: iPadMusicContext(), analyzedAt: Date(), pipelineRevision: iPadOfflinePitchAnalyzer.pipelineRevision)
             // Prepare the viewer before committing the study. If this late step
             // fails, retry must not find a persisted record and create a second
             // study for the same completed recording.
@@ -200,9 +201,10 @@ final class iPadStudyState {
         command(.setVideoFullscreen(isVideoFullscreen))
     }
 
-    func configure(graphPitchColor: String, guideColor: String, makamIntervals: iPadMakamIntervalsStore? = nil) {
+    func configure(graphPitchColor: String, guideColor: String, kararColor: String, makamIntervals: iPadMakamIntervalsStore? = nil) {
         pitchColor = graphPitchColor
         self.guideColor = guideColor
+        self.kararColor = kararColor
         if let makamIntervals { self.makamIntervals = makamIntervals }
         if let currentStudy { webView.enqueue(contextCommand(for: currentStudy.context)) }
     }
@@ -233,7 +235,7 @@ final class iPadStudyState {
     }
 
     private func contextCommand(for context: iPadMusicContext) -> iPadStudyCommand {
-        .context(context, pitchColor: pitchColor, guideColor: guideColor, komaOverride: makamIntervals.commas(for: context.makam))
+        .context(context, pitchColor: pitchColor, guideColor: guideColor, kararColor: kararColor, komaOverride: makamIntervals.commas(for: context.makam))
     }
 
     func updateTitle(_ title: String) {

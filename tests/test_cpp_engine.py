@@ -41,7 +41,10 @@ def test_reads_the_v1_cli_contract(monkeypatch, tmp_path: Path) -> None:
         "window_size": 1536,
         "hop_size": 512,
         "engines": ["unified_v1"],
-        "unified_lag_frames": 5,
+        # D-042: 5 -> 8 hops (53,3 -> 85,3 ms). Bu, gecikme sabitinin
+        # DÖRDÜNCÜ aynasıdır: unified::kDefaultLagFrames, cpp_engine.py ve
+        # pitch_tournament_engines.py ile birlikte güncellenmeli.
+        "unified_lag_frames": 8,
     }
 
     class Completed:

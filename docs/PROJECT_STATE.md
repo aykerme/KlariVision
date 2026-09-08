@@ -20,7 +20,7 @@ hata döner, hayatta kalan motora yönlendirilmez. Kayıtlı seçimi kaldırılm
 motoru adlandıran kurulumlar `unified_v1`'e düşer; **daha önce çözümlenmiş
 çalışmalar kendi sonuçlarını ve motor kimliğini korur.**
 
-Bu turda motor davranışı, eşikler, gecikme (5 hop / 53,3 ms) ve kalıcı veri
+Bu turda motor davranışı, eşikler, gecikme (D-042 ile 8 hop / 85,3 ms) ve kalıcı veri
 biçimleri değişmedi. Bu belgenin altındaki dört motora ait bölümler tarihçedir.
 
 Doğrulandı: `scripts/test_core.sh`, macOS Swift paketi, macOS Xcode Debug
@@ -85,11 +85,21 @@ bu nedenle sonuç “NOT RUN”, başarısızlık veya başarı değildir. Bu ka
 TestFlight/App Store hazırlığı başlatılmaz. Pitch motoru veya kalıcı veri biçimi
 bu kabul çalışmasının parçası olarak değiştirilmez.
 
-Android için de ürün yapılmadan teknik fizibilite çıkarıldı. Yerel Android
-SDK/NDK/CMake/Gradle bulunmadığı için arm64-v8a smoke koşulmadı ve araç
-kurulmadı; NDK mevcut olduğunda tek yetkili sonraki adım C ABI v1 Core Smoke'tır.
-JNI, AudioRecord, WebView, SAF, lifecycle ve performans kapıları:
-`docs/ANDROID_FEASIBILITY.md`.
+Android ürünü 8 Eylül 2026'da kullanıcı yetkisiyle başlatıldı (D-043) ve
+`android/` altında Gradle/Compose olarak durur: `:core` (NDK ile derlenen
+paylaşılan C++ + JNI) ve `:app` (Compose kabuk, AudioRecord canlı yol,
+MediaCodec çevrimdışı yol, SAF içe aktarma, WebView grafikleri).
+
+13 Ağustos'tan beri açık duran `arm64-v8a` smoke koşuldu ve **tek satır C++
+değişikliği olmadan** geçti. Fiziksel Samsung SM-A736B / Android 16 üzerinde
+C ABI ve oturum yaşam döngüsü **56/56**, JVM birim testleri **246/246**
+geçti. Ölçülen canlı yol RTF'i **0,86** (bütçenin %86'sı); bu, NEON iç çarpım
+yolu ve native optimizasyon açıldıktan sonraki değerdir — ikisi de gerekliydi
+(bkz. D-043). Pay dardır ve tek cihaza aittir.
+
+Fiziksel kullanıcı akış kabulü (mikrofon, kayıt, SAF, A/B, rota/kesinti, yön)
+**NOT RUN**'dır; başarısızlık değil, yapılmamış turdur. Ayrıntı ve ölçüm
+tabloları: `docs/ANDROID_FEASIBILITY.md`.
 
 13 Ağustos son entegrasyon doğrulamasında tüm kabul değişiklikleri birlikte
 yeniden sınandı: çekirdek testleri, tam Python paketi (`79 passed`), Swift
@@ -168,7 +178,7 @@ Yeni bir görevde önce bu dosya, sonra `CODEX_HANDOFF.md` okunmalıdır.
 
 | Motor | Rol | Durum |
 |---|---|---|
-| `unified_v1` | Çoklu aday + yol seçimi + harmonik spektral kanıt; 5 hop (53,3 ms) sabit karar gecikmesi | **Çalışan tek motor** |
+| `unified_v1` | Çoklu aday + yol seçimi + harmonik spektral kanıt; 8 hop (85,3 ms) sabit karar gecikmesi (D-042) | **Çalışan tek motor** |
 | Vamp pYIN | Çevrimdışı dosya analizi ve gerçek kayıtta kararlı referans | Kullanımda |
 | YIN v1 / Pitch Engine v2 / VPM-benzeri / Harmonik-Faz | — | **Kaldırıldı (D-039)**; ABI kimlikleri 0–3 rezerve |
 
@@ -394,6 +404,16 @@ sessizlik boşluklarını `sessizlikte N yanlış nokta` olarak ayrıca raporlar
 1. Şükrü Tunar kaydında `111–113 sn` aralığında 7 adet yaklaşık `2x` kare
    kalıyor. ACF, spektrum ve sabit pYIN güven vekili tek başına gerçek-değer
    sağlamadığı için yeni eşik ayarı yapılmadan bağımsız/elle doğrulama gerekir.
+   **7 Eylül 2026 notu:** aynı kayıttaki `164,63–164,80 sn` hatası D-041 ile
+   kapatıldı, ama bu `111–113 sn` maddesi kapanmadı. Yeniden üretilen çevrimdışı
+   izde o aralıkta ayrık bir `2x` sıçraması **bulunamadı** — üç sesli bölüm de
+   sürekli ve düzgün. Bu, maddenin yanlış olduğunu kanıtlamaz: sorun ayrık bir
+   sıçrama değil, sürekli bir notanın tamamının yanlış oktavda raporlanması
+   olabilir ve otomatik tarama bunu göremez. Kulakla doğrulama olmadan
+   kapatılmamalı.
+1b. `unified_v1`'in **canlı** yolunda (Çalma Modu) alt-harmonik EBOB hatası
+   duruyor. D-041 yalnız çevrimdışı yola indi; canlı yol bu turda kasten
+   değiştirilmedi (gecikme sözleşmesi). `164,63 sn` canlı izde hâlâ 149 Hz.
 2. Hoparlör/oda/mikrofon zinciri doğrudan dosyaya göre daha zorlayıcıdır;
    dış sesler ve güçlü 2x/3x harmonikler ek sağlamlık gerektirir.
 3. `unified_v1`'in `holdout_adverse_v1.wav` vetosu açık: 24 kare ciddi eksik

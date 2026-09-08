@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstddef>
+#include <functional>
 #include <memory>
 #include <optional>
 #include <span>
@@ -65,6 +66,17 @@ struct EngineFrame {
     double confidence{};
 };
 
+/// Optional, in-process progress signal: `(done, total)` in frame counts.
+/// Every offline entry point below defaults this to an empty
+/// `std::function`, so an unchecked call site pays nothing beyond the
+/// `if (callback)` test the implementation already has to do -- there is no
+/// separate no-op path to keep in sync. Callers that do supply one should
+/// expect it to fire from inside a hot per-frame loop, so it must be cheap
+/// and must not throw; implementations throttle how often they actually
+/// invoke it (see collect_unified_evidence's own throttling), so a callback
+/// should not assume every frame produces a call.
+using PitchProgressCallback = std::function<void(std::size_t done, std::size_t total)>;
+
 /// Canonical frame-at-a-time production boundary shared by microphone and
 /// file analysis. It owns every causal publication decision for the selected
 /// engine; offline-only look-ahead is deliberately applied after this trace.
@@ -101,15 +113,17 @@ public:
     PitchEngine(PitchEngineId id, PitchEngineProfile profile, PitchEngineConfig config = {});
     void reset();
     void push(std::span<const float> mono_samples, double sample_rate);
-    [[nodiscard]] std::vector<EngineFrame> finish();
+    [[nodiscard]] std::vector<EngineFrame> finish(PitchProgressCallback on_progress = {});
     [[nodiscard]] std::vector<EngineFrame> analyse(
         std::span<const float> mono_samples,
-        double sample_rate
+        double sample_rate,
+        PitchProgressCallback on_progress = {}
     );
     /// Exact shared live trace before any file-only refinement or tail flush.
     [[nodiscard]] std::vector<EngineFrame> analyse_causal(
         std::span<const float> mono_samples,
-        double sample_rate
+        double sample_rate,
+        PitchProgressCallback on_progress = {}
     );
 
 private:

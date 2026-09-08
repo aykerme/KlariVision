@@ -1229,7 +1229,7 @@ struct LiveWebPitchGraph: NSViewRepresentable {
 
         func enqueue(
             points: [PitchGraphPoint],
-            guides: [(label: String, frequency: Double)],
+            guides: [(label: String, frequency: Double, isKarar: Bool)],
             appearance: GraphAppearance,
             graphNow: Double,
             isAnimating: Bool,
@@ -1252,9 +1252,10 @@ struct LiveWebPitchGraph: NSViewRepresentable {
             let payload: [String: Any] = [
                 "reset": reset,
                 "points": additions.map { ["t": $0.time, "hz": $0.frequency] },
-                "guides": guides.map { ["label": pitchGraphNoteLabel($0.label, frequency: $0.frequency), "hz": $0.frequency] },
+                "guides": guides.map { ["label": pitchGraphNoteLabel($0.label, frequency: $0.frequency), "hz": $0.frequency, "karar": $0.isKarar] },
                 "pitch": appearance.pitchHex,
                 "guide": appearance.noteGuideHex,
+                "karar": appearance.kararHex,
                 "now": graphNow,
                 "animating": isAnimating,
                 "visibleDuration": visibleDuration,
@@ -1317,7 +1318,7 @@ struct LiveWebPitchGraph: NSViewRepresentable {
     </style><canvas id="graph"></canvas><script>
     (()=>{
       const c=document.getElementById('graph'),x=c.getContext('2d');
-      const s={points:[],guides:[],pitch:'#0A84FF',guide:'#8E8E93',now:0,received:performance.now(),animating:false,visibleDuration:12,verticalCenter:0,verticalSpan:2400};
+      const s={points:[],guides:[],pitch:'#0A84FF',guide:'#8E8E93',karar:'#E75A5A',now:0,received:performance.now(),animating:false,visibleDuration:12,verticalCenter:0,verticalSpan:2400};
       let dragY=null;
       const resize=()=>{const d=devicePixelRatio||1,w=Math.max(1,c.clientWidth),h=Math.max(1,c.clientHeight);if(c.width!==Math.round(w*d)||c.height!==Math.round(h*d)){c.width=Math.round(w*d);c.height=Math.round(h*d);x.setTransform(d,0,0,d,0,0)}};
       // Sunum saati.  `s.now` SwiftUI body'sinde Date() ile okunur ve
@@ -1344,7 +1345,7 @@ struct LiveWebPitchGraph: NSViewRepresentable {
         const dark=matchMedia('(prefers-color-scheme:dark)').matches,bg=dark?'#20262d':'#ffffff',label=dark?'#e7f3f7':'#3d4854',axis=dark?'#bdcad5':'#3d4854';
         x.fillStyle=bg;x.fillRect(0,0,w,h);x.font='600 11px -apple-system,system-ui';x.textAlign='right';
         const Y=hz=>T+(high-1200*Math.log2(hz/440))/s.verticalSpan*ch,X=t=>L+(t-start)/s.visibleDuration*cw;
-        x.strokeStyle=s.guide+'70';x.lineWidth=1;for(const g of s.guides){const y=Y(g.hz);if(y<T-4||y>h-B+4)continue;x.beginPath();x.moveTo(L,y);x.lineTo(w-R,y);x.stroke();x.fillStyle=label;x.fillText(g.label,L-7,y+4)}
+        x.strokeStyle=s.guide+'70';x.lineWidth=1;for(const g of s.guides){if(g.karar)continue;const y=Y(g.hz);if(y<T-4||y>h-B+4)continue;x.beginPath();x.moveTo(L,y);x.lineTo(w-R,y);x.stroke();x.fillStyle=label;x.fillText(g.label,L-7,y+4)}x.strokeStyle=s.karar+'C0';x.lineWidth=2;for(const g of s.guides){if(!g.karar)continue;const y=Y(g.hz);if(y<T-4||y>h-B+4)continue;x.beginPath();x.moveTo(L,y);x.lineTo(w-R,y);x.stroke();x.fillStyle=label;x.fillText(g.label,L-7,y+4)}x.lineWidth=1;
         const step=s.visibleDuration<=12?1:s.visibleDuration<=30?2:5;x.font='500 9px -apple-system,system-ui';x.textAlign='center';for(let t=Math.max(0,Math.ceil(start/step)*step);t<=now+.001;t+=step){const xx=X(t);x.strokeStyle=axis+'38';x.beginPath();x.moveTo(xx,T);x.lineTo(xx,h-B);x.stroke();x.fillStyle=label;x.fillText(Math.round(t)+' sn',xx,h-B+15)}
         x.save();x.beginPath();x.rect(L,T,cw,ch);x.clip();x.strokeStyle=s.pitch;x.lineWidth=1.7;x.lineJoin='round';x.lineCap='round';x.beginPath();let p=null;for(const q of s.points){if(q.t<start-.05||q.t>now+.05)continue;const xx=X(q.t),yy=Y(q.hz),ok=p&&q.t-p.t>0&&q.t-p.t<.040&&Math.abs(1200*Math.log2(q.hz/p.hz))<520;ok?x.lineTo(xx,yy):x.moveTo(xx,yy);p=q}x.stroke();x.strokeStyle=dark?'#9a6ab0':'#7755b8';x.lineWidth=1.5;x.beginPath();x.moveTo(w-R,T);x.lineTo(w-R,h-B);x.stroke();x.restore();x.strokeStyle=axis+'66';x.strokeRect(L,T,cw,ch);
         if(!s.points.length){x.fillStyle=label;x.font='13px -apple-system,system-ui';x.textAlign='center';x.fillText('Mikrofonu başlatıp klarnet çalmaya başla.',w/2,h/2)}
@@ -1377,7 +1378,7 @@ struct LiveGraphHorizontalDragEvent {
     let size: CGSize
 }
 
-func pitchGuide(scale: LiveScale, tonic: Int, intervals: [Int]? = nil) -> [(label: String, frequency: Double)] {
+func pitchGuide(scale: LiveScale, tonic: Int, intervals: [Int]? = nil) -> [(label: String, frequency: Double, isKarar: Bool)] {
     var steps = [0.0]
     let guideIntervals = intervals?.map(Double.init) ?? scale.intervals
     for interval in guideIntervals.dropLast() { steps.append(steps.last! + interval) }
@@ -1400,7 +1401,7 @@ func pitchGuide(scale: LiveScale, tonic: Int, intervals: [Int]? = nil) -> [(labe
                 let displayedPitchClass = tonic + Int((step * 12 / 53).rounded())
                 label = noteName(displayedPitchClass)
             }
-            return (label, frequency)
+            return (label, frequency, degree == 0)
         }
     }
 }

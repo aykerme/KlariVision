@@ -5,6 +5,7 @@ from __future__ import annotations
 import os
 import json
 import subprocess
+import sys
 from pathlib import Path
 
 from ..runtime_paths import resource_root
@@ -30,7 +31,7 @@ OFFLINE_TRACK_ENGINES = ENGINES | REMOVED_ENGINES
 # NOTE: this string must match the hand-duplicated literal at
 # core/tools/pitch_track_cli.cpp:~200 ("implementation_revision") exactly.
 # There is no compile-time link between the two.
-OFFLINE_TRACK_REVISION = "offline-unified-path-r1"
+OFFLINE_TRACK_REVISION = "offline-unified-path-r3"
 OFFLINE_TRACK_PROFILE = "offline_track_v1"
 PITCH_C_ABI_VERSION = 1
 PCM_SAMPLE_RATE_HZ = 48_000
@@ -39,7 +40,12 @@ PCM_HOP_SAMPLES = 512
 # Mirrors kv_unified_lag_frames() from the C ABI — unified_v1's own decision
 # latency, separate from kv_pitch_contract_v1.v2_fixed_lag_frames, which is a
 # reserved leftover of the removed pitch_engine_v2.
-UNIFIED_DEFAULT_LAG_FRAMES = 5
+# D-042 (docs/DECISIONS.md): raised from 5 (53 ms) to 8 (85.3 ms) so the live
+# path's fixed-lag buffer doubles as the series-coherence veto's look-ahead
+# window. Must match unified::kDefaultLagFrames in
+# core/include/klarivision/core/unified_pitch_constants.hpp — the contract
+# validation below fails loudly if this drifts from the C++ default.
+UNIFIED_DEFAULT_LAG_FRAMES = 8
 
 
 def executable() -> Path:
@@ -60,7 +66,16 @@ def executable() -> Path:
     raise RuntimeError("Taşınabilir C++ pitch motoru bulunamadı. Beta paketi veya build/klarivision-pitch-track-cli dosyasını kontrol et.")
 
 
-def extract(wav: Path, engine: str, output: Path) -> None:
+def extract(wav: Path, engine: str, output: Path, baseline: bool = False) -> None:
+    """Run the portable C++ CLI to produce an offline_track_v1 JSON track.
+
+    ``baseline`` mirrors the CLI's optional ``--baseline`` flag: it makes the
+    CLI additionally run the causal pass and fill in ``causal_baseline`` /
+    ``offline_changes``, roughly doubling the CLI's runtime. It defaults to
+    False so the normal Study/local_app.py path (a real user's file) takes
+    the fast, single-pass route; only synthetic-validation tooling that
+    actually reads those two fields needs to opt in.
+    """
     if engine in REMOVED_ENGINES:
         raise ValueError(
             f"{engine} motoru kaldırıldı (D-039); yalnız unified_v1 çalıştırılabilir."
@@ -68,12 +83,38 @@ def extract(wav: Path, engine: str, output: Path) -> None:
     if engine not in ENGINES:
         raise ValueError("Geçersiz C++ pitch motoru seçimi.")
     output.parent.mkdir(parents=True, exist_ok=True)
-    subprocess.run(
-        [str(executable()), str(wav), "--engine", engine, "--output", str(output)],
-        check=True,
-        capture_output=True,
+    command = [str(executable()), str(wav), "--engine", engine, "--output", str(output)]
+    if baseline:
+        command.append("--baseline")
+
+    # The CLI reports KV-PROGRESS lines (see core/tools/pitch_track_cli.cpp)
+    # on stderr as it runs. capture_output=True would buffer that entire
+    # stream and only hand it back after the process exits -- exactly the
+    # progress visibility this function needs to forward live. Stream stderr
+    # line by line instead: KV-PROGRESS lines go straight to our own stderr
+    # (so a parent process piping *our* stderr, like local_app.py running
+    # under KlariVisionApp.swift, sees them immediately); every other line is
+    # kept so a failure can still report the CLI's actual error text.
+    process = subprocess.Popen(
+        command,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.PIPE,
         text=True,
+        bufsize=1,
     )
+    other_lines: list[str] = []
+    assert process.stderr is not None
+    for line in process.stderr:
+        if line.startswith("KV-PROGRESS "):
+            sys.stderr.write(line if line.endswith("\n") else line + "\n")
+            sys.stderr.flush()
+        else:
+            other_lines.append(line)
+    process.wait()
+    if process.returncode != 0:
+        raise subprocess.CalledProcessError(
+            process.returncode, command, output=None, stderr="".join(other_lines)
+        )
 
 
 def contract() -> dict[str, object]:

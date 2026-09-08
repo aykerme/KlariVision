@@ -12,6 +12,7 @@ import os
 import re
 import shutil
 import subprocess
+import sys
 from datetime import datetime
 import unicodedata
 import uuid
@@ -43,6 +44,30 @@ OUTPUTS_DIR = PROJECT_ROOT / "outputs"
 RECENTS_PATH = PROJECT_ROOT / "data" / "recent_analyses.json"
 VIDEO_SUFFIXES = {".mp4", ".mov", ".m4v", ".webm"}
 MEDIA_SUFFIXES = VIDEO_SUFFIXES | {".wav", ".mp3", ".m4a"}
+
+
+def _emit_progress(stage: str, processed: int, total: int) -> None:
+    """Report one KV-PROGRESS line on stderr for a long-running analysis stage.
+
+    Canonical protocol definition lives in core/tools/pitch_track_cli.cpp
+    (search "KV-PROGRESS protocol" there); this mirrors it so the two
+    analyse_upload() stages this module drives directly -- ``extract``
+    (ffmpeg pulling portable PCM in ``_to_wav``) and ``viewer`` (building the
+    HTML viewer) -- use the same wire format the CLI's own ``decode`` /
+    ``causal`` / ``pitch`` / ``write`` stages do:
+
+        KV-PROGRESS <stage> <processed>/<total>
+
+    Never printed to stdout: analyse_upload()'s caller (the Xcode Cmd+R
+    python fallback in KlariVisionApp.swift) prints the returned viewer path
+    to stdout and nothing else must land there. ``extract_cpp_pitch()``
+    (klarivision.pitch.cpp_engine.extract) relays the CLI's own KV-PROGRESS
+    lines onto this same stderr stream, so the whole pipeline reads as one
+    ordered sequence: extract -> decode -> [causal] -> pitch -> write ->
+    viewer.
+    """
+    sys.stderr.write(f"KV-PROGRESS {stage} {processed}/{total}\n")
+    sys.stderr.flush()
 
 
 def _safe_stem(filename: str) -> str:
@@ -249,7 +274,9 @@ def analyse_upload(source: Path, makam: str, karar: str, engine: str = "vamp") -
     pitch_json = OUTPUTS_DIR / f"{analysis_id}.{engine}{profile}.json"
     viewer = OUTPUTS_DIR / f"{analysis_id}.html"
     if not wav.is_file():
+        _emit_progress("extract", 0, 1)
         _to_wav(media_source, wav)
+        _emit_progress("extract", 1, 1)
     cache_hit = pitch_json.is_file()
     if not cache_hit:
         if engine in CPP_ENGINES:
@@ -265,6 +292,7 @@ def analyse_upload(source: Path, makam: str, karar: str, engine: str = "vamp") -
                 extractor = PyinPitchExtractor()
             track = extractor.extract(AudioSource(wav))
             write_json(track, pitch_json)
+    _emit_progress("viewer", 0, 1)
     build_frequency_viewer(
         pitch_json,
         os.path.relpath(wav, start=viewer.parent).replace(os.sep, "/"),
@@ -280,6 +308,7 @@ def analyse_upload(source: Path, makam: str, karar: str, engine: str = "vamp") -
         validation=validation_for_study(source.name, wav, pitch_json, engine, prepare_display_frames),
         engine=engine,
     )
+    _emit_progress("viewer", 1, 1)
     viewer_url = "/" + quote(viewer.relative_to(PROJECT_ROOT).as_posix())
     _store_recent_analysis(source, viewer_url, cache_hit=cache_hit)
     return viewer_url

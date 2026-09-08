@@ -32,7 +32,9 @@ struct StudySettingsDraft: Codable, Identifiable {
         self.intervals = intervals
         self.graphAppearance = GraphAppearance(
             pitchHex: (values["graphAppearance"] as? [String: Any])?["pitchHex"] as? String ?? GraphAppearance.defaultPitchHex,
-            noteGuideHex: (values["graphAppearance"] as? [String: Any])?["noteGuideHex"] as? String ?? GraphAppearance.defaultNoteGuideHex
+            noteGuideHex: (values["graphAppearance"] as? [String: Any])?["noteGuideHex"] as? String ?? GraphAppearance.defaultNoteGuideHex,
+            micHex: (values["graphAppearance"] as? [String: Any])?["micHex"] as? String ?? GraphAppearance.defaultMicHex,
+            kararHex: (values["graphAppearance"] as? [String: Any])?["kararHex"] as? String ?? GraphAppearance.defaultKararHex
         )
     }
 }

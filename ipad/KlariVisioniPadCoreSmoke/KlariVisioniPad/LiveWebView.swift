@@ -37,6 +37,7 @@ final class iPadLiveWebViewStore: NSObject, ObservableObject, WKNavigationDelega
     private var context = iPadMusicContext()
     private var pitchColor = "#67d5ff"
     private var guideColor = "#b7d8ff"
+    private var kararColor = "#E75A5A"
     private var makamIntervals = iPadMakamIntervalsStore()
 
     override init() {
@@ -74,9 +75,10 @@ final class iPadLiveWebViewStore: NSObject, ObservableObject, WKNavigationDelega
     }
 
     func setContext(_ context: iPadMusicContext) { self.context = context; sendContextIfReady() }
-    func setStyle(pitchColor: String, guideColor: String, makamIntervals: iPadMakamIntervalsStore? = nil) {
+    func setStyle(pitchColor: String, guideColor: String, kararColor: String, makamIntervals: iPadMakamIntervalsStore? = nil) {
         self.pitchColor = pitchColor
         self.guideColor = guideColor
+        self.kararColor = kararColor
         if let makamIntervals { self.makamIntervals = makamIntervals }
         sendContextIfReady()
     }
@@ -123,8 +125,8 @@ final class iPadLiveWebViewStore: NSObject, ObservableObject, WKNavigationDelega
         guard ready else { return }
         let payload: [String: Any] = [
             "makam": context.makam.rawValue, "karar": context.karar.rawValue,
-            "guides": context.guideNotes(commas: makamIntervals.commas(for: context.makam)).map { ["name": $0.name, "hz": $0.hz] }, "follow": context.followsCurve,
-            "pitchColor": pitchColor, "guideColor": guideColor,
+            "guides": context.guideNotes(commas: makamIntervals.commas(for: context.makam)).map { ["name": $0.name, "hz": $0.hz, "karar": $0.isKarar] }, "follow": context.followsCurve,
+            "pitchColor": pitchColor, "guideColor": guideColor, "kararColor": kararColor,
         ]
         guard let data = try? JSONSerialization.data(withJSONObject: payload), let json = String(data: data, encoding: .utf8) else { return }
         webView.evaluateJavaScript("window.kvLive && window.kvLive.context(\(json));")

@@ -5,6 +5,7 @@
 #include "klarivision/core/pyin_ladder.hpp"
 
 #include <algorithm>
+#include <chrono>
 #include <cmath>
 #include <deque>
 #include <numeric>
@@ -117,7 +118,8 @@ UnifiedFrameEvidence unified_frame_evidence(
     const double sample_rate,
     const double source_time_seconds,
     const PitchEngineConfig& config,
-    const ParityEstimate& parity
+    const ParityEstimate& parity,
+    const std::span<const float> lookahead_samples
 ) {
     UnifiedFrameEvidence frame{};
     frame.time_seconds = source_time_seconds;
@@ -196,7 +198,8 @@ UnifiedFrameEvidence unified_frame_evidence(
 
     const auto spectra = compute_multi_resolution_spectra(history, sample_rate);
     frame.evidence = score_harmonic_evidence(
-        history, spectra, sample_rate, frequencies, parity
+        history, spectra, sample_rate, frequencies, parity,
+        unified::kSpectralAnalysisMaximumHz, lookahead_samples
     );
 
     frame.candidates.reserve(merged.size());
@@ -220,6 +223,18 @@ UnifiedFrameEvidence unified_frame_evidence(
         if (frequency_hz < unified::kLowRegisterHz &&
             evidence.fundamental_presence < unified::kLowFundamentalPresenceFloor &&
             evidence.twm_score < unified::kHiddenFundamentalTwmFloor) {
+            continue;
+        }
+
+        // A candidate whose own predicted series has a multi-partial hole
+        // and then real energy again further up is not a single physical
+        // source -- see kSeriesCoherenceMinimumGapRun for the measured
+        // common-subharmonic-ghost case this drops. Vetoed here rather than
+        // merely discounted downstream, the same way the low-register check
+        // above removes rather than discounts: a candidate this internally
+        // inconsistent should not be able to win a frame at all, whatever
+        // periodicity mass it happens to be carrying.
+        if (evidence.series_incoherent) {
             continue;
         }
 
@@ -277,12 +292,89 @@ struct UnifiedPitchSession::Impl {
 
     std::deque<double> pending_family_margins{};
     std::deque<double> pending_frame_times{};
+    /// The frame's own leading hypothesis (candidates[0], sorted by
+    /// descending prior probability at evidence time) -- what the
+    /// series-coherence veto actually polices offline, which is not always
+    /// what the fixed-lag Viterbi eventually publishes. Carried through the
+    /// lag window the same way family_margin is.
+    std::deque<std::optional<double>> pending_leading_candidate_hz{};
+
+    /// Raw audio that has arrived since the oldest frame still sitting in
+    /// the decoder's fixed-lag buffer. Capped at kSeriesCoherenceLookaheadSamples,
+    /// so once full it holds exactly the samples immediately after that
+    /// oldest frame's own boundary -- real look-ahead, not fabricated, the
+    /// same span collect_unified_evidence hands the offline profile. See
+    /// `resolve_series_incoherent_veto` below for how it lines up with
+    /// which frame the decoder is about to resolve.
+    std::deque<float> lookahead_buffer{};
 
     [[nodiscard]] std::optional<double> publish(
         const UnifiedDecodedFrame& decoded,
         double family_margin
     );
 };
+
+namespace {
+
+/// Applies the series-coherence veto to an already-decoded live candidate,
+/// using audio that has genuinely arrived since that frame's own instant.
+///
+/// The fixed-lag decoder resolves frame N only once `lag_frames` more hops'
+/// evidence has been pushed after it -- i.e. exactly when the current hop is
+/// N + lag_frames. `lookahead_buffer`, refreshed with this hop's fresh
+/// samples immediately before this call, therefore holds precisely the
+/// audio between N and N + lag_frames: real future relative to N, available
+/// only because publication itself is delayed by the same lag. This is why
+/// `kDefaultLagFrames` was raised to make lag_frames * kHopSamples equal
+/// kSeriesCoherenceLookaheadSamples (see unified_pitch_constants.hpp) -- a
+/// shorter or longer configured lag misaligns this and the veto degrades to
+/// firing on stale audio or not firing at all, so callers reconfiguring lag
+/// via set_lag_frames should keep that identity in mind.
+///
+/// Deliberately does not call unified_frame_evidence a second time: the
+/// series-coherence spectrum is built from `lookahead_samples` alone (see
+/// score_harmonic_evidence), so nothing about frame N's own history window
+/// is needed to re-check its already-decoded winner, and re-running the
+/// full candidate ladder and spectral scoring for one already-settled frame
+/// would double the live path's per-hop cost for no new information.
+bool decoded_candidate_is_series_incoherent(
+    const std::optional<v2::PitchCandidate>& candidate,
+    const std::optional<double>& leading_candidate_hz,
+    const std::deque<float>& lookahead_buffer,
+    const double sample_rate
+) {
+    if (!candidate || !leading_candidate_hz) return false;
+    // Offline only ever checks candidates[0] -- this frame's own leading
+    // hypothesis at evidence time (kSeriesCoherenceCandidateLimit) -- never
+    // whatever the path decoder eventually settles on. The fixed-lag
+    // decoder's winner is usually that same hypothesis (a GCD ghost wins on
+    // inherited posterior, which is exactly what makes it the leading
+    // proposal too), but is not guaranteed to be bit-identical to it, so the
+    // check below runs against the leading hypothesis, and its result is
+    // only applied if the winner is close enough to be the same candidate.
+    const auto winner_hz = candidate->frequency_hz;
+    const auto cents = std::abs(1200.0 * std::log2(winner_hz / *leading_candidate_hz));
+    if (cents > unified::kCandidateMergeCents) return false;
+    const auto check_hz = *leading_candidate_hz;
+    if (check_hz >= unified::kLowRegisterHz) return false;
+    if (lookahead_buffer.size() < unified::kSeriesCoherenceLookaheadSamples) {
+        // Still filling (session start) or misconfigured lag: no genuine
+        // look-ahead yet, so behave exactly like the empty-span default.
+        return false;
+    }
+    const std::vector<float> lookahead(lookahead_buffer.begin(), lookahead_buffer.end());
+    const auto spectrum = compute_frame_spectrum(lookahead, sample_rate, AnalysisBand::low);
+    // Same per-candidate ceiling analysis_limit_for computes offline: at
+    // least kMinimumScoredPartials partials of this candidate, never below
+    // the shared floor, never above what the sample rate can resolve.
+    const auto nyquist = 0.5 * sample_rate * unified::kSpectralAnalysisHeadroom;
+    const auto wanted = check_hz * static_cast<double>(unified::kMinimumScoredPartials);
+    const auto limit =
+        std::min(std::max(unified::kSpectralAnalysisMaximumHz, wanted), nyquist);
+    return has_series_incoherence(spectrum, check_hz, limit);
+}
+
+}  // namespace
 
 std::optional<double> UnifiedPitchSession::Impl::publish(
     const UnifiedDecodedFrame& decoded,
@@ -349,6 +441,11 @@ void UnifiedPitchSession::set_minimum_rms(const double minimum_rms) {
 
 void UnifiedPitchSession::set_lag_frames(const std::size_t lag_frames) {
     impl_->decoder = UnifiedTrackDecoder(lag_frames, unified::kTransitionWidthCents);
+    // The look-ahead buffer's alignment with the decoder's own buffered
+    // frames depends on lag_frames matching kSeriesCoherenceLookaheadSamples
+    // / kHopSamples (see decoded_candidate_is_series_incoherent); reconfiguring
+    // the decoder invalidates whatever partial window had accumulated.
+    impl_->lookahead_buffer.clear();
 }
 
 const UnifiedFrameDiagnostic& UnifiedPitchSession::last_diagnostic() const {
@@ -367,6 +464,8 @@ void UnifiedPitchSession::reset() {
     impl_->last_published_hz.reset();
     impl_->pending_family_margins.clear();
     impl_->pending_frame_times.clear();
+    impl_->pending_leading_candidate_hz.clear();
+    impl_->lookahead_buffer.clear();
 }
 
 std::vector<EngineFrame> UnifiedPitchSession::process_frame(
@@ -384,12 +483,21 @@ std::vector<EngineFrame> UnifiedPitchSession::process_frame(
     // the whole window on every call would consume each sample three times
     // over and run the clock at three times real speed. The first call has no
     // predecessor to overlap with, so it seeds the ring with everything.
-    if (!impl.seeded) {
-        for (const auto sample : samples) impl.history.push(sample);
-        impl.seeded = true;
-    } else {
-        const auto fresh = std::min(samples.size(), unified::kHopSamples);
-        for (const auto sample : samples.last(fresh)) impl.history.push(sample);
+    const auto fresh_samples = impl.seeded
+        ? samples.last(std::min(samples.size(), unified::kHopSamples))
+        : samples;
+    for (const auto sample : fresh_samples) impl.history.push(sample);
+    impl.seeded = true;
+
+    // Mirrors the fresh audio into a rolling look-ahead buffer for whichever
+    // frame is currently the oldest one sitting in the decoder's fixed-lag
+    // window -- see `decoded_candidate_is_series_incoherent` for why this is
+    // real future audio rather than a fabricated one.
+    for (const auto sample : fresh_samples) {
+        impl.lookahead_buffer.push_back(sample);
+    }
+    while (impl.lookahead_buffer.size() > unified::kSeriesCoherenceLookaheadSamples) {
+        impl.lookahead_buffer.pop_front();
     }
 
     const auto history = impl.history.window();
@@ -414,12 +522,34 @@ std::vector<EngineFrame> UnifiedPitchSession::process_frame(
     }
     impl.pending_family_margins.push_back(best_margin);
     impl.pending_frame_times.push_back(frame_time);
+    impl.pending_leading_candidate_hz.push_back(
+        evidence.candidates.empty()
+            ? std::nullopt
+            : std::make_optional(evidence.candidates.front().candidate.frequency_hz)
+    );
 
     const auto rms = evidence.rms;
     const auto candidate_count = evidence.candidates.size();
     const auto eligible = evidence.signal_eligible;
-    const auto decoded = impl.decoder.push(evidence);
-    if (!decoded) return {};
+    auto decoded_optional = impl.decoder.push(evidence);
+    if (!decoded_optional) return {};
+    auto decoded = *decoded_optional;
+
+    const auto leading_candidate_hz = impl.pending_leading_candidate_hz.front();
+    impl.pending_leading_candidate_hz.pop_front();
+
+    // The lookahead buffer was just refreshed with this hop's fresh samples
+    // above, before the decoder resolved anything -- at this exact call it
+    // holds precisely the audio between the resolved frame's own instant and
+    // now (see `decoded_candidate_is_series_incoherent`). Retroactively
+    // veto the winner the fixed-lag decoder already chose, the same way
+    // candidate generation drops one offline, just lagged by necessity: this
+    // is the one check in the whole evidence layer that needs samples which
+    // did not exist yet when the frame was first evidenced.
+    if (decoded_candidate_is_series_incoherent(
+            decoded.candidate, leading_candidate_hz, impl.lookahead_buffer, impl.sample_rate)) {
+        decoded.candidate.reset();
+    }
 
     const auto margin = impl.pending_family_margins.front();
     impl.pending_family_margins.pop_front();
@@ -428,12 +558,12 @@ std::vector<EngineFrame> UnifiedPitchSession::process_frame(
 
     impl.diagnostic = UnifiedFrameDiagnostic{
         resolved_time, rms, eligible, candidate_count,
-        decoded->winner_posterior, decoded->voiced_posterior,
-        decoded->harmonic_dominance(), decoded->harmonic_evidence_ratio,
+        decoded.winner_posterior, decoded.voiced_posterior,
+        decoded.harmonic_dominance(), decoded.harmonic_evidence_ratio,
         margin, impl.parity.index, {}
     };
-    const auto frequency = impl.publish(*decoded, margin);
-    if (frequency && decoded->winner_posterior >= unified::kParityTrustPosterior) {
+    const auto frequency = impl.publish(decoded, margin);
+    if (frequency && decoded.winner_posterior >= unified::kParityTrustPosterior) {
         update_parity_estimate(
             impl.parity, compute_multi_resolution_spectra(history, impl.sample_rate),
             *frequency, impl.sample_rate
@@ -445,14 +575,34 @@ std::vector<EngineFrame> UnifiedPitchSession::process_frame(
     return {EngineFrame{
         resolved_time,
         frequency,
-        frequency ? decoded->winner_posterior : 0.0,
+        frequency ? decoded.winner_posterior : 0.0,
     }};
 }
 
 std::vector<EngineFrame> UnifiedPitchSession::finish() {
     auto& impl = *impl_;
     std::vector<EngineFrame> published;
-    while (const auto decoded = impl.decoder.finish_next()) {
+    while (auto decoded_optional = impl.decoder.finish_next()) {
+        auto decoded = *decoded_optional;
+        // No more real audio arrives past end of stream, so the buffer
+        // cannot grow here -- it can only shrink. Each successive frame
+        // drained by finish_next() is one hop newer than the last, so its
+        // true look-ahead is one hop shorter; the veto's own "still filling"
+        // guard degrades it to a no-op once it runs out, matching
+        // finish_next()'s "real, shorter suffix" rather than fabricating one.
+        std::optional<double> leading_candidate_hz{};
+        if (!impl.pending_leading_candidate_hz.empty()) {
+            leading_candidate_hz = impl.pending_leading_candidate_hz.front();
+            impl.pending_leading_candidate_hz.pop_front();
+        }
+        if (decoded_candidate_is_series_incoherent(
+                decoded.candidate, leading_candidate_hz, impl.lookahead_buffer, impl.sample_rate)) {
+            decoded.candidate.reset();
+        }
+        for (std::size_t i = 0; i < unified::kHopSamples && !impl.lookahead_buffer.empty(); ++i) {
+            impl.lookahead_buffer.pop_front();
+        }
+
         auto margin = 0.0;
         if (!impl.pending_family_margins.empty()) {
             margin = impl.pending_family_margins.front();
@@ -466,11 +616,11 @@ std::vector<EngineFrame> UnifiedPitchSession::finish() {
             frame_time = impl.pending_frame_times.front();
             impl.pending_frame_times.pop_front();
         }
-        const auto frequency = impl.publish(*decoded, margin);
+        const auto frequency = impl.publish(decoded, margin);
         published.push_back(EngineFrame{
             frame_time,
             frequency,
-            frequency ? decoded->winner_posterior : 0.0,
+            frequency ? decoded.winner_posterior : 0.0,
         });
     }
     return published;
@@ -479,14 +629,27 @@ std::vector<EngineFrame> UnifiedPitchSession::finish() {
 std::vector<UnifiedFrameEvidence> collect_unified_evidence(
     const std::span<const float> mono_samples,
     const double sample_rate,
-    const PitchEngineConfig& config
+    const PitchEngineConfig& config,
+    const PitchProgressCallback on_progress
 ) {
     std::vector<UnifiedFrameEvidence> frames;
     if (mono_samples.empty() || sample_rate <= 0.0) return frames;
 
     HistoryRing ring{};
     ParityEstimate parity{};
-    frames.reserve(mono_samples.size() / unified::kHopSamples + 1);
+    const auto estimated_total = mono_samples.size() / unified::kHopSamples + 1;
+    frames.reserve(estimated_total);
+
+    // This loop is where nearly all of a whole-track offline pass's time
+    // goes (the per-hop pYIN ladder + spectral evidence build dominates the
+    // later global decode), so it is the one place a progress callback is
+    // actually worth reporting from. Throttled the same way the CLI's own
+    // write-progress loop is throttled (see pitch_track_cli.cpp): roughly
+    // every 1% of the estimated frame count or every 200ms, whichever comes
+    // first, so a three-minute recording's ~17,900 hops don't turn into
+    // 17,900 callback invocations for no visible benefit.
+    const std::size_t report_stride = std::max<std::size_t>(estimated_total / 100, 1);
+    auto last_report = std::chrono::steady_clock::now();
 
     std::size_t consumed = 0;
     for (std::size_t index = 0; index < mono_samples.size(); ++index) {
@@ -498,8 +661,21 @@ std::vector<UnifiedFrameEvidence> collect_unified_evidence(
 
         const auto frame_time =
             static_cast<double>(index + 1) / sample_rate;
+        // The one place this offline collector is allowed to differ from
+        // the live path in what it hands unified_frame_evidence: samples
+        // beyond the current instant, already sitting in `mono_samples`
+        // because the whole track is loaded up front. See
+        // kSeriesCoherenceLookaheadSamples for what this buys and why it is
+        // capped rather than unbounded.
+        const auto lookahead_begin = std::min(index + 1, mono_samples.size());
+        const auto lookahead_end = std::min(
+            lookahead_begin + unified::kSeriesCoherenceLookaheadSamples, mono_samples.size()
+        );
+        const auto lookahead = mono_samples.subspan(
+            lookahead_begin, lookahead_end - lookahead_begin
+        );
         auto evidence =
-            unified_frame_evidence(history, sample_rate, frame_time, config, parity);
+            unified_frame_evidence(history, sample_rate, frame_time, config, parity, lookahead);
         // Offline, parity is seeded from the strongest proposal of each frame
         // rather than from a committed decision, because no decision exists
         // yet. It converges to the same place: the estimate is an average over
@@ -513,19 +689,101 @@ std::vector<UnifiedFrameEvidence> collect_unified_evidence(
             note_unvoiced_frame(parity);
         }
         frames.push_back(std::move(evidence));
+
+        if (on_progress) {
+            const auto now = std::chrono::steady_clock::now();
+            if (frames.size() % report_stride == 0 ||
+                now - last_report >= std::chrono::milliseconds(200)) {
+                on_progress(frames.size(), estimated_total);
+                last_report = now;
+            }
+        }
     }
     return frames;
 }
 
+namespace {
+
+/// Offline equivalent of `UnifiedPitchSession::Impl::publish`'s
+/// `low_register_confirmations` guard.
+///
+/// The live path cannot tell a genuine low note from a brief low-register
+/// slip the instant it appears, so it withholds publication for
+/// `kLowRegisterConfirmFrames` frames while waiting to see whether the pitch
+/// holds -- confirmation arrives, if at all, strictly *after* the onset,
+/// because that is the only direction a causal listener has.
+///
+/// Offline has already decoded every frame before anything is published, so
+/// there is nothing left to wait for: whether an onset sustains is a fact
+/// about the sequence, not something that has to arrive over time. This asks
+/// the same question -- does this low-register onset hold for at least
+/// `kLowRegisterConfirmFrames` frames -- by looking at the neighbourhood
+/// directly, in one pass, rather than by delaying every candidate's
+/// publication to find out. An onset that fails to sustain is withheld in
+/// full (all of its unconfirmed frames go silent), matching what the live
+/// path would have done to the frames it held back while waiting.
+///
+/// This is deliberately a low-register-only, run-length check and not an
+/// attempt to catch a sustained wrong note: a GCD ghost that holds the path
+/// for many frames running (the case this fix package's other steps target)
+/// sustains for far longer than `kLowRegisterConfirmFrames` and passes this
+/// guard exactly as a genuine low note would. This guard's job is the
+/// narrower one the live path already does -- catching the brief slip -- not
+/// the one the evidence-ratio ceiling in `publishable_frequency` does.
+void suppress_unconfirmed_low_register_onsets(std::vector<std::optional<double>>& frequencies) {
+    const auto count = frequencies.size();
+    for (std::size_t index = 0; index < count; ++index) {
+        if (!frequencies[index] || *frequencies[index] >= unified::kLowRegisterHz) continue;
+
+        // Bridging from an already-confirmed low-register run continues
+        // trusted, exactly like the live path's `continues` check.
+        if (index > 0 && frequencies[index - 1] &&
+            std::abs(1200.0 * std::log2(*frequencies[index] / *frequencies[index - 1])) < 100.0) {
+            continue;
+        }
+
+        // How many of the next kLowRegisterConfirmFrames frames, starting
+        // here, stay within a semitone of this onset.
+        std::size_t run = 0;
+        for (std::size_t offset = 0;
+             offset < unified::kLowRegisterConfirmFrames && index + offset < count;
+             ++offset) {
+            const auto& candidate = frequencies[index + offset];
+            if (!candidate) break;
+            if (std::abs(1200.0 * std::log2(*candidate / *frequencies[index])) >= 100.0) break;
+            ++run;
+        }
+        if (run < unified::kLowRegisterConfirmFrames) {
+            for (std::size_t offset = 0; offset < run; ++offset) {
+                frequencies[index + offset].reset();
+            }
+        }
+    }
+}
+
+}  // namespace
+
 std::vector<EngineFrame> decode_unified_offline_track(
     const std::span<const UnifiedFrameEvidence> evidence,
-    const PitchEngineConfig& config
+    const PitchEngineConfig& config,
+    const PitchProgressCallback on_progress
 ) {
     (void)config;
     std::vector<EngineFrame> frames;
     frames.reserve(evidence.size());
+    // The global Viterbi decode itself lives in unified_track_decoder.cpp and
+    // has no progress hook of its own (a different fix package's territory),
+    // so this stage cannot tick mid-decode -- only report its completion.
+    // Deliberately not also reporting 0/total here: collect_unified_evidence
+    // has already ticked this same callback up to (near) evidence.size(), and
+    // this function runs strictly after it within one analyse() call, so an
+    // extra 0/total here would read as the progress bar jumping backwards
+    // for a step that is short next to the evidence collection pass anyway.
     const auto decoded =
         decode_unified_track_globally(evidence, unified::kTransitionWidthCents);
+    if (on_progress) on_progress(evidence.size(), evidence.size());
+
+    std::vector<std::optional<double>> frequencies(decoded.size());
     for (std::size_t index = 0; index < decoded.size(); ++index) {
         auto margin = 0.0;
         const auto& source = evidence[index];
@@ -537,12 +795,16 @@ std::vector<EngineFrame> decode_unified_offline_track(
                 }
             )->family_margin;
         }
-        const auto frequency =
+        frequencies[index] =
             publishable_frequency(decoded[index], unified::kOfflineAbstention, margin);
+    }
+    suppress_unconfirmed_low_register_onsets(frequencies);
+
+    for (std::size_t index = 0; index < decoded.size(); ++index) {
         frames.push_back(EngineFrame{
-            source.time_seconds,
-            frequency,
-            frequency ? decoded[index].winner_posterior : 0.0,
+            evidence[index].time_seconds,
+            frequencies[index],
+            frequencies[index] ? decoded[index].winner_posterior : 0.0,
         });
     }
     return frames;

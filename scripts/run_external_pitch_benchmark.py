@@ -281,6 +281,7 @@ def evaluate_dataset(
     engines: list[str] | None,
     limit: int | None,
     skip_reference: bool = False,
+    offline: bool = False,
     allowed: set[str] | None = None,
 ) -> list[FileResult]:
     audio_files = sorted(EXTERNAL.glob(dataset.audio_glob))
@@ -315,7 +316,8 @@ def evaluate_dataset(
 
         duration = len(audio) / CONTRACT_RATE
         candidates: dict[str, list] = {
-            name: trace.frames for name, trace in run_engines(audio, CONTRACT_RATE).items()
+            name: trace.frames
+            for name, trace in run_engines(audio, CONTRACT_RATE, offline=offline).items()
         }
         if not skip_reference:
             vamp = vamp_pyin_frames(audio_path)
@@ -395,6 +397,13 @@ def main() -> int:
         ),
     )
     parser.add_argument(
+        "--offline", action="store_true",
+        help=(
+            "canlı (nedensel) yol yerine Dinleme Modu'nun çevrimdışı yolunu ölç. "
+            "İkisi ayrı kod çözücülerdir; biri hakkındaki sayı diğeri için kanıt değildir."
+        ),
+    )
+    parser.add_argument(
         "--no-reference", action="store_true",
         help="çevrimdışı pYIN referanslarını atla (hızlı koşu)",
     )
@@ -417,6 +426,7 @@ def main() -> int:
         print(f"{dataset.name}:")
         results.extend(evaluate_dataset(
             dataset, args.engine, args.limit, args.no_reference,
+            offline=args.offline,
             allowed=split.get(dataset.name) if split else None,
         ))
 
@@ -429,6 +439,10 @@ def main() -> int:
     payload = {
         "schema": "klarivision-external-pitch-benchmark-v1",
         "policy": "assertion-gate-never-a-tuning-target",
+        # Which decoder produced these numbers. The causal and offline paths are
+        # separate decoders over the same evidence; a number from one is not
+        # evidence about the other, so the file has to say which it is.
+        "path": "offline_track" if args.offline else "causal",
         # Hangi bölümün koşulduğu sonucun parçasıdır: bölüm adı olmayan bir
         # tablo, hangi veriye bakılarak üretildiğini söylemez.
         "split": args.split or "all-files-no-split",

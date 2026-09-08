@@ -13,6 +13,120 @@ import UniformTypeIdentifiers
 import WebKit
 import os
 
+// Consumes an analysis child process's stderr as it arrives (via
+// `readabilityHandler`, never `readDataToEndOfFile()` after `waitUntilExit()`
+// -- that pattern deadlocks once a child writes enough stderr to fill the
+// pipe's kernel buffer before anyone has started reading it, which is
+// exactly what a stream of KV-PROGRESS lines does on a multi-minute
+// recording) and separates it into two things:
+//   - KV-PROGRESS lines (see core/tools/pitch_track_cli.cpp and
+//     src/klarivision/local_app.py for the producing side) are turned into a
+//     Turkish status string and handed to `onProgress` immediately.
+//   - Every other line is preserved verbatim, in order, for `errorText` --
+//     the same detail the old `readDataToEndOfFile()` call used to hand the
+//     failure path, just assembled incrementally instead of in one shot.
+// `readabilityHandler` runs on a private queue Foundation manages per file
+// handle, serially, so `pending`/`errorLines` need no lock -- but that queue
+// only stops delivering once it hands back an empty Data (EOF) and the
+// handler is cleared, which can race with the caller's `waitUntilExit()`
+// returning. `waitUntilDone(timeout:)` blocks on a semaphore signalled
+// exactly at that EOF, so `errorText` is only read once every line has
+// actually been consumed.
+// @unchecked Sendable: every mutable property is only ever touched from
+// `readabilityHandler`'s callback, which Foundation invokes serially on one
+// private queue per file handle -- never concurrently, and never from the
+// thread that calls `attach`/`waitUntilDone`/`errorText`. `waitUntilDone`'s
+// semaphore is the happens-before edge that makes reading `errorText`
+// afterwards safe.
+private final class StderrProgressCapture: @unchecked Sendable {
+    private var pending: [UInt8] = []
+    private(set) var errorLines: [String] = []
+    private let onProgress: (String) -> Void
+    private let doneSemaphore = DispatchSemaphore(value: 0)
+
+    init(onProgress: @escaping (String) -> Void) {
+        self.onProgress = onProgress
+    }
+
+    func attach(to pipe: Pipe) {
+        pipe.fileHandleForReading.readabilityHandler = { [weak self] handle in
+            guard let self else { return }
+            let data = handle.availableData
+            if data.isEmpty {
+                handle.readabilityHandler = nil
+                self.flushRemainder()
+                self.doneSemaphore.signal()
+                return
+            }
+            self.consume(data)
+        }
+    }
+
+    /// Blocks until the stderr pipe has reported EOF (readabilityHandler's
+    /// empty-Data callback). Call only after `waitUntilExit()`, by which
+    /// point the child has closed its stderr and EOF is imminent -- the
+    /// timeout is a safety margin, not the expected path.
+    func waitUntilDone(timeout: DispatchTime) {
+        _ = doneSemaphore.wait(timeout: timeout)
+    }
+
+    var errorText: String { errorLines.joined(separator: "\n") }
+
+    private func consume(_ data: Data) {
+        pending.append(contentsOf: data)
+        while let newlineIndex = pending.firstIndex(of: 0x0a) {
+            let lineBytes = Array(pending[..<newlineIndex])
+            pending.removeFirst(newlineIndex + 1)
+            handleLine(lineBytes)
+        }
+    }
+
+    private func flushRemainder() {
+        guard !pending.isEmpty else { return }
+        handleLine(pending)
+        pending.removeAll()
+    }
+
+    private func handleLine(_ bytes: [UInt8]) {
+        guard let line = String(bytes: bytes, encoding: .utf8), !line.isEmpty else { return }
+        if let message = Self.progressMessage(from: line) {
+            onProgress(message)
+        } else {
+            errorLines.append(line)
+        }
+    }
+
+    // KV-PROGRESS protocol (canonical definition in
+    // core/tools/pitch_track_cli.cpp, mirrored in
+    // src/klarivision/local_app.py): one line, "KV-PROGRESS <stage>
+    // <processed>/<total>". <stage> is a stable lowercase token; this is the
+    // one place that maps it to the Turkish text a user sees.
+    private static let stageLabels: [String: String] = [
+        "extract": "Ses çıkarılıyor",
+        "decode": "Ses okunuyor",
+        "causal": "Temel geçiş",
+        "pitch": "Perde analizi",
+        "write": "Sonuçlar yazılıyor",
+        "viewer": "Görünüm oluşturuluyor",
+    ]
+
+    private static func progressMessage(from line: String) -> String? {
+        guard line.hasPrefix("KV-PROGRESS ") else { return nil }
+        let parts = line.dropFirst("KV-PROGRESS ".count).split(separator: " ")
+        guard parts.count == 2 else { return nil }
+        let label = stageLabels[String(parts[0])] ?? "İşleniyor"
+        let fraction = parts[1].split(separator: "/")
+        guard fraction.count == 2,
+              let processed = Int(fraction[0]),
+              let total = Int(fraction[1]),
+              total > 0 else {
+            return "\(label)…"
+        }
+        let percent = min(100, max(0, Int((Double(processed) / Double(total) * 100).rounded())))
+        return "\(label)… %\(percent)"
+    }
+}
+
 @Observable
 @MainActor
 final class RecentLibrary {
@@ -121,8 +235,48 @@ final class RecentLibrary {
         if activeViewer.flatMap(item(for:))?.id == item.id {
             closeWorkspace()
         }
+        deleteStudyFiles(item)
         saveMetadata()
         persistItems()
+    }
+
+    /// Deletes every file this study owns: the viewer page, every cached pitch
+    /// track (any engine id, any offline_track revision), the extracted WAV and
+    /// the imported video copy.
+    ///
+    /// Deliberately scoped to the app's own `outputs/`, `data/audio/` and
+    /// `data/imports/` directories under the root that actually holds this
+    /// viewer. Analysis only ever copies *into* those directories, so the file
+    /// the user originally picked -- which lives wherever they keep it -- is
+    /// unreachable from here and is never touched.
+    ///
+    /// Removing the cached track matters beyond disk space: `analyse_upload`
+    /// treats an existing track for the same content signature as a cache hit,
+    /// so leaving one behind means re-adding the study silently reuses the old
+    /// engine's answer instead of re-analysing it.
+    private func deleteStudyFiles(_ item: Item) {
+        let manager = FileManager.default
+        let relative = item.viewerURL.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+        guard !relative.isEmpty else { return }
+        let roots = dataRoots()
+        guard let root = roots.first(where: {
+            manager.fileExists(atPath: $0.appending(path: relative).path)
+        }) ?? roots.first else { return }
+
+        let viewer = root.appending(path: relative)
+        let stem = viewer.deletingPathExtension().lastPathComponent
+        guard !stem.isEmpty, stem != "." , stem != ".." else { return }
+
+        try? manager.removeItem(at: viewer)
+        for directory in ["outputs", "data/audio", "data/imports"].map({ root.appending(path: $0) }) {
+            guard let names = try? manager.contentsOfDirectory(atPath: directory.path) else { continue }
+            // `hasPrefix(stem + ".")` and not a looser match: two studies can
+            // share a leading name and differ only by the content-signature
+            // suffix the stem already carries.
+            for name in names where name == stem || name.hasPrefix(stem + ".") {
+                try? manager.removeItem(at: directory.appending(path: name))
+            }
+        }
     }
 
     private func metadataURL() -> URL {
@@ -238,12 +392,19 @@ final class RecentLibrary {
             let error = Pipe()
             process.standardOutput = output
             process.standardError = error
+            let progress = StderrProgressCapture { message in
+                DispatchQueue.main.async { [weak self] in
+                    self?.analysisMessage = message
+                }
+            }
+            progress.attach(to: error)
 
             do {
                 try process.run()
                 process.waitUntilExit()
+                progress.waitUntilDone(timeout: .now() + 5)
                 let standardOutput = String(decoding: output.fileHandleForReading.readDataToEndOfFile(), as: UTF8.self)
-                let standardError = String(decoding: error.fileHandleForReading.readDataToEndOfFile(), as: UTF8.self)
+                let standardError = progress.errorText
                 DispatchQueue.main.async {
                     guard let self else { return }
                     self.isAnalysing = false
@@ -280,12 +441,19 @@ final class RecentLibrary {
             let error = Pipe()
             process.standardOutput = output
             process.standardError = error
+            let progress = StderrProgressCapture { message in
+                DispatchQueue.main.async { [weak self] in
+                    self?.analysisMessage = message
+                }
+            }
+            progress.attach(to: error)
 
             do {
                 try process.run()
                 process.waitUntilExit()
+                progress.waitUntilDone(timeout: .now() + 5)
                 let standardOutput = String(decoding: output.fileHandleForReading.readDataToEndOfFile(), as: UTF8.self)
-                let standardError = String(decoding: error.fileHandleForReading.readDataToEndOfFile(), as: UTF8.self)
+                let standardError = progress.errorText
                 DispatchQueue.main.async {
                     guard let self else { return }
                     self.isAnalysing = false
@@ -539,7 +707,7 @@ struct WelcomeView: View {
                                 Button(role: .destructive) {
                                     itemToRemove = item
                                 } label: {
-                                    Label("Listeden Kaldır", systemImage: "minus.circle")
+                                    Label("Çalışmayı Sil", systemImage: "trash")
                                 }
                             }
                         }
@@ -591,7 +759,7 @@ struct WelcomeView: View {
             selectedStudyID = identifier
         }
         .alert(
-            "Çalışma listeden kaldırılsın mı?",
+            "Çalışma silinsin mi?",
             isPresented: Binding(
                 get: { itemToRemove != nil },
                 set: { if !$0 { itemToRemove = nil } }
@@ -599,12 +767,12 @@ struct WelcomeView: View {
             presenting: itemToRemove
         ) { item in
             Button("Vazgeç", role: .cancel) {}
-            Button("Listeden Kaldır", role: .destructive) {
+            Button("Sil", role: .destructive) {
                 library.removeFromLibrary(item)
                 itemToRemove = nil
             }
         } message: { item in
-            Text("\(library.study(for: item).title) yalnızca Çalışmalar listesinden kaldırılır. Video, ses ve pitch verileri silinmez.")
+            Text("\(library.study(for: item).title) listeden kaldırılır ve bu çalışmaya ait görünüm, ses kopyası ile pitch verileri silinir. Kendi seçtiğin özgün dosyaya dokunulmaz. Bu işlem geri alınamaz.")
         }
     }
 }

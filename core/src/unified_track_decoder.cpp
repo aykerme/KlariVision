@@ -362,6 +362,18 @@ std::optional<double> publishable_frequency(
         frame.harmonic_evidence_ratio > unified::kHarmonicContestEvidenceRatio) {
         return std::nullopt;
     }
+    // Independent of the check above, which reads posterior dominance -- a
+    // quantity the path can carry as inertia from frames the winner
+    // legitimately won, so a candidate can clear it for several frames while
+    // its own raw evidence is, every one of those frames, worse than a
+    // harmonic relative's. This gate reads the raw comparison directly and
+    // carries no such inertia: it fires the moment a harmonic relative's own
+    // emission matches or beats the winner's, regardless of how much
+    // posterior mass history has handed the winner. See
+    // `kHarmonicEvidenceRatioAbstainCeiling` for the measured basis.
+    if (frame.harmonic_evidence_ratio > policy.harmonic_evidence_ratio_ceiling) {
+        return std::nullopt;
+    }
     if (family_margin < policy.family_margin_floor) return std::nullopt;
 
     const auto frequency = frame.candidate->frequency_hz;

@@ -19,7 +19,12 @@ from generate_pitch_tournament_holdout_v3 import write_holdout as write_holdout_
 from generate_pitch_tournament_holdout_v4 import write_holdout as write_holdout_v4  # noqa: E402
 from generate_pitch_tournament_holdout_v5 import write_holdout as write_holdout_v5  # noqa: E402
 from benchmark_live_pyin_alignment import centered_rms, signal_is_eligible  # noqa: E402
-from pitch_tournament_engines import EngineTrace, LIVE_WINDOW, unified_frames  # noqa: E402
+from pitch_tournament_engines import (  # noqa: E402
+    UNIFIED_DEFAULT_LAG_FRAMES,
+    EngineTrace,
+    LIVE_WINDOW,
+    unified_frames,
+)
 from run_pitch_engine_tournament import (  # noqa: E402
     SAFETY_RATE_LIMIT,
     deterministic_fingerprint,
@@ -295,7 +300,7 @@ def test_unified_v1_makes_no_serious_harmonic_error_on_any_holdout(
         audio, rate = read_wav(tmp_path / label / filename)
         trace = EngineTrace(
             "unified_v1", "Production C++ unified session", unified_frames(audio, rate),
-            0.0, len(audio) / rate, 0.0, 5 * 512 / rate * 1_000,
+            0.0, len(audio) / rate, 0.0, UNIFIED_DEFAULT_LAG_FRAMES * 512 / rate * 1_000,
         )
         result = score_trace(
             trace, effective_manifest_for_signal(manifest, audio, rate), rate
@@ -306,11 +311,21 @@ def test_unified_v1_makes_no_serious_harmonic_error_on_any_holdout(
 
 
 # The one case that fails the safety rate, recorded in D-038 as accepted and
-# still open. 23 frames of 2365 voiced (0.97%) against the 0.5% bound. It was
-# 24 until swipe_prime was folded onto FrameSpectrum, whose finer bins recover
-# one frame; the constant tracks the measurement, so it ratchets down with it.
+# still open. 24 frames of 2365 voiced (1.01%) against the 0.5% bound. It was
+# 24 originally, fell to 23 when swipe_prime was folded onto FrameSpectrum
+# (whose finer bins recovered one frame), and returned to 24 with D-042's
+# latency change; the constant tracks the measurement, so it moves in both
+# directions with it.
+#
+# The D-042 step back up was put to the user with its full price -- one more
+# withheld frame on an adverse holdout -- against what the same change bought:
+# the live path's wrong frames on the measured GCD trap fell 9 -> 4, and octave
+# error on the hardest external set (mdb_stem_synth, causal path) fell
+# 0.0070 -> 0.0025. The user accepted it. Raising this number is never a
+# silent act: that is the whole point of asserting the exception at its
+# measured count rather than waiving it.
 ACCEPTED_VETO_SOURCE = "klarivision_pitch_tournament_holdout_adverse_v1.wav"
-ACCEPTED_VETO_MISSING_VOICED_FRAMES = 23
+ACCEPTED_VETO_MISSING_VOICED_FRAMES = 24
 
 
 @pytest.mark.parametrize(
@@ -329,7 +344,7 @@ def test_unified_v1_missing_voiced_stays_inside_the_safety_bound(
 
     Every frozen holdout case must stay inside the tournament's safety rate,
     with one recorded exception: `holdout_adverse_v1.wav`, where the engine
-    withholds 23 of 2365 voiced frames (0.97%, against a 0.5% bound). That
+    withholds 24 of 2365 voiced frames (1.01%, against a 0.5% bound). That
     veto is the open item the user accepted in D-038 -- it is asserted at its
     measured count rather than waived, so the exception cannot quietly grow.
     """
@@ -338,7 +353,7 @@ def test_unified_v1_missing_voiced_stays_inside_the_safety_bound(
         audio, rate = read_wav(tmp_path / label / filename)
         trace = EngineTrace(
             "unified_v1", "Production C++ unified session", unified_frames(audio, rate),
-            0.0, len(audio) / rate, 0.0, 5 * 512 / rate * 1_000,
+            0.0, len(audio) / rate, 0.0, UNIFIED_DEFAULT_LAG_FRAMES * 512 / rate * 1_000,
         )
         result = score_trace(
             trace, effective_manifest_for_signal(manifest, audio, rate), rate

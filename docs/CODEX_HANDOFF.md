@@ -1,6 +1,49 @@
 # Codex Görev Devri
 
-Son güncelleme: 6 Eylül 2026
+Son güncelleme: 8 Eylül 2026
+
+## Android ürünü başlatıldı — 8 Eylül 2026
+
+**Sonraki oturum bu bölümden başlamalı.**
+
+Android portu `android/` altında çalışır durumda (D-043). Otomatik kapıların
+hepsi yeşil: fiziksel SM-A736B'de C ABI + yaşam döngüsü **56/56**, JVM birim
+testleri **246/246**, `assembleDebug` ve mevcut platform regresyonu (C++
+çekirdek, Python `100 passed / 1 skipped`, imzasız macOS Debug) geçti.
+
+### Sıradaki tek somut iş: fiziksel akış kabulü
+
+Cihazda **NOT RUN** olan tur şudur — başarısızlık değil, yapılmamış:
+mikrofon izni ve canlı grafik akışı, WAV kaydı → Çalışmalara ekleme, SAF ile
+dosya alma ve çözümleme, A/B döngüsü, oynatma hızı, video/grafik geçişi,
+kulaklık/Bluetooth rota değişimi, telefon kesintisi, arka plan dönüşü, yön
+değişimi. Kurulum:
+
+```bash
+cd android && ./gw --no-daemon :app:installDebug
+```
+
+### Bilinmesi gereken iki şey
+
+1. **RTF payı dar.** Canlı yol bu cihazda bütçenin %86'sını kullanıyor.
+   NEON iç çarpım yolu ve `RelWithDebInfo` native derleme olmadan pay
+   negatiftir (sırasıyla RTF 1,004 ve 7,68). Termal kısıtlama altında ve daha
+   zayıf cihazlarda yeniden ölçülmeli. Ölçüm testi:
+   `android/core/src/androidTest/.../RealtimeFactorBenchmark.kt`, sonuçlar
+   `adb logcat -s KlariVisionRTF:I` ile okunur.
+
+2. **Grafik HTML'leri iki yerde.** Kanonik kaynak
+   `ipad/KlariVisioniPadCoreSmoke/KlariVisioniPad/Resources/`, kopya
+   `android/app/src/main/assets/viewer/`. İkisi byte-eşit olmalı; düzenleme
+   kanonik tarafta yapılıp kopyalanır. Sözleşme:
+   `android/app/src/main/assets/viewer/README.md`.
+
+### Değişmeyenler
+
+C ABI v1 dondurulmuş; Android yalnız `unified_v1` (kimlik 4) kullanır.
+Motor davranışı, eşikler ve kalıcı veri biçimleri bu turda değişmedi —
+`Studies-v1.json` şeması iOS ile birebir aynıdır. Tek çekirdek değişikliği
+`pyin_ladder.cpp`'deki NEON yoludur ve Apple yolunu etkilemez.
 
 ## Dış karşılaştırmada ölçüm hatası — 6 Eylül 2026
 

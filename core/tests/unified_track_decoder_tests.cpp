@@ -201,5 +201,47 @@ int main() {
         assert(published && close_to(*published, 294.0, 0.001));
     }
 
+    // GCD trap: two notes a perfect fifth apart (3:2, 150 Hz and 450 Hz,
+    // standing in the decoder's own twelfth relationship at 450 = 3 x 150)
+    // overlap for four frames in the middle of an otherwise clean 150 Hz
+    // stretch. The 450 Hz relative's own emission is stronger every one of
+    // those frames (probability 0.55 against 150's 0.30), but the path stays
+    // on 150 throughout because switching for only four frames costs the
+    // leap floor twice and the posterior mass this hands 150 clears the
+    // dominance floor by inertia -- exactly the mechanism measured on the
+    // sukru-tunar-ussak-taksim holdout at 164.63-164.80s. Before the
+    // evidence-ratio ceiling this shipped as a confident, wrong 150 Hz;
+    // reverting `harmonic_evidence_ratio_ceiling` (or raising it back past
+    // ~1.83) makes this assert fail.
+    {
+        std::vector<UnifiedFrameEvidence> sequence;
+        for (int index = 0; index < 8; ++index) {
+            sequence.push_back(frame({candidate(150.0, 0.90)}, 0.02));
+        }
+        for (int index = 0; index < 4; ++index) {
+            sequence.push_back(
+                frame({candidate(150.0, 0.30), candidate(450.0, 0.55)}, 0.02)
+            );
+        }
+        for (int index = 0; index < 8; ++index) {
+            sequence.push_back(frame({candidate(150.0, 0.90)}, 0.02));
+        }
+        const auto decoded = decode_unified_track_globally(sequence);
+        for (int index = 8; index < 12; ++index) {
+            const auto& resolved = decoded[static_cast<std::size_t>(index)];
+            assert(resolved.candidate && close_to(resolved.candidate->frequency_hz, 150.0, 0.001));
+            // The dominance floor alone is fooled: posterior inertia keeps it
+            // well clear of the offline 0.75 floor even though the rival's
+            // raw evidence is stronger.
+            assert(resolved.harmonic_dominance() > unified::kOfflineAbstention.harmonic_dominance_floor);
+            assert(resolved.harmonic_evidence_ratio > unified::kHarmonicEvidenceRatioAbstainCeiling);
+            assert(!publishable_frequency(resolved, unified::kOfflineAbstention, 1.0));
+        }
+        // Outside the overlap the fundamental is uncontested and publishes
+        // normally under the same policy.
+        assert(publishable_frequency(decoded.front(), unified::kOfflineAbstention, 1.0));
+        assert(publishable_frequency(decoded.back(), unified::kOfflineAbstention, 1.0));
+    }
+
     std::cout << "KlariVision unified track decoder tests passed.\n";
 }

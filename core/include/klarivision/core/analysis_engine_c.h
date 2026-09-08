@@ -78,6 +78,33 @@ size_t kv_pitch_engine_finish(kv_pitch_engine *engine);
 int kv_pitch_engine_frame(const kv_pitch_engine *engine, size_t index, kv_pitch_frame *out_frame);
 const char *kv_pitch_engine_last_error(const kv_pitch_engine *engine);
 
+/// Progress reporting for the offline (whole-file) analysis kv_pitch_engine
+/// performs in kv_pitch_engine_finish.
+///
+/// Exposed as its own setter rather than as a field on kv_pitch_contract_v1
+/// for the same reason kv_unified_lag_frames() is a call: that struct's layout
+/// is a persisted contract that callers assert on, and appending to it would
+/// require a new ABI version for what is one optional capability. Adding a
+/// function is additive and leaves every existing caller binary-compatible.
+///
+/// `callback` may be NULL to clear a previously set one. `context` is passed
+/// back untouched. The callback is invoked from the thread that called
+/// kv_pitch_engine_finish, never concurrently, and never after that call
+/// returns -- so it may safely touch caller state that outlives the call.
+/// `done` never exceeds `total`; both count analysis frames, not samples.
+///
+/// Rationale: the offline profile decodes the whole file in one blocking
+/// call (~50 s for a three-minute recording), so a caller with no hook can
+/// only show an indeterminate spinner for the entire analysis.
+typedef void (*kv_pitch_progress_fn)(size_t done, size_t total, void *context);
+
+/// Returns 1 on success and 0 for an invalid engine handle.
+int kv_pitch_engine_set_progress(
+    kv_pitch_engine *engine,
+    kv_pitch_progress_fn callback,
+    void *context
+);
+
 /// Canonical live/file causal session for the unified engine. Each call
 /// consumes one complete analysis window centred on source_time_seconds and
 /// returns 1 on success or 0 on failure. Its output vector is replaced on every

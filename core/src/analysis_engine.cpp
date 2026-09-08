@@ -3,6 +3,7 @@
 #include "klarivision/core/unified_pitch_session.hpp"
 
 #include <algorithm>
+#include <chrono>
 #include <limits>
 #include <stdexcept>
 #include <utility>
@@ -231,8 +232,8 @@ void PitchEngine::push(std::span<const float> mono_samples, double sample_rate) 
     }
 }
 
-std::vector<EngineFrame> PitchEngine::finish() {
-    auto result = analyse(buffered_samples_, sample_rate_);
+std::vector<EngineFrame> PitchEngine::finish(PitchProgressCallback on_progress) {
+    auto result = analyse(buffered_samples_, sample_rate_, std::move(on_progress));
     reset();
     return result;
 }
@@ -242,13 +243,25 @@ std::vector<EngineFrame> PitchEngine::finish() {
 // flush from session.finish().
 std::vector<EngineFrame> PitchEngine::analyse_causal(
     const std::span<const float> samples,
-    const double rate
+    const double rate,
+    const PitchProgressCallback on_progress
 ) {
     if (rate <= 0 || samples.size() < config_.window_size) {
         return {};
     }
     ProductionPitchSession session(id_, config_);
     std::vector<EngineFrame> output;
+    // Total window count for this loop, known up front (unlike
+    // collect_unified_evidence's hop count, which is why this can compute it
+    // once here rather than re-deriving it per call).
+    const std::size_t total_windows =
+        (samples.size() - config_.window_size) / config_.hop_size + 1;
+    std::size_t processed_windows = 0;
+    // Same throttle as collect_unified_evidence and the CLI's own write loop:
+    // ~1% of windows or 200ms, whichever comes first, so the callback never
+    // costs more than a handful of calls even on a multi-minute recording.
+    const std::size_t report_stride = std::max<std::size_t>(total_windows / 100, 1);
+    auto last_report = std::chrono::steady_clock::now();
     // slide a fixed-size window across the buffer
     for (std::size_t start = 0;
          start + config_.window_size <= samples.size();
@@ -258,10 +271,20 @@ std::vector<EngineFrame> PitchEngine::analyse_causal(
         auto published =
             session.process_frame(samples.subspan(start, config_.window_size), rate, time);
         output.insert(output.end(), published.begin(), published.end());
+        ++processed_windows;
+        if (on_progress) {
+            const auto now = std::chrono::steady_clock::now();
+            if (processed_windows % report_stride == 0 ||
+                now - last_report >= std::chrono::milliseconds(200)) {
+                on_progress(processed_windows, total_windows);
+                last_report = now;
+            }
+        }
     }
     // flush the buffered fixed-lag look-ahead
     auto final = session.finish();
     output.insert(output.end(), final.begin(), final.end());
+    if (on_progress) on_progress(total_windows, total_windows);
     return output;
 }
 
@@ -269,16 +292,17 @@ std::vector<EngineFrame> PitchEngine::analyse_causal(
 // published live; offline_track decodes the whole sequence instead.
 std::vector<EngineFrame> PitchEngine::analyse(
     const std::span<const float> samples,
-    const double rate
+    const double rate,
+    const PitchProgressCallback on_progress
 ) {
-    if (profile_ != PitchEngineProfile::offline_track) return analyse_causal(samples, rate);
+    if (profile_ != PitchEngineProfile::offline_track) return analyse_causal(samples, rate, on_progress);
     // Not a refinement of the causal trace. A refinement pass may only reprice
     // frames the causal pass already published, so a frame the causal pass
     // declined to answer is permanently lost to it -- and declining is the
     // engine's central mechanism. Decoding the whole sequence over the same
     // candidates can revisit voicing as well as pitch, which strictly
     // dominates.
-    const auto evidence = collect_unified_evidence(samples, rate, config_);
-    return drop_offline_stray_runs(decode_unified_offline_track(evidence, config_));
+    const auto evidence = collect_unified_evidence(samples, rate, config_, on_progress);
+    return drop_offline_stray_runs(decode_unified_offline_track(evidence, config_, on_progress));
 }
 }  // namespace klarivision::core
