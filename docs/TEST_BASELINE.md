@@ -74,6 +74,39 @@ Donmuş holdout'larda ciddi harmonik hata sıfır kaldı, güvenlik sınırı
 (`adverse_v1` 24 kare) kımıldamadı, `test_core.sh` temiz, `pytest tests/`
 109 geçti / 1 atlandı.
 
+#### Düzeltme: yukarıdaki kapsama sayıları ekranda görünmüyordu
+
+Kullanıcı uygulamadan baktı ve S04'te çizgi olmadığını bildirdi. Doğruydu, ve
+hata ölçümdeydi: **motorun yayımladığı iz ile kullanıcının gördüğü çizgi aynı
+şey değil.** Arada `src/klarivision/frequency_viewer.py`'nin kendi filtresi var
+ve `MINIMUM_CONFIDENCE = 0,20` altındaki her kareyi çizmeden atıyor.
+
+S04'te motor 45 kareyi **doğru perdede (294,0 Hz)** yayımlıyor, ama güvenleri
+0,010–0,151 (medyan 0,035). Yani 45'inin de tamamı ekrana ulaşmadan eleniyor.
+Sağlıklı bölümlerde güven 0,92–0,996; oradaki fark üç kat değil, yirmi beş kat.
+
+**Ekranda görünen gerçek değişim tek bölüm:**
+
+| | ekran 0,40 | ekran 0,75 |
+|---|---:|---:|
+| `adverse` S08 `temel_yok_doyumlu` | 8 kare | **85 kare** |
+| diğer bütün bölümler, üç varyant | — | değişmedi |
+
+Yani `kHarmonicContestEvidenceRatio` değişikliği geçerli ama kazancı bir
+önceki bölümde yazıldığından **çok daha küçüktür**: S04/S07/S11 kazançları
+motor izindedir, ekranda yoktur.
+
+`tests/test_pitch_continuity.py` düzeltildi: `MINIMUM_CONFIDENCE`'ı
+`frequency_viewer`'dan **içe aktarıyor** (kopyalamıyor, sabit kayamasın) ve
+kapsamayı çizilen çizgi üzerinden ölçüyor. Bu hatayı sabitleyen bir test de
+eklendi: eşik altındaki kareler kapsama saymaz.
+
+**Kalan açık soru, artık motorda:** motor 0,035 güvenle kare yayımlıyor. İki
+katman birbirinden bağımsız olarak "bu gösterilmeli mi" diye karar veriyor ve
+aralarında ortak bir sözleşme yok. Kapsamayı gerçekten geri kazanmanın yolu
+`kHarmonicContestEvidenceRatio` değil, bu iki kararın tek yerde verilmesi
+olabilir.
+
 **Gerçek klarnet kayıtlarında hiçbir şey değişmedi** — `gercek-klarnet-calm`
 5201/6601 ve 33 kopma, `calm2` 4684/5377 ve 44 kopma, iki sürümde birebir
 aynı. Yani bu değişikliğin kazancı sentetik tuzak materyalinde gösterilmiştir;

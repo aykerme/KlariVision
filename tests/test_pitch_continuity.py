@@ -19,12 +19,13 @@ The numbers below are asserted at their measured values, in the same spirit as
 change that buys coverage back must move them, and a change that quietly
 spends more coverage cannot hide.
 
-The gate has since done both jobs once. Raising `kHarmonicContestEvidenceRatio`
-from 0.40 to 0.75 recovered S08 outright (0.10 -> above the floor), S04 from
-0.00-0.06 to 0.11-0.52, and S07 and S11 slightly; this file failed on the old
-figures until they were re-recorded, which is the mechanism working rather
-than a regression. S05, S06 and S11 barely moved at any setting, so they are
-withheld by something other than that ratio and stay open.
+These figures are the *displayed* line, not the engine's published track --
+see DISPLAY_MINIMUM_HZ below for why the distinction cost a round. Raising
+`kHarmonicContestEvidenceRatio` from 0.40 to 0.75 moved exactly one section
+that a reader can see: S08 on the adverse variant, 0.10 -> 0.72. It also took
+S04 from 0 to 45 published frames on clean, every one of which the viewer
+discards for confidence, so the screen there is unchanged and this table says
+so. S05, S06 and S11 barely moved at any setting and stay open.
 """
 
 from __future__ import annotations
@@ -38,6 +39,8 @@ import pytest
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
 
+sys.path.insert(0, str(ROOT / "src"))
+
 from generate_octave_trap_suite_v1 import write_suite  # noqa: E402
 from pitch_error_metrics import (  # noqa: E402
     ObservedFrame,
@@ -47,10 +50,22 @@ from pitch_error_metrics import (  # noqa: E402
 from pitch_tournament_engines import unified_offline_frames  # noqa: E402
 from run_pitch_engine_tournament import read_wav  # noqa: E402
 
+from klarivision.frequency_viewer import MINIMUM_CONFIDENCE  # noqa: E402
+
 
 # One analysis hop at 48 kHz, the same tolerance the tournament matches
 # reference frames to observed ones with.
 TOLERANCE_SECONDS = 512 / 48_000
+
+# The engine's published track is not the line the user sees. Between them
+# sits frequency_viewer's own filter, which drops any frame below
+# MINIMUM_CONFIDENCE before drawing. Scoring the raw track therefore measures
+# a curve nobody looks at -- and did, once: a change that took S04 from 0 to
+# 45 published frames moved this file's numbers and changed nothing on screen,
+# because all 45 carried confidence 0.010-0.151 against a 0.20 floor. The
+# constant is imported rather than repeated so the gate cannot drift away from
+# the viewer it claims to speak for.
+DISPLAY_MINIMUM_HZ = 80.0
 
 
 def _ref(*pairs: tuple[float, float | None]) -> list[ReferenceFrame]:
@@ -151,13 +166,13 @@ FLOOR = 0.90
 
 MEASURED_COVERAGE: dict[str, dict[str, float]] = {
     "clean": {
-        "S04": 0.464, "S05": 0.000, "S06": 0.000, "S11": 0.033, "S14": 0.672,
+        "S04": 0.000, "S05": 0.000, "S06": 0.000, "S11": 0.000, "S14": 0.672,
     },
     "room": {
-        "S04": 0.518, "S05": 0.100, "S06": 0.145, "S11": 0.000,
+        "S04": 0.118, "S05": 0.027, "S06": 0.036, "S11": 0.000,
     },
     "adverse": {
-        "S04": 0.109, "S05": 0.000, "S06": 0.000, "S07": 0.069,
+        "S04": 0.000, "S05": 0.000, "S06": 0.000, "S07": 0.000, "S08": 0.723,
         "S09": 0.817, "S11": 0.000, "S12": 0.900, "S13": 0.879, "S14": 0.626,
     },
 }
@@ -166,6 +181,30 @@ MEASURED_COVERAGE: dict[str, dict[str, float]] = {
 # a one-frame boundary shift does not turn the gate red, narrow enough that a
 # section moving by more than two frames of its ~110 does.
 TOLERANCE = 0.03
+
+
+def test_the_gate_scores_the_drawn_line_not_the_published_track() -> None:
+    """The bug that cost a round, pinned.
+
+    A frame the viewer will discard must not count as coverage here, or this
+    file reports a recovery the user cannot see -- which is precisely what
+    happened when S04 went from 0 to 45 published frames at confidence 0.035.
+    """
+    manifest = {
+        "ground_truth": [
+            {"time_seconds": 0.0, "frequency_hz": 294.0},
+            {"time_seconds": 0.01, "frequency_hz": 294.0},
+        ],
+        "sections": [{
+            "kind": "weak_fundamental", "label": "stub",
+            "start_seconds": 0.0, "end_seconds": 1.0,
+            "trap": {"id": "S00", "beklenen_hata": "yok"},
+        }],
+    }
+    believed = [(0.0, 294.0, 0.9), (0.01, 294.0, 0.9)]
+    barely = [(0.0, 294.0, MINIMUM_CONFIDENCE / 2), (0.01, 294.0, MINIMUM_CONFIDENCE / 2)]
+    assert _section_coverage(manifest, believed)["S00"] == 1.0
+    assert _section_coverage(manifest, barely)["S00"] == 0.0
 
 
 @pytest.fixture(scope="module")
@@ -180,7 +219,11 @@ def _section_coverage(
     frames: list[tuple[float, float, float]],
 ) -> dict[str, float]:
     truth = manifest["ground_truth"]  # type: ignore[index]
-    observed = [ObservedFrame(time, hz) for time, hz, _ in frames]
+    observed = [
+        ObservedFrame(time, hz)
+        for time, hz, confidence in frames
+        if confidence >= MINIMUM_CONFIDENCE and hz >= DISPLAY_MINIMUM_HZ
+    ]
     coverage: dict[str, float] = {}
     for section in manifest["sections"]:  # type: ignore[union-attr]
         trap = section.get("trap")
