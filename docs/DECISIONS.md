@@ -770,6 +770,63 @@ bir motor öneren karar mekanizması değildir. Motor kimliği ile
 `offline_track` profil sürümünün çalışma önbelleği anahtarında kalması
 zorunludur.
 
+## D-044 — Çekişme oranı 0,75; kapsama kapısı ekranı ölçer
+
+Kullanıcı bildirimi: turnuvalara güvenilerek yapılan motor turlarının sonucu
+uygulamadan bakıldığında tatmin edici değildi, ve sorun `octave_trap_suite`
+dosyalarında ciddiydi. Ölçüldü; iki ayrı bulgu çıktı.
+
+**Bulgu 1 — turnuva kapısı deliği göremiyordu.** Sert kapı
+`serious_harmonic_error_frames == 0`'dır ve **susmak harmonik hata değildir**.
+Motor oktav tuzağına yanlış nota vererek değil, cevap vermeyerek giriyordu;
+tabela bunu tam puanla ödüllendiriyordu. Çevrimdışı yolda dört bölüm hiç kare
+yayımlamıyordu (S04/S05/S06 zayıf-yok temel, S11 üçüncü harmonik baskın), her
+biri ~1,1 saniye, üç varyantta da. Sebep kapı ya da aday eksikliği değildi:
+kareler RMS 0,25'te (kapının 24 dB üstünde), kare başına 11–12 aday, gerekçe
+103 karenin 99–112'sinde `contested`.
+
+`scripts/pitch_error_metrics.py:score_continuity` kareyi değil çizgiyi ölçer;
+`unanswered_regions` sayacı bu işin sebebidir. `tests/test_pitch_continuity.py`
+tabloyu ölçülen değerinde sabitler ve ölçenin kendisini de ölçer.
+
+**Bulgu 2 — kapı yanlış katmanı ölçüyordu.** İlk hâli motorun izini ölçüyordu;
+kullanıcı uygulamadan bakıp S04'te çizgi olmadığını bildirdi ve haklıydı.
+Arada `frequency_viewer`'ın `MINIMUM_CONFIDENCE = 0,20` filtresi var. S04'te
+motor 45 kareyi **doğru perdede (294,0 Hz)** yayımlıyor ama güvenleri
+0,010–0,151; hepsi çizilmeden eleniyor. Kapı düzeltildi: sabiti içe aktarıyor
+ve çizilen çizgiyi ölçüyor.
+
+**Değişiklik:** `kHarmonicContestEvidenceRatio` 0,40 → 0,75. Gerekçe
+enstrümandır: kapalı silindirik boruda temel çoğu zaman spektrumun en zayıf
+öğesidir, dolayısıyla kendi f/2 ve f/3 akrabaları kalıcı olarak 0,4–0,95
+bandında oturur. 0,40 bunu "çekişme" sayıyor ve kazananın **her harmonik
+rakipten ham kanıtta üstün olduğu** kareleri susturuyordu. Süpürmede 0,75 dizdir;
+0,90 ve 1,00 fazladan hiçbir şey getirmez ve 1,00'de bu kontrol
+`kHarmonicEvidenceRatioAbstainCeiling` ile aynı soruyu sorup ölü koda döner.
+
+**Kazanç, ekranda ölçülmüş hâliyle: tek bölüm.** `adverse` S08
+`temel_yok_doyumlu`, 8 kare → **85 kare** (8,77–10,07 sn). Kullanıcı bunu
+uygulamadan doğruladı. S04/S07/S11'deki kazançlar motor izindedir, ekranda
+yoktur; kayıt için ayrımı korumak şarttır.
+
+**Bedel: ölçülemedi.** Dış karşılaştırma (development, 96 dosya, çevrimdışı)
+bach10 RPA 0,9300 → 0,9300, mdb 0,6290 → 0,6291, vocadito 0,8191 → 0,8191;
+oktav hatası üçünde de ±0,0001. Donmuş holdout'larda ciddi harmonik hata sıfır,
+`adverse_v1` güvenlik sınırı 24'te sabit. Gerçek klarnet kayıtları birebir aynı.
+
+**Kapatılan kalem:** D-040'ın istediği ürün tarafı kanıt toplandı ve **kapıyı
+akladı**. Gerçek klarnet kayıtlarında RMS kapısının kestiği karelerin tamamı
+gerçek sessizliktedir — `gercek-klarnet-calm` 1093 kare, `calm2` 579, hiçbiri
+cümle içinde değil. Kapı olduğu yerde kalır.
+
+**Açık kalanlar:** S05/S06/S11 hiçbir oran ayarında kımıldamıyor; onları başka
+bir kural tutuyor. Motor 0,035 posterior ile kare yayımlıyor ve `confidence`
+alanı doğrudan `winner_posterior`'dır — on iki adayın seyrelttiği bir pay,
+gerçek bir güven ölçüsü değil; hem görüntü filtresi hem motorun kendi
+`kOfflineStrayConfidence = 0,80` filtresi bu sayıya dayanır. Görüntü eşiğinin
+gerçek kayıtlardaki maliyeti ölçüldü ve **sıfırdır**, yani bu kalem kapsama
+şikâyetinin kaynağı değildir; ölçüsü şüpheli olan büyüklüğün kendisidir.
+
 ## D-043 — Android ürünü başlatıldı; taşınabilirlik kanıtlandı
 
 Kullanıcı kararı: Android'e **tam ürün paritesi** hedefiyle geçilmesi, araç
