@@ -18,6 +18,13 @@ The numbers below are asserted at their measured values, in the same spirit as
 `ACCEPTED_VETO_MISSING_VOICED_FRAMES` in test_pitch_engine_tournament.py: a
 change that buys coverage back must move them, and a change that quietly
 spends more coverage cannot hide.
+
+The gate has since done both jobs once. Raising `kHarmonicContestEvidenceRatio`
+from 0.40 to 0.75 recovered S08 outright (0.10 -> above the floor), S04 from
+0.00-0.06 to 0.11-0.52, and S07 and S11 slightly; this file failed on the old
+figures until they were re-recorded, which is the mechanism working rather
+than a regression. S05, S06 and S11 barely moved at any setting, so they are
+withheld by something other than that ratio and stay open.
 """
 
 from __future__ import annotations
@@ -144,13 +151,13 @@ FLOOR = 0.90
 
 MEASURED_COVERAGE: dict[str, dict[str, float]] = {
     "clean": {
-        "S04": 0.000, "S05": 0.000, "S06": 0.000, "S11": 0.000, "S14": 0.672,
+        "S04": 0.464, "S05": 0.000, "S06": 0.000, "S11": 0.033, "S14": 0.672,
     },
     "room": {
-        "S04": 0.064, "S05": 0.009, "S06": 0.018, "S11": 0.000,
+        "S04": 0.518, "S05": 0.100, "S06": 0.145, "S11": 0.000,
     },
     "adverse": {
-        "S04": 0.000, "S05": 0.000, "S06": 0.000, "S07": 0.000, "S08": 0.100,
+        "S04": 0.109, "S05": 0.000, "S06": 0.000, "S07": 0.069,
         "S09": 0.817, "S11": 0.000, "S12": 0.900, "S13": 0.879, "S14": 0.626,
     },
 }

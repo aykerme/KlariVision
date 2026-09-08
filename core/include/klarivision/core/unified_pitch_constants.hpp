@@ -317,7 +317,39 @@ inline constexpr AbstentionPolicy kOfflineAbstention{
 // winner's, before a split posterior counts as a genuine contest. Below this
 // the rival is simply a partial of the note being played, drawing mass because
 // it is really there -- which is evidence for the winner, not against it.
-inline constexpr double kHarmonicContestEvidenceRatio = 0.40;
+//
+// 0.40 was too low, and the instrument is why. On a closed cylindrical pipe
+// the fundamental is routinely the weakest thing in the spectrum, so its own
+// f/2 and f/3 relatives sit permanently in the 0.4-0.95 band -- not because
+// the frame is undecided but because that is what a clarinet looks like. The
+// conjunction in publishable_frequency then withheld frames whose winner had
+// *strictly better raw evidence than every harmonic rival it had*, which is
+// the one thing this ratio was supposed to let through.
+//
+// Measured on klarivision_octave_trap_suite (offline path, mean of the three
+// variants), sweeping this constant with everything else held:
+//
+//   ratio   S04    S05    S06    S07    S08    S11    serious harmonic errors
+//   0.40    0.02   0.00   0.01   0.66   0.70   0.00   0
+//   0.60    0.35   0.00   0.01   0.68   0.99   0.00   0
+//   0.75    0.36   0.03   0.05   0.68   0.99   0.01   0
+//   0.90    0.36   0.05   0.05   0.68   0.99   0.00   0
+//   1.00    0.36   0.05   0.05   0.68   0.99   0.00   0
+//
+// 0.75 is the knee: everything this gate can recover is recovered by it, and
+// 0.90/1.00 buy nothing further. Stopping short of 1.00 is deliberate --
+// there this check would ask the same question as
+// kHarmonicEvidenceRatioAbstainCeiling and become dead code, leaving split
+// posteriors priced by nothing. Serious harmonic errors stay at zero across
+// the whole sweep, and the frozen holdouts and real clarinet recordings do
+// not move at all: on gercek-klarnet-calm and calm2 the published frame count
+// and break count are identical before and after (5201/6601 and 4684/5377).
+//
+// S05/S06/S11 stay near zero at every setting, so they are withheld by
+// something other than this ratio and remain open; see
+// tests/test_pitch_continuity.py, which holds all of these at their measured
+// values.
+inline constexpr double kHarmonicContestEvidenceRatio = 0.75;
 
 inline constexpr std::size_t kAbstainRecoveryFrames = 2;
 

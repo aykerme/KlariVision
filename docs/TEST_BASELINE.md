@@ -33,6 +33,58 @@ değil *tam olarak* boş çıkmasının sebebi budur.
 
 **Bu davranış yanlış olmayabilir; yanlış olan görünmez olmasıydı.**
 
+### Kapı ilk işini gördü: `kHarmonicContestEvidenceRatio` 0,40 → 0,75
+
+Bağlanan kapı hem kırmızıya döndü hem tabloyu güncellettirdi, yani mekanizma
+amacına uygun çalıştı.
+
+`publishable_frequency`'deki bağlaç, dominance tabanının altındaki bir kareyi
+yalnız `harmonic_evidence_ratio > kHarmonicContestEvidenceRatio` iken tutar.
+0,40 eşiği **enstrümanın kendisi yüzünden** yanlıştı: kapalı silindirik boruda
+temel çoğu zaman spektrumun en zayıf öğesidir, dolayısıyla kendi f/2 ve f/3
+akrabaları kalıcı olarak 0,4–0,95 bandında oturur. Ölçülen oran medyanları:
+S04 0,50–0,59, S05 0,62–0,82, S07 0,46–0,47, S08 0,44–0,59, S11 0,77–0,93 —
+hepsi 0,40'ın üstünde ve **1,0'ın altında**. Yani motor, kazananının her
+harmonik rakipten ham kanıtta üstün olduğu kareleri susturuyordu; bu oranın
+izin vermesi gereken tek durum tam olarak buydu.
+
+Süpürme (çevrimdışı yol, üç varyantın ortalaması, başka her şey sabit):
+
+| oran | S04 | S05 | S06 | S07 | S08 | S11 | ciddi harmonik hata |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| 0,40 | 0,02 | 0,00 | 0,01 | 0,66 | 0,70 | 0,00 | 0 |
+| **0,75** | **0,36** | 0,03 | 0,05 | 0,68 | **0,99** | 0,01 | **0** |
+| 0,90 | 0,36 | 0,05 | 0,05 | 0,68 | 0,99 | 0,00 | 0 |
+| 1,00 | 0,36 | 0,05 | 0,05 | 0,68 | 0,99 | 0,00 | 0 |
+
+0,75 dizdir; 0,90 ve 1,00 fazladan hiçbir şey getirmez. 1,00'e çıkmamak
+bilinçlidir: orada bu kontrol `kHarmonicEvidenceRatioAbstainCeiling` ile aynı
+soruyu sorar, ölü koda döner ve bölünmüş posterior'u fiyatlayan kural kalmaz.
+
+**Bedeli ölçüldü, yok.** Dış karşılaştırma (development bölmesi, 96 dosya,
+çevrimdışı yol) 0,40 → 0,75:
+
+| Küme | RPA | Oktav (RCA−RPA) | Ötüm recall |
+|---|---|---|---|
+| bach10_mf0_synth | 0,9300 → 0,9300 | 0,0002 → 0,0002 | 0,9614 → 0,9614 |
+| mdb_stem_synth | 0,6290 → 0,6291 | 0,0084 → 0,0085 | 0,7082 → 0,7086 |
+| vocadito | 0,8191 → 0,8191 | 0,0002 → 0,0002 | 0,9226 → 0,9226 |
+
+Donmuş holdout'larda ciddi harmonik hata sıfır kaldı, güvenlik sınırı
+(`adverse_v1` 24 kare) kımıldamadı, `test_core.sh` temiz, `pytest tests/`
+109 geçti / 1 atlandı.
+
+**Gerçek klarnet kayıtlarında hiçbir şey değişmedi** — `gercek-klarnet-calm`
+5201/6601 ve 33 kopma, `calm2` 4684/5377 ve 44 kopma, iki sürümde birebir
+aynı. Yani bu değişikliğin kazancı sentetik tuzak materyalinde gösterilmiştir;
+kullanıcının kendi çalımında duyacağı bir fark olduğuna dair kanıt yoktur.
+
+**S05, S06 ve S11 açık kaldı.** Hiçbir oran ayarında kımıldamıyorlar, yani onları
+tutan başka bir kural: canlı izde gerekçe clean'de hâlâ `contested`, adverse'te
+`abstained`'a dönüyor (dominance bağlacı tetiklenmeden). S06 "temel hiç yok"
+bölümüdür ve orada yayımlamaya zorlamak gerçek bir `1/3x` hatası üretebilir —
+yani kurtarılması istenmeyebilir de.
+
 ### Kapı bağlandı
 
 `scripts/pitch_error_metrics.py:score_continuity` kareyi değil **çizgiyi**
