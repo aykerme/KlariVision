@@ -1,5 +1,64 @@
 # KlariVision Test Tabanı
 
+## Turnuva kapısı deliği göremiyordu — 8 Eylül 2026
+
+**Motor oktav tuzağına yanlış nota vererek değil, susarak giriyordu; tabela
+bunu tam puanla ödüllendiriyordu.**
+
+Turnuvanın sert kapısı `serious_harmonic_error_frames == 0`. Susmak harmonik
+hata değildir, dolayısıyla `klarivision_octave_trap_suite_*` üzerinde
+`unified_v1` temiz sayfa alıyordu — oysa çevrimdışı (Dinleme Modu) yolda dört
+bölüm **hiç kare yayımlamıyor**:
+
+| Bölüm | clean | room | adverse | suite'in beklediği hata |
+|---|---:|---:|---:|---|
+| S04 `zayif_temel_0.10` | 0,000 | 0,064 | 0,000 | `1/3x` |
+| S05 `zayif_temel_0.03` | 0,000 | 0,009 | 0,000 | `1/3x` |
+| S06 `zayif_temel_0.00` | 0,000 | 0,018 | 0,000 | `1/3x` |
+| S11 `ucuncu_harmonik_baskin` | 0,000 | 0,000 | 0,000 | `1/3x` |
+
+Her biri ~1,1 saniye kesintisiz sessizlik. Sebebi kapı ya da aday eksikliği
+değil: bu karelerin RMS medyanı **0,25** (kapının 24 dB üstünde) ve kare başına
+**11–12 aday** var. `unified_trace --diagnostic`'in kare başına verdiği gerekçe
+103 karenin 99–112'sinde **`contested`** — yani `harmonic_dominance`, tabanının
+(canlı 0,90 / çevrimdışı 0,75) altında. Ölçülen dominance S06'da 0,054, S05'te
+0,083, S04'te 0,362, S11'de 0,318–0,776. Temel zayıfladıkça dominance yapısal
+olarak çöküyor ve motor kazananın alt-harmonik hayaleti olmadığını
+kanıtlayamadığı için cevap vermiyor.
+
+Yapışkanlık bunu bölüm boyuna yayıyor: `contested` bir kare
+`abstain_recovery = 2` ve `low_register_confirmations = 3` kuruyor, yani tek
+kararsız kare arkasından birkaç kareyi daha susturuyor. Bölümlerin dağınık
+değil *tam olarak* boş çıkmasının sebebi budur.
+
+**Bu davranış yanlış olmayabilir; yanlış olan görünmez olmasıydı.**
+
+### Kapı bağlandı
+
+`scripts/pitch_error_metrics.py:score_continuity` kareyi değil **çizgiyi**
+ölçer: sesli bölge başına kapsama, iki yayımlanmış kare arasındaki kopmalar ve
+`unanswered_regions` — hiç cevaplanmamış sesli bölge sayısı. Son sayaç bu
+işin sebebidir: bütünüyle cevapsız bir nota, yayımlanmış perdeleri kıyaslayan
+bir kare-hata oranına da, hiçbir şey yayımlanmadığı için harmonik hata
+kapısına da görünmez.
+
+`tests/test_pitch_continuity.py` iki iş yapar: ölçenin kendisini ölçer (atak/
+release'i kopma saymamak, sessizliği bölge sonu saymak, yanlış notayı
+"cevaplanmış" saymak) ve yukarıdaki tabloyu **ölçülen değerinde** sabitler.
+Tabloda olmayan her tuzak bölümü `FLOOR = 0,90` üstünde kalmak zorundadır, yani
+kapsama başka bir yere sessizce harcanamaz. Kapsama geri kazanan bir değişiklik
+bu tabloyu güncellemek zorundadır — kastedilen tam olarak budur.
+
+Kapı testlerdedir, turnuva JSON'una alan eklenmemiştir: `deterministic_fingerprint`
+dondurulmuş kayıtları taşıdığı için rapor şemasını genişletmek ayrı bir karardır.
+
+**Gerçek klarnet kayıtlarında bu sorun yok.** Aynı araçla ölçüldü: kapının
+üstündeki karelerin %94,5–98,2'si yayımlanıyor ve RMS kapısının kestiği
+karelerin **tamamı gerçek sessizlikte** (`gercek-klarnet-calm` 1093 kare,
+`calm2` 579, hiçbiri cümle içinde değil). Bu, D-040'ın istediği ürün tarafı
+kanıttır ve kapının yerinde kalmasını destekler.
+
+
 ## Dış karşılaştırmada ölçüm hatası bulundu ve düzeltildi — 6 Eylül 2026
 
 **Kayıtlı dış tablo motorun kusurunu değil, ölçen kodun kusurunu gösteriyordu.**

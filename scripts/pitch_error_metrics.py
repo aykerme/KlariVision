@@ -208,3 +208,125 @@ def score_frames(
     ))
     assert int(summary["reference_silent_frames"]) == int(summary["correct_silent_frames"]) + int(summary["false_voiced_frames"])
     return summary
+
+
+# ---------------------------------------------------------------------------
+# Continuity
+# ---------------------------------------------------------------------------
+#
+# `score_frames` above prices every frame the same way wherever it falls, which
+# is what a per-frame error rate needs and exactly what a reader of the graph
+# does not see. A user sees a *line*: 40 scattered missing frames read as a
+# slightly thin curve, while the same 40 in a row read as a hole, and a note
+# that is never answered at all reads as the note being gone. The tournament
+# gate before this function could not tell those three apart -- and a dropout
+# is not a harmonic error, so an engine that avoids a harmonic trap by falling
+# silent scored a clean sheet on the very case built to catch it.
+#
+# Nothing here re-judges pitch. A frame counts as answered when the engine
+# published anything within `tolerance_seconds` of it; whether that answer was
+# the right note is score_frames' question, deliberately kept separate so a
+# coverage gate cannot be satisfied by publishing wrong notes.
+
+
+def score_continuity(
+    reference: Iterable[ReferenceFrame],
+    observed: Iterable[ObservedFrame],
+    *,
+    tolerance_seconds: float,
+) -> dict[str, object]:
+    """Measure the published line's holes over reference-voiced regions.
+
+    A *region* is a maximal run of consecutive reference-voiced frames; a
+    reference-silent frame ends one. Inside a region, a *break* is a maximal
+    run of unanswered frames with at least one answered frame on both sides --
+    the line went somewhere, stopped, and came back. Unanswered frames at a
+    region's edges are attack and release, not breaks: the engine is allowed
+    to arrive late and leave early, and charging those as holes would make
+    every note in the file break twice.
+
+    `unanswered_regions` counts regions with no answered frame at all. That
+    number is the one this function exists for: an entirely unanswered note is
+    invisible to a per-frame error rate that only ever compares published
+    pitches, and invisible to a harmonic-error gate because nothing was
+    published to be wrong.
+    """
+    targets = sorted(reference, key=lambda item: item.time_seconds)
+    output_times = sorted(item.time_seconds for item in observed)
+
+    def answered(time: float) -> bool:
+        index = bisect.bisect_left(output_times, time)
+        for candidate in (index - 1, index):
+            if 0 <= candidate < len(output_times):
+                if abs(output_times[candidate] - time) <= tolerance_seconds + 1e-9:
+                    return True
+        return False
+
+    regions: list[list[bool]] = []
+    times: list[list[float]] = []
+    current: list[bool] = []
+    current_times: list[float] = []
+    for target in targets:
+        if target.frequency_hz is None:
+            if current:
+                regions.append(current)
+                times.append(current_times)
+            current, current_times = [], []
+            continue
+        current.append(answered(target.time_seconds))
+        current_times.append(target.time_seconds)
+    if current:
+        regions.append(current)
+        times.append(current_times)
+
+    breaks: list[dict[str, object]] = []
+    unanswered_regions = 0
+    broken_regions = 0
+    voiced = 0
+    covered = 0
+    for region, region_times in zip(regions, times):
+        voiced += len(region)
+        covered += sum(region)
+        if not any(region):
+            unanswered_regions += 1
+            breaks.append({
+                "start_seconds": region_times[0],
+                "end_seconds": region_times[-1],
+                "frames": len(region),
+                "whole_region": True,
+            })
+            continue
+        first, last = region.index(True), len(region) - 1 - region[::-1].index(True)
+        run_start: int | None = None
+        region_broke = False
+        for index in range(first, last + 1):
+            if not region[index]:
+                run_start = index if run_start is None else run_start
+                continue
+            if run_start is not None:
+                breaks.append({
+                    "start_seconds": region_times[run_start],
+                    "end_seconds": region_times[index - 1],
+                    "frames": index - run_start,
+                    "whole_region": False,
+                })
+                region_broke = True
+                run_start = None
+        if region_broke:
+            broken_regions += 1
+
+    longest = max(
+        (float(item["end_seconds"]) - float(item["start_seconds"]) for item in breaks),
+        default=0.0,
+    )
+    return {
+        "voiced_regions": len(regions),
+        "unanswered_regions": unanswered_regions,
+        "broken_regions": broken_regions,
+        "breaks": len(breaks),
+        "longest_break_seconds": round(longest, 6),
+        "reference_voiced_frames": voiced,
+        "answered_voiced_frames": covered,
+        "coverage": round(covered / voiced, 6) if voiced else 0.0,
+        "break_ranges": breaks,
+    }
