@@ -20,14 +20,13 @@ from generate_pitch_tournament_holdout_v4 import write_holdout as write_holdout_
 from generate_pitch_tournament_holdout_v5 import write_holdout as write_holdout_v5  # noqa: E402
 from benchmark_live_pyin_alignment import centered_rms, signal_is_eligible  # noqa: E402
 from pitch_tournament_engines import (  # noqa: E402
+    UNIFIED_DEFAULT_LAG_FRAMES,
     EngineTrace,
-    _bridge_short_v2_gaps,
-    _v2_is_publishable,
-    hapt_frames,
-    v2_frames,
-    vpm_frames,
+    LIVE_WINDOW,
+    unified_frames,
 )
 from run_pitch_engine_tournament import (  # noqa: E402
+    SAFETY_RATE_LIMIT,
     deterministic_fingerprint,
     effective_manifest_for_signal,
     harmonic_class,
@@ -39,7 +38,6 @@ from run_pitch_engine_tournament import (  # noqa: E402
     verify_inventory,
 )
 from pitch_error_metrics import ObservedFrame, ReferenceFrame, score_frames  # noqa: E402
-from run_pitch_regression_suite import LIVE_WINDOW, causal_yin_frames  # noqa: E402
 
 
 def test_frozen_holdout_is_byte_deterministic(tmp_path: Path) -> None:
@@ -104,12 +102,6 @@ def test_low_signal_truth_is_blank_and_cannot_be_bridged() -> None:
     )
     assert effective["ground_truth"][0]["frequency_hz"] == 220.0
     assert effective["ground_truth"][1]["frequency_hz"] is None
-    bridged = _bridge_short_v2_gaps(
-        [(0.0, 220.0, 0.8), (0.03, 220.0, 0.8)],
-        0.01,
-        {0.01},
-    )
-    assert [round(frame[0], 2) for frame in bridged] == [0.0, 0.02, 0.03]
 
 
 def test_near_pitch_is_raw_non_harmonic_but_not_serious() -> None:
@@ -199,58 +191,28 @@ def _result(engine: str, source: str, total: int) -> dict[str, object]:
     }
 
 
-def test_selection_veto_keeps_yin_when_candidate_hides_voiced_frames() -> None:
-    rows = [
-        _result("yin_v1", "holdout.wav", 1),
-        _result("pitch_engine_v2", "holdout.wav", 5),
-        _result("vpm_like", "holdout.wav", 0),
-        _result("hapt_v1", "holdout.wav", 0),
-    ]
+def test_safety_gate_vetoes_a_case_that_hides_too_many_voiced_frames() -> None:
+    """The gate is now absolute (SAFETY_RATE_LIMIT of the case's own frames).
+
+    It used to be relative to yin_v1, which scored zero serious frames on
+    every frozen holdout; removing that engine (D-039) left the threshold
+    unchanged and only moved its reference point.
+    """
+    rows = [_result("unified_v1", "holdout.wav", 5)]
     decision = selection(rows)
-    assert decision["default_engine"] == "yin_v1"
-    assert decision["decisions"]["pitch_engine_v2"]["vetoes"]
+    assert decision["decisions"]["unified_v1"]["vetoes"]
+    assert not decision["decisions"]["unified_v1"]["eligible"]
 
 
-def test_selection_ranks_serious_then_non_serious_without_veto_affecting_winner() -> None:
-    rows = [
-        _result("yin_v1", "holdout.wav", 8),
-        _result("pitch_engine_v2", "holdout.wav", 9),
-        _result("vpm_like", "holdout.wav", 10),
-        _result("hapt_v1", "holdout.wav", 8),
-    ]
-    rows[0].update({"serious_total_error_frames": 3, "serious_missing_voiced_frames": 3})
-    rows[1].update({"serious_total_error_frames": 2, "serious_missing_voiced_frames": 2})
-    rows[2].update({
-        "serious_total_error_frames": 2,
-        "serious_missing_voiced_frames": 1,
-        "serious_false_voiced_frames": 1,
-        "false_voiced_frames": 1,
-    })
-    # VPM has the same serious total as V2 but fewer raw remainder errors.
-    rows[2]["total_error_frames"] = 4
-    rows[2]["missing_voiced_frames"] = 4
-    # HAPT ties yin's worst-case serious total so it cannot outrank vpm_like.
-    rows[3].update({"serious_total_error_frames": 3, "serious_missing_voiced_frames": 3})
-    decision = selection(rows, rows)
-    assert decision["benchmark_winner"] == "vpm_like"
-    assert decision["decisions"]["vpm_like"]["vetoes"]
-    assert decision["default_engine"] == "yin_v1"
-
-
-def test_selection_uses_cents_then_latency_after_both_error_totals_tie() -> None:
-    rows = [
-        _result(engine, "holdout.wav", 2)
-        for engine in ("yin_v1", "pitch_engine_v2", "vpm_like", "hapt_v1")
-    ]
-    for row in rows:
-        row.update({"serious_total_error_frames": 1, "serious_missing_voiced_frames": 1})
-    rows[0].update({"correct_pitch_mean_absolute_cents": 4.0, "correct_pitch_absolute_cents_sum": 392.0})
-    rows[1].update({"correct_pitch_mean_absolute_cents": 3.0, "correct_pitch_absolute_cents_sum": 294.0})
-    rows[2].update({"correct_pitch_mean_absolute_cents": 3.0, "correct_pitch_absolute_cents_sum": 294.0, "latency": {"decision_latency_ms": 8.0}})
-    # HAPT sits out of contention here (worse serious total than the tied
-    # three) so this stays a pure cents-then-latency tie-break test.
-    rows[3].update({"serious_total_error_frames": 2})
-    assert selection(rows, rows)["benchmark_winner"] == "vpm_like"
+def test_safety_gate_passes_a_case_inside_the_rate_limit() -> None:
+    rows = [_result("unified_v1", "holdout.wav", 0)]
+    # A single serious missing-voiced frame out of 100 reference voiced frames
+    # is 1%, above the bound; zero is inside it.
+    decision = selection(rows)
+    assert decision["decisions"]["unified_v1"]["eligible"]
+    assert decision["decisions"]["unified_v1"]["vetoes"] == []
+    assert decision["shipped_engine"] == "unified_v1"
+    assert "benchmark_winner" not in decision
 
 
 def test_legacy_truth_covers_silence_constant_vibrato_glide_and_grace() -> None:
@@ -286,7 +248,7 @@ def test_tournament_inventory_is_exactly_all_synthetic_wavs() -> None:
             f"({len(missing)} dosya)."
         )
     inventory = verify_inventory(sources)
-    assert len(inventory["used_synthetic_wavs"]) == 26
+    assert len(inventory["used_synthetic_wavs"]) == 29
     assert inventory["excluded_real_wavs"] == [
         "data/benchmarks/klarnet_gercek_gecis_vibrato_v1.wav",
         "data/benchmarks/klarnet_gercek_sabit_re3_v1.wav",
@@ -312,80 +274,58 @@ def test_deterministic_fingerprint_ignores_runtime_observation() -> None:
     assert deterministic_fingerprint(payload) == deterministic_fingerprint(changed)
 
 
-def test_v2_high_register_publication_matches_swift_contract() -> None:
-    assert _v2_is_publishable(880.0, 0.70, False)
-    assert _v2_is_publishable(1100.0, 0.70, True)
-    assert not _v2_is_publishable(1100.0, 0.70, False)
-    assert not _v2_is_publishable(880.0, 0.699, True)
+@pytest.mark.parametrize(
+    ("writer", "label"),
+    [
+        (write_holdout, "v1"), (write_holdout_v2, "v2"), (write_holdout_v3, "v3"),
+        (write_holdout_v4, "v4"), (write_holdout_v5, "v5"),
+    ],
+)
+def test_unified_v1_makes_no_serious_harmonic_error_on_any_holdout(
+    tmp_path: Path,
+    writer: object,
+    label: str,
+) -> None:
+    """The one hard requirement of D-037, on every frozen holdout.
 
-
-def test_yin_v1_has_no_serious_error_on_high_register_holdout_v2(tmp_path: Path) -> None:
-    manifest = write_holdout_v2(tmp_path)
+    Only the harmonic classes are asserted at zero. Serious *missing voiced*
+    is deliberately not: abstaining is this engine's central mechanism, the
+    product prefers a silent point to a harmonic error (D-038), and one
+    holdout's adverse variant is a known, accepted case -- see
+    test_unified_v1_missing_voiced_stays_inside_the_safety_bound, which holds
+    it to the safety gate's rate instead of to zero.
+    """
+    manifest = writer(tmp_path / label)  # type: ignore[operator]
     for filename in manifest["variants"]:
-        audio, rate = read_wav(tmp_path / filename)
-        frames = [(*frame, 1.0) for frame in causal_yin_frames(audio, rate)]
+        audio, rate = read_wav(tmp_path / label / filename)
         trace = EngineTrace(
-            "yin_v1",
-            "Python mirror of shipped Swift YIN v1",
-            frames,
-            0.0,
-            len(audio) / rate,
-            LIVE_WINDOW / (2 * rate) * 1_000,
-            0.0,
+            "unified_v1", "Production C++ unified session", unified_frames(audio, rate),
+            0.0, len(audio) / rate, 0.0, UNIFIED_DEFAULT_LAG_FRAMES * 512 / rate * 1_000,
         )
         result = score_trace(
             trace, effective_manifest_for_signal(manifest, audio, rate), rate
         )
-        assert result["serious_false_voiced_frames"] == 0, filename
-        assert result["serious_missing_voiced_frames"] == 0, filename
         assert result["serious_harmonic_error_frames"] == 0, filename
         assert result["serious_non_harmonic_error_frames"] == 0, filename
-        assert result["serious_total_error_frames"] == 0, filename
+        assert result["serious_false_voiced_frames"] == 0, filename
 
 
-@pytest.mark.parametrize(
-    ("writer", "label"),
-    [(write_holdout, "v1"), (write_holdout_v3, "v3")],
-)
-def test_yin_v1_has_no_serious_error_on_additional_holdouts(
-    tmp_path: Path,
-    writer: object,
-    label: str,
-) -> None:
-    manifest = writer(tmp_path / label)  # type: ignore[operator]
-    for filename in manifest["variants"]:
-        audio, rate = read_wav(tmp_path / label / filename)
-        frames = [(*frame, 1.0) for frame in causal_yin_frames(audio, rate)]
-        trace = EngineTrace(
-            "yin_v1", "Python mirror of shipped Swift YIN v1", frames,
-            0.0, len(audio) / rate, LIVE_WINDOW / (2 * rate) * 1_000, 0.0,
-        )
-        result = score_trace(
-            trace, effective_manifest_for_signal(manifest, audio, rate), rate
-        )
-        assert result["serious_total_error_frames"] == 0, filename
-
-
-@pytest.mark.parametrize(
-    ("writer", "label"),
-    [(write_holdout, "v1"), (write_holdout_v2, "v2"), (write_holdout_v3, "v3")],
-)
-def test_v2_has_no_serious_error_on_yin_holdouts(
-    tmp_path: Path,
-    writer: object,
-    label: str,
-) -> None:
-    manifest = writer(tmp_path / label)  # type: ignore[operator]
-    for filename in manifest["variants"]:
-        audio, rate = read_wav(tmp_path / label / filename)
-        trace = EngineTrace(
-            "pitch_engine_v2", "Python mirror of shipped Swift V2", v2_frames(audio, rate),
-            0.0, len(audio) / rate, LIVE_WINDOW / (2 * rate) * 1_000, 5 * 512 / rate * 1_000,
-        )
-        result = score_trace(
-            trace, effective_manifest_for_signal(manifest, audio, rate), rate
-        )
-        assert result["serious_total_error_frames"] == 0, filename
+# The one case that fails the safety rate, recorded in D-038 as accepted and
+# still open. 24 frames of 2365 voiced (1.01%) against the 0.5% bound. It was
+# 24 originally, fell to 23 when swipe_prime was folded onto FrameSpectrum
+# (whose finer bins recovered one frame), and returned to 24 with D-042's
+# latency change; the constant tracks the measurement, so it moves in both
+# directions with it.
+#
+# The D-042 step back up was put to the user with its full price -- one more
+# withheld frame on an adverse holdout -- against what the same change bought:
+# the live path's wrong frames on the measured GCD trap fell 9 -> 4, and octave
+# error on the hardest external set (mdb_stem_synth, causal path) fell
+# 0.0070 -> 0.0025. The user accepted it. Raising this number is never a
+# silent act: that is the whole point of asserting the exception at its
+# measured count rather than waiving it.
+ACCEPTED_VETO_SOURCE = "klarivision_pitch_tournament_holdout_adverse_v1.wav"
+ACCEPTED_VETO_MISSING_VOICED_FRAMES = 24
 
 
 @pytest.mark.parametrize(
@@ -395,44 +335,32 @@ def test_v2_has_no_serious_error_on_yin_holdouts(
         (write_holdout_v4, "v4"), (write_holdout_v5, "v5"),
     ],
 )
-def test_hapt_has_no_serious_error_on_all_holdouts(
+def test_unified_v1_missing_voiced_stays_inside_the_safety_bound(
     tmp_path: Path,
     writer: object,
     label: str,
 ) -> None:
+    """Abstention is allowed, but not unbounded.
+
+    Every frozen holdout case must stay inside the tournament's safety rate,
+    with one recorded exception: `holdout_adverse_v1.wav`, where the engine
+    withholds 24 of 2365 voiced frames (1.01%, against a 0.5% bound). That
+    veto is the open item the user accepted in D-038 -- it is asserted at its
+    measured count rather than waived, so the exception cannot quietly grow.
+    """
     manifest = writer(tmp_path / label)  # type: ignore[operator]
     for filename in manifest["variants"]:
         audio, rate = read_wav(tmp_path / label / filename)
         trace = EngineTrace(
-            "hapt_v1", "Production C++ HAPT core", hapt_frames(audio, rate),
-            0.0, len(audio) / rate, LIVE_WINDOW / (2 * rate) * 1_000, 0.0,
+            "unified_v1", "Production C++ unified session", unified_frames(audio, rate),
+            0.0, len(audio) / rate, 0.0, UNIFIED_DEFAULT_LAG_FRAMES * 512 / rate * 1_000,
         )
         result = score_trace(
             trace, effective_manifest_for_signal(manifest, audio, rate), rate
         )
-        assert result["serious_total_error_frames"] == 0, filename
-
-
-@pytest.mark.parametrize(
-    ("writer", "label"),
-    [
-        (write_holdout, "v1"), (write_holdout_v2, "v2"), (write_holdout_v3, "v3"),
-        (write_holdout_v4, "v4"), (write_holdout_v5, "v5"),
-    ],
-)
-def test_vpm_like_has_no_serious_error_on_all_holdouts(
-    tmp_path: Path,
-    writer: object,
-    label: str,
-) -> None:
-    manifest = writer(tmp_path / label)  # type: ignore[operator]
-    for filename in manifest["variants"]:
-        audio, rate = read_wav(tmp_path / label / filename)
-        trace = EngineTrace(
-            "vpm_like", "Production C++ VPM-like core", vpm_frames(audio, rate),
-            0.0, len(audio) / rate, LIVE_WINDOW / (2 * rate) * 1_000, 0.0,
-        )
-        result = score_trace(
-            trace, effective_manifest_for_signal(manifest, audio, rate), rate
-        )
-        assert result["serious_total_error_frames"] == 0, filename
+        missing = int(result["serious_missing_voiced_frames"])
+        if filename == ACCEPTED_VETO_SOURCE:
+            assert missing <= ACCEPTED_VETO_MISSING_VOICED_FRAMES, (filename, missing)
+            continue
+        voiced = max(1, int(result["reference_voiced_frames"]))
+        assert missing / voiced <= SAFETY_RATE_LIMIT, (filename, missing / voiced)

@@ -2,8 +2,6 @@
 
 #include <algorithm>
 #include <cmath>
-#include <complex>
-#include <numbers>
 
 namespace klarivision::core::v2 {
 namespace {
@@ -24,79 +22,31 @@ bool is_prime(const int value) {
     return true;  // no factor found
 }
 
-// Smallest power of two that is >= value; the FFT below only supports
-// power-of-two lengths.
-std::size_t next_power_of_two(const std::size_t value) {
-    auto result = std::size_t{1};
-    while (result < value) {
-        result <<= 1U;  // double result until it covers value
-    }
-    return result;
-}
-
-// In-place iterative radix-2 Cooley-Tukey FFT (decimation-in-time).
-// `values.size()` must already be a power of two. Two phases:
-//   1. Bit-reversal permutation, so the butterfly network below can work
-//      in place without needing extra buffers.
-//   2. log2(count) butterfly passes, each combining pairs of sub-transforms
-//      of doubling length using precomputed twiddle factors
-//      (`step` = e^{-2*pi*i/length}, walked forward via repeated multiply).
-void fft(std::vector<std::complex<double>>& values) {
-    const auto count = values.size();  // transform length (power of two)
-    // Phase 1: bit-reversal permutation -- reorder `values` so index i ends
-    // up where its bit-reversed index would be, in place, via pairwise swaps.
-    for (std::size_t index = 1, reversed = 0; index < count; ++index) {
-        auto bit = count >> 1U;              // start at the most-significant bit
-        while ((reversed & bit) != 0U) {      // carry propagation for the bit-reversed counter
-            reversed ^= bit;                  // clear this bit in the reversed counter
-            bit >>= 1U;                       // move to the next lower bit
-        }
-        reversed ^= bit;                      // set the first unset bit found
-        if (index < reversed) {
-            std::swap(values[index], values[reversed]);  // swap into bit-reversed position
-        }
-    }
-
-    // Phase 2: iterative butterfly passes. `length` doubles each pass,
-    // combining pairs of already-transformed halves of size length/2 into a
-    // transform of size `length` (classic Cooley-Tukey recombination, done
-    // bottom-up instead of via recursion).
-    for (auto length = std::size_t{2}; length <= count; length <<= 1U) {
-        const auto angle = -2.0 * std::numbers::pi / static_cast<double>(length);  // twiddle base angle for this stage
-        const auto step = std::complex<double>{std::cos(angle), std::sin(angle)};  // e^{-2*pi*i/length}, the per-butterfly rotation
-        for (std::size_t start = 0; start < count; start += length) {  // one sub-transform block per iteration
-            auto weight = std::complex<double>{1.0, 0.0};  // twiddle factor for this butterfly, starts at 1 and rotates by `step`
-            for (std::size_t offset = 0; offset < length / 2; ++offset) {
-                const auto even = values[start + offset];                          // "even" half element
-                const auto odd = values[start + offset + length / 2] * weight;     // "odd" half element, phase-rotated
-                values[start + offset] = even + odd;               // butterfly sum -> lower half output
-                values[start + offset + length / 2] = even - odd;  // butterfly difference -> upper half output
-                weight *= step;  // advance the twiddle factor to the next offset
-            }
-        }
-    }
-}
-
-// Reads the (precomputed, sqrt-magnitude) spectrum at an arbitrary
-// frequency by linearly interpolating between the two nearest FFT bins.
-// This lets score_candidate probe harmonics that don't land exactly on a
-// bin centre.
+// Reads the sqrt-compressed spectrum at an arbitrary frequency by linearly
+// interpolating between the two nearest bins, so score_candidate can probe
+// harmonics that don't land exactly on a bin centre.
+//
+// Deliberately interpolates in the sqrt domain rather than calling
+// FrameSpectrum::amplitude_at() and taking the root afterwards: SWIPE'
+// compresses first and the peak-minus-valley term below is a difference of
+// compressed values, so doing it the other way round changes the kernel, not
+// just the arithmetic order.
 double interpolated_value(
-    const std::vector<double>& spectrum,
+    const std::vector<double>& square_root_spectrum,
     const double sample_rate,
     const std::size_t fft_size,
     const double frequency
 ) {
-    if (frequency <= 0.0 || frequency >= sample_rate / 2.0 || spectrum.empty()) {
+    if (frequency <= 0.0 || frequency >= sample_rate / 2.0 || square_root_spectrum.empty()) {
         return 0.0;  // outside the representable (0, Nyquist) range
     }
     const auto position = frequency * static_cast<double>(fft_size) / sample_rate;  // frequency -> fractional FFT bin index
     const auto lower = static_cast<std::size_t>(std::floor(position));               // bin just below the target frequency
-    if (lower + 1 >= spectrum.size()) {
+    if (lower + 1 >= square_root_spectrum.size()) {
         return 0.0;  // upper neighbour bin would be out of range
     }
     const auto fraction = position - static_cast<double>(lower);  // how far past `lower` the target frequency sits, in [0, 1)
-    return spectrum[lower] * (1.0 - fraction) + spectrum[lower + 1] * fraction;  // linear interpolation between the two bins
+    return square_root_spectrum[lower] * (1.0 - fraction) + square_root_spectrum[lower + 1] * fraction;  // linear interpolation
 }
 
 // SWIPE'-style spectral matching score for one candidate fundamental
@@ -165,38 +115,25 @@ double score_candidate(
 }  // namespace
 
 std::vector<double> swipe_prime_harmonic_supports(
-    const std::span<const float> samples,
-    const double sample_rate,
+    const FrameSpectrum& spectrum,
     const std::span<const double> candidate_frequencies_hz,
     const double maximum_analysis_frequency_hz
 ) {
     std::vector<double> supports(candidate_frequencies_hz.size(), 0.0);  // one output score per input candidate, defaulting to 0
-    if (samples.size() < 256 || sample_rate <= 0.0 || candidate_frequencies_hz.empty()) {
-        return supports;  // not enough signal, or nothing to score
+    if (spectrum.magnitude.empty() || spectrum.fft_size == 0 ||
+        spectrum.sample_rate <= 0.0 || candidate_frequencies_hz.empty()) {
+        return supports;  // no spectrum, or nothing to score
     }
-
-    // Apply a Hann window (reduces spectral leakage from the finite analysis
-    // window) and zero-pad up to the next power of two so the FFT above can
-    // run. Samples beyond the window length stay at the buffer's
-    // default-constructed zero.
-    const auto fft_size = next_power_of_two(samples.size());  // FFT length, rounded up (zero-padded) to a power of two
-    std::vector<std::complex<double>> spectrum_buffer(fft_size);  // zero-initialised; entries beyond samples.size() stay zero (the padding)
-    const auto window_denominator = static_cast<double>(std::max<std::size_t>(1, samples.size() - 1));  // Hann window normaliser (N-1)
-    for (std::size_t index = 0; index < samples.size(); ++index) {
-        const auto window = 0.5 - 0.5 * std::cos(
-            2.0 * std::numbers::pi * static_cast<double>(index) / window_denominator
-        );  // Hann window coefficient at this sample, tapering to 0 at both edges
-        spectrum_buffer[index] = static_cast<double>(samples[index]) * window;  // windowed sample, ready for the FFT
-    }
-    fft(spectrum_buffer);  // transform in place: spectrum_buffer now holds complex frequency-domain bins
 
     // SWIPE' works on sqrt-magnitude (amplitude^0.5) rather than raw
-    // magnitude or power; this compresses the dynamic range so that a
-    // single very loud harmonic doesn't dominate the score. Only the first
-    // half of the (conjugate-symmetric, real-input) spectrum is kept.
-    std::vector<double> square_root_spectrum(fft_size / 2 + 1);  // only the non-redundant half of the spectrum, DC through Nyquist
+    // magnitude or power; this compresses the dynamic range so that a single
+    // very loud harmonic doesn't dominate the score. FrameSpectrum stores raw
+    // magnitude because its other callers (TWM, fundamental presence) want
+    // linear amplitude ratios, so the compression happens here, once per
+    // frame rather than once per probe.
+    std::vector<double> square_root_spectrum(spectrum.magnitude.size());
     for (std::size_t index = 0; index < square_root_spectrum.size(); ++index) {
-        square_root_spectrum[index] = std::sqrt(std::abs(spectrum_buffer[index]));  // |complex bin| -> magnitude, then sqrt-compressed
+        square_root_spectrum[index] = std::sqrt(spectrum.magnitude[index]);
     }
 
     // Score every candidate frequency independently against the same
@@ -204,8 +141,8 @@ std::vector<double> swipe_prime_harmonic_supports(
     for (std::size_t index = 0; index < candidate_frequencies_hz.size(); ++index) {
         supports[index] = score_candidate(
             square_root_spectrum,
-            sample_rate,
-            fft_size,
+            spectrum.sample_rate,
+            spectrum.fft_size,
             candidate_frequencies_hz[index],
             maximum_analysis_frequency_hz
         );  // fill in this candidate's SWIPE'-style support score

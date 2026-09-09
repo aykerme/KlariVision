@@ -30,7 +30,7 @@ xcodebuild \
 5. `LiveModels.swift` + `LiveAnalyzer.swift` — mikrofon yaşam döngüsü
 6. `StudyWebView.swift` + `LiveWebView.swift` — kalıcı canvas köprüleri
 
-C ABI smoke testi sözleşme, üç motor ve create/process/finish/destroy yaşam
+C ABI smoke testi sözleşme, motor kimliği ve create/process/finish/destroy yaşam
 döngüsünü doğrular. Fiziksel VoiceOver kabul turu henüz “NOT RUN” durumundadır;
 TestFlight/App Store hazırlığı öncesinde tamamlanmalıdır.
 

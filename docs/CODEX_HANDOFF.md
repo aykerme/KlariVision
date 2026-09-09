@@ -1,6 +1,224 @@
 # Codex Görev Devri
 
-Son güncelleme: 20 Ağustos 2026
+Son güncelleme: 8 Eylül 2026
+
+## Android ürünü başlatıldı — 8 Eylül 2026
+
+**Sonraki oturum bu bölümden başlamalı.**
+
+Android portu `android/` altında çalışır durumda (D-043). Otomatik kapıların
+hepsi yeşil: fiziksel SM-A736B'de C ABI + yaşam döngüsü **56/56**, JVM birim
+testleri **246/246**, `assembleDebug` ve mevcut platform regresyonu (C++
+çekirdek, Python `100 passed / 1 skipped`, imzasız macOS Debug) geçti.
+
+### Sıradaki tek somut iş: fiziksel akış kabulü
+
+Cihazda **NOT RUN** olan tur şudur — başarısızlık değil, yapılmamış:
+mikrofon izni ve canlı grafik akışı, WAV kaydı → Çalışmalara ekleme, SAF ile
+dosya alma ve çözümleme, A/B döngüsü, oynatma hızı, video/grafik geçişi,
+kulaklık/Bluetooth rota değişimi, telefon kesintisi, arka plan dönüşü, yön
+değişimi. Kurulum:
+
+```bash
+cd android && ./gw --no-daemon :app:installDebug
+```
+
+### Bilinmesi gereken iki şey
+
+1. **RTF payı dar.** Canlı yol bu cihazda bütçenin %86'sını kullanıyor.
+   NEON iç çarpım yolu ve `RelWithDebInfo` native derleme olmadan pay
+   negatiftir (sırasıyla RTF 1,004 ve 7,68). Termal kısıtlama altında ve daha
+   zayıf cihazlarda yeniden ölçülmeli. Ölçüm testi:
+   `android/core/src/androidTest/.../RealtimeFactorBenchmark.kt`, sonuçlar
+   `adb logcat -s KlariVisionRTF:I` ile okunur.
+
+2. **Grafik HTML'leri iki yerde.** Kanonik kaynak
+   `ipad/KlariVisioniPadCoreSmoke/KlariVisioniPad/Resources/`, kopya
+   `android/app/src/main/assets/viewer/`. İkisi byte-eşit olmalı; düzenleme
+   kanonik tarafta yapılıp kopyalanır. Sözleşme:
+   `android/app/src/main/assets/viewer/README.md`.
+
+### Değişmeyenler
+
+C ABI v1 dondurulmuş; Android yalnız `unified_v1` (kimlik 4) kullanır.
+Motor davranışı, eşikler ve kalıcı veri biçimleri bu turda değişmedi —
+`Studies-v1.json` şeması iOS ile birebir aynıdır. Tek çekirdek değişikliği
+`pyin_ladder.cpp`'deki NEON yoludur ve Apple yolunu etkilemez.
+
+## Dış karşılaştırmada ölçüm hatası — 6 Eylül 2026
+
+**Sonraki oturum bu bölümden başlamalı.** Klarnet dışı ötüm kapsaması iş
+kalemine girildi ve kalemin dayanağının büyük kısmının ölçüm hatası olduğu
+bulundu. Ayrıntı ve sayılar `TEST_BASELINE.md`'nin en üstünde, karar notu
+D-038'in altında.
+
+Özetle: `on_hop_grid` motorun karelerinin ~%33'ünü puanlamadan önce siliyordu;
+pYIN referansları etkilenmiyordu, yani tablo tek yönde bozuktu. Düzeltilmiş
+tabloda `unified_v1` RPA bach10'da 0,64 → **0,95**, vocadito'da ~0,63 →
+**0,92**, mdb'de 0,31 → **0,47**. Oktav iddiası ayakta (mdb'de pYIN'in
+3,4–7,2 katı daha az), çarpanı düzeltildi.
+
+### Kalan açık, artık dar ve nicel
+
+Geliştirme bölümünün tamamında (96 dosya), aralık içi ötümlü karelerin
+kaderi: kaçırmanın baskın sebebi **sabit RMS kapısı (0,015)**, çekimserlik
+değil — mdb'de %26,6'ya karşı %4,2, vocadito'da %14,6'ya karşı %2,0.
+
+**Kalem kapatıldı (D-040).** Kapı olduğu yerde kalır. Projenin kendi donmuş
+yargıcı kapıyı suçlamıyor (`adverse_v1` vetosunun 23 karesinde 0 kapı), kapının
+baskın çıktığı tek yer yeniden sentezlenmiş dış stem'ler, ve o tabloya bakarak
+eşik indirmek D-038'in yasakladığı hareket. Kalem yeniden açılacaksa gereken
+yeni bir eşik denemesi değil, **ürün tarafından kanıttır**: sessiz çalınmış
+gerçek bir klarnet kaydında kapının ne kadarını kestiğinin ölçümü.
+
+### Bölme hazır
+
+`data/benchmarks/external-pitch-split-v1.json` (`afe1d9abdb40bbc2`):
+geliştirme 96 / holdout 72 / yedek 142. Koşucu `--split` alır ve hangi bölümden
+üretildiğini tabloya yazar. Ayar yalnız `--split development` ile yapılır.
+
+### Sonraki oturumun bilmesi gerekenler
+
+- **Ölçüm hattı da ölçülmeli.** Bu turda üç ayrı ızgara hatası çıktı ve üçü de
+  motorun kusuru gibi görünüyordu (çakışan yuvalar, kapsam dışı kalan baştaki
+  sessizlik, `3,5e-18` faz artığı). `tests/test_external_pitch_benchmark.py`
+  bunları bağladı; yeni bir ölçüt eklenirken aynısı yapılmalı.
+- `unified_trace --diagnostic` kare başına ret gerekçesi verir; bir "neden bu
+  nota yok" sorusu doğrudan buradan cevaplanır.
+### Açık kalanlar
+
+1. **iPad `KlariVisioniPadTests` temizden derlenmiyor** — `@testable import
+   KlariVisioniPad` "unable to resolve module dependency" veriyor. Bu **eski
+   bir kırık**: `310706e` (motor silmeden önceki commit) ayrı bir worktree'de
+   aynı hatayı veriyor. Artımlı derlemede görünmüyor, çünkü DerivedData'daki
+   eski modül soruyu cevaplıyor — bu yüzden fark edilmemiş ve bir süredir
+   AppStateTests hiç koşulmamış olabilir.
+
+   Denendi ve **çözmedi**: test hedefine `SWIFT_INCLUDE_PATHS =
+   $(BUILT_PRODUCTS_DIR)`. Hedefin bağımlılığı, `TEST_HOST` ve `BUNDLE_LOADER`
+   ayarları yerinde; sorun büyük olasılıkla explicit-module derlemesinde app
+   hedefinin `.swiftmodule`'ünün test hedefine görünür olmaması.
+
+   **Not:** iPad uygulamasının kendisi hem simülatör hem cihaz SDK'sıyla
+   derleniyor (`BUILD SUCCEEDED`), ve C ABI tarafını doğrulayan
+   `KlariVisionCoreSmokeTests` hedefi de derleniyor. Derlenemeyen tek şey bu
+   test paketi. Bu makinede simülatör cihazı tanımlı olmadığı için testler
+   zaten *koşulamıyor*; kırık olan derlenmeleri.
+2. **`adverse_v1` vetosu** (23 kare, sınır 12). Artık gerekçesi de ölçülü:
+   17 `unvoiced`, 2 `contested`, 2 `abstain-recovery`, 0 RMS kapısı. Ucuz ayar
+   yok; ölçülüp reddedilen altı kol tekrar denenmemeli.
+3. **Küçük borç:** `pitch_candidate.hpp`'nin `klarivision::core::v2` ad alanı;
+   mekanik yeniden adlandırma.
+
+## Faz 7 tamamlandı — `swipe_prime` `FrameSpectrum` üstüne katlandı — 6 Eylül 2026
+
+`swipe_prime.cpp` kendi pencere/FFT/interpolasyon kopyasını taşıyordu (216 →
+153 satır) ve aynı history'yi karede ikinci kez dönüştürüyordu.
+`swipe_prime_harmonic_supports()` artık ham örnek yerine hazır bir
+`FrameSpectrum` alır; çağıran `harmonic_evidence.cpp` ona `spectra.low`'u
+verir — SWIPE′ adayı **kendi** parçalılarına karşı puanladığı için pencere en
+düşük frekansı çözebilmeli ve düşük bant zaten tam history penceresidir.
+
+SWIPE′ çekirdeği değişmedi. sqrt sıkıştırması hâlâ interpolasyondan **önce**
+yapılır; tersi çekirdeği değiştirirdi. Tek davranış farkı bin çözünürlüğü
+(kendi FFT'si 4096, `FrameSpectrum` 4× dolguyla 16384).
+
+**Ölçüldü, varsayılmadı:** temiz ve oda holdout'ları bit düzeyinde aynı;
+adverse holdout'ta ciddi eksik ötüm **24 → 23**, sent farkı +0,003; ciddi
+harmonik hata beş holdout'un bütün varyantlarında hâlâ sıfır. Çevrimdışı iz
+%2,7 hızlandı. Sayılar `TEST_BASELINE.md`'nin en üstünde.
+`ACCEPTED_VETO_MISSING_VOICED_FRAMES` 24 → 23'e indirildi.
+
+### Sonraki oturumun işleri — öncelik sırasıyla
+
+1. **Klarnet dışı ötüm kapsaması** (D-038'den devam, kullanıcı bu turu
+   onayladı). Dış karşılaştırmada RPA 0,315–0,635, pYIN 0,66–0,99; fark
+   neredeyse tamamen voicing recall — perde doğru ölçülüyor, yayımlanmıyor.
+   **Sıra önemli:** önce ayrı bir doğrulama kümesi ayrılır, sonra girilir.
+   Dış tablo elimizdeki tek ayarlanmamış ölçüttür; ona bakarak ayar yapmak onu
+   ölçüt olmaktan çıkarır.
+2. **iPad `xcodebuild`** — bu makinede iOS platformu kurulu olmadığı için
+   koşulamadı (kullanıcı en sona bıraktı). Kurulduğunda ilk iş budur.
+3. **`adverse_v1` vetosu** (23 kare, sınır 12): ucuz ayar yok, mimari iş
+   gerekir; ölçülüp reddedilen altı kol `TEST_BASELINE.md`'de, tekrar
+   denenmemeli.
+4. **Küçük borç:** `pitch_candidate.hpp`'nin ad alanı hâlâ
+   `klarivision::core::v2`; mekanik yeniden adlandırma.
+
+## Faz 6 tamamlandı — dört eski motor silindi (D-039) — 6 Eylül 2026
+
+Kullanıcı kararıyla D-037'nin nihai hedefi uygulandı. **Sonraki oturum bu
+bölümden başlamalı.**
+
+### Yapılanlar
+
+- **C++:** `hapt`, `vpm_like`, `pitch_engine_v2`, `pitch_engine_v2_session`
+  kaynakları/başlıkları/testleri/araçları silindi. `analysis_engine.cpp`
+  2120 → 284 satır: geriye oturum yaşam döngüsü, pencereleme ve çevrimdışı
+  stray-run temizliği kaldı; her perde kararı artık `unified_*` dosyalarında.
+  Paylaşılan aday sözlüğü `pitch_candidate.hpp`'ye taşındı.
+- **ABI:** v1 **mutasyona uğratılmadı**. 0–3 kimlikleri ve yetenek bitleri
+  rezerve; kaldırılmış kimlikle create **hata döner** (hayatta kalan motora
+  yönlendirilmez). `kv_v2_session_*` sembolleri duruyor ve temiz başarısız
+  oluyor. `v2_fixed_lag_frames` rezerve alan olarak `5` bildirmeye devam ediyor.
+- **UI:** macOS ve iPad'de motor seçicileri kaldırıldı; yerine ne çalıştığını
+  söyleyen tek satır kondu. Kaldırılmış motoru adlandıran kayıtlı seçimler
+  `unified_v1`'e düşüyor; **çözümlenmiş çalışmalar kendi motor kimliklerini
+  koruyor** ve görüntüleyici onları "(kaldırıldı)" etiketiyle gösteriyor.
+- **Swift:** V2/VPM/YIN Swift aynaları, parite dışa aktarımları, karşılaştırma
+  grafiği (`LiveGraphDisplay`, yin/autocorrelation benchmark kareleri) ve
+  `ExperimentalHarmonicJumpGate` silindi. Canlı yol tek dal: C++ üretim
+  oturumu.
+- **Turnuva:** artık seçim değil ölçüm. `benchmark_winner`/`default_engine`/
+  `outcome` kaldırıldı; güvenlik kapısı aynı eşikle mutlak orana çevrildi
+  (`SAFETY_RATE_LIMIT = 0.005`).
+- **Silinen geliştirme araçları:** v2/vpm parite denetimleri, VPM kalibrasyonu,
+  Şükrü Tunar VPM tanılaması, motor ayrışma haritası (+HTML şablonu),
+  `run_pitch_regression_suite.py` (canlı-YIN ↔ pYIN kapısı) ve iki `evaluate_*`
+  tüketicisi, `pitch_track_cli --diagnostic`.
+
+### Bu turda bulunan iki gerçek kusur
+
+**macOS ve iPad Xcode projeleri `unified_*` kaynaklarını hiç derlemiyordu.**
+D-037'den beri her iki uygulama da kazanan motoru bağlayamazdı; `build_beta_app.sh`'de
+aynı hata bir önceki oturumda bulunmuştu, proje dosyalarında kalmıştı. İkisi de
+düzeltildi ve macOS Debug derlemesi geçti.
+
+### Sonraki oturumun işleri — öncelik sırasıyla
+
+1. **iPad hedefi bu makinede derlenemedi:** Xcode'da iOS 26.5 platformu kurulu
+   değil. Kod ve proje değişikliği yapıldı, `xcodebuild` doğrulaması
+   **koşulmadı**. Platform kurulduğunda ilk iş budur.
+2. **Faz 7 —** `swipe_prime.cpp`'nin `FrameSpectrum` üstüne katlanması, ardından
+   `graphify update .`.
+3. **Klarnet dışı ötüm kapsaması** (D-038'den devam). Dış karşılaştırmada
+   RPA 0,315–0,635, pYIN 0,66–0,99; fark neredeyse tamamen voicing recall.
+   **Uyarı:** dış tabloya bakılarak ayarlanamaz — o tablo elimizdeki tek
+   ayarlanmamış ölçüt. Önce ayrı bir doğrulama kümesi ayrılmalı.
+4. **`adverse_v1` vetosu** (D-038'den devam): 24 kare ciddi eksik ötüm, sınır
+   12. Artık teste sabitlendi (`ACCEPTED_VETO_MISSING_VOICED_FRAMES = 24`), yani
+   büyürse kırmızıya döner. `TEST_BASELINE.md`'de ölçülüp reddedilen altı kol
+   kayıtlı; **tekrar denenmemeli**, mimari iş gerekir.
+5. **Küçük borç:** `pitch_candidate.hpp`'nin ad alanı hâlâ
+   `klarivision::core::v2`. Mekanik bir yeniden adlandırma; motor silme
+   commit'ini okunabilir tutmak için ayrı bırakıldı.
+
+### Sonraki oturumun bilmesi gereken tuzaklar
+
+- **Turnuvanın kıyas tarafı artık yeniden üretilemez.** D-038'in koruduğu
+  `benchmark_winner=vpm_like` satırı yalnız `outputs/` altındaki raporlarda
+  kayıtlıdır. Bu, kararın bilinen bedelidir; "kaybolmuş" bir sonuç değildir.
+- Sayısal eşikler donmuş holdout'lara bakılarak seçildi. Hangi sabitin
+  `frozen-no-retuning-after-first-result`, hangisinin `diagnostic-may-be-retuned`
+  olduğu `TEST_BASELINE.md`'de yazılı.
+- `KLARIVISION_PITCH_TRACK_CLI` ayarlı değilse `build/klarivision-pitch-track-cli`
+  kullanılır ve **bayat kalabilir**; sabitler değiştiğinde yeniden derlenmeli.
+- `outputs/` altındaki motor izleri farklı derlemelerden kalmış olabilir;
+  kıyaslamadan önce tazelenir.
+- Motor davranışını değiştiren her tur, üç yerde birden duran gecikme sabitini
+  senkron tutmalı: `unified::kDefaultLagFrames`,
+  `scripts/pitch_tournament_engines.py:UNIFIED_DEFAULT_LAG_FRAMES` (C++
+  varsayılanını **gölgeler**) ve `src/klarivision/pitch/cpp_engine.py`.
 
 ## Dokümantasyon ve kaynak açıklama turu — 20 Ağustos
 
@@ -39,6 +257,102 @@ sıfır-parametreli closure'a geçirildi. C++ `scripts/test_core.sh`, Python
 Xcode derlemesi ve evrensel iOS Simulator `build-for-testing` geçti. HTML parse,
 yerel Markdown bağlantıları ve `git diff --check` temizdir. Sıradaki tek ürün
 işi değişmedi: gerçek iPhone VoiceOver odak/ad/değer/ipucu kabul turu.
+
+## `unified_v1` kazanan ilan edildi — 6 Eylül 2026 (oturum sonu)
+
+Karar D-038, sayılar `TEST_BASELINE.md`'nin en üst bölümünde. Sonraki oturum bu
+bölümden başlamalı.
+
+### Bu oturumda yapılanlar
+
+- **Karar gecikmesi 15 hop (160 ms) → 5 hop (53,3 ms).** 160 ms'nin gerekçesi
+  ölçümle çürüdü: harmonik hata 5–25 hop arasında her değerde sıfır, sent
+  hassasiyeti üç ondalığa kadar aynı. Değer **üç yerde birden** durur ve üçü
+  ayrı düşerse turnuva gönderilenden başka bir motoru ölçer:
+  `unified::kDefaultLagFrames`, `scripts/pitch_tournament_engines.py`
+  (`UNIFIED_DEFAULT_LAG_FRAMES` — C++ varsayılanını **gölgeler**) ve
+  `src/klarivision/pitch/cpp_engine.py`. Üçü de güncellendi, uyarı yorumları
+  yazıldı.
+- **Tam turnuva yeni değerle yeniden koşuldu.** Ciddi harmonik hata hâlâ 0;
+  veto hâlâ tek dosya. `fingerprint=00a55e42…`.
+- **Yeni kurulum varsayılanı `unified_v1`.** macOS `PitchEngineSettings.initialEngine`
+  ve iPad `iPadAppState.engine(_:)` yedeği. Mevcut kurulumlar kendi kayıtlı
+  seçimlerini korur.
+- **Üç bayat kayıt düzeltildi:** `LiveNotationTests.swift` beş motor eklendiğinden
+  beri kırmızıydı; `scripts/build_beta_app.sh` `unified_*` kaynaklarını
+  derlemiyordu (beta paketi link edemezdi); `tests/test_cpp_engine.py`
+  sözleşme stub'ı 15'i sabitlemişti.
+
+Doğrulandı: `scripts/test_core.sh` temiz, `pytest` 127 geçti / 1 atlandı,
+`swift test` (macos/KlariVision) 50 test / 2 atlandı / **0 hata**, tam sentetik
+turnuva koşuldu.
+
+### Sonraki oturumun işleri — öncelik sırasıyla
+
+1. **Klarnet dışı ötüm kapsaması.** Dış karşılaştırmada RPA 0,315–0,635, pYIN
+   0,66–0,99; fark neredeyse tamamen voicing recall. Perde doğru ölçülüyor,
+   yayımlanmıyor. **Uyarı:** bu, dış tabloya bakılarak ayarlanamaz — o tablo
+   elimizdeki tek ayarlanmamış ölçüt. Önce ayrı bir doğrulama kümesi ayrılmalı,
+   sonra girilmeli.
+2. **`adverse_v1` vetosu.** Kullanıcı şimdilik kabul etti ama kapanmadı: ciddi
+   eksik ötüm 24 kare, sınır 12. `TEST_BASELINE.md`'de ölçülüp reddedilen altı
+   kol kayıtlı (düşük register onayı, geçiş genişliği, yapışkan kurtarma,
+   gecikme, ötüm tabanları, emisyon kalibrasyonu) — hiçbiri kımıldatmıyor.
+   Ucuz ayar yok; mimari iş gerekir. Kollar tekrar denenmemeli.
+3. **Faz 6 — dört eski motorun silinmesi** (D-037'nin nihai hedefi) ve
+   `analysis_engine.cpp:538-689` ölü kodu. ABI numaraları 0–3 kalıcıdır,
+   yeniden numaralandırılmaz.
+4. **Faz 7 —** `swipe_prime.cpp`'nin `FrameSpectrum` üstüne katlanması,
+   ardından `graphify update .`.
+
+### Sonraki oturumun bilmesi gereken tuzaklar
+
+- Sayısal eşikler donmuş holdout'lara bakılarak seçildi. Dış tablo onların
+  **zarar vermediğini** gösterir, onları haklı çıkarmaz. Hangi sabitin
+  `frozen-no-retuning-after-first-result`, hangisinin `diagnostic-may-be-retuned`
+  olduğu `TEST_BASELINE.md`'de yazılı — yeni bir ayar turuna girmeden önce
+  okunmalı.
+- Turnuvanın `benchmark_winner=vpm_like` / `outcome=candidate_requires_parity`
+  satırları **kasten** öyle bırakıldı. Kazanan ilanı ürün kararıdır (D-038),
+  ölçümün üstüne konur; ölçümü yeniden yazmak bu ayrımı yok eder.
+- `KLARIVISION_PITCH_TRACK_CLI` ayarlı değilse `build/klarivision-pitch-track-cli`
+  kullanılır ve **bayat kalabilir**. Sabitler değiştiğinde yeniden derlenmeli;
+  `pytest` sözleşme testi bunu yakalamaz (stub kullanır).
+- `outputs/` altındaki motor izleri farklı derlemelerden kalmış olabilir;
+  kıyaslamadan önce tazelenir.
+
+## Birleşik motor `unified_v1` — 6 Eylül 2026
+
+Beşinci motor eklendi ve her seçim yüzeyine kaydedildi; `yin_v1` varsayılan
+olarak kaldı. Karar gerekçesi ve kalıcı sözleşmeler `docs/DECISIONS.md` D-037,
+ölçülmüş sonuç `docs/TEST_BASELINE.md`'dedir.
+
+Özet sonuç: oktav tuzağı paketinin üç varyantında da **ciddi harmonik hatası
+sıfır** olan tek motor; donmuş dinleyici kararlarının 85 aralığının tamamında
+sıfır yeni kusur; sentetik oturum testlerinde %100 kapsama. Gerçek kayıtta
+kapsama sevkiyattaki motorla başabaş (%77,9 / %86,5 / %78,5 karşısında %79,5 /
+%87,1 / %80,8), iki kayıtta hiç harmonik uyuşmazlık yok.
+
+Doğrulandı: `zsh scripts/test_core.sh`, `pytest` (128 test), macOS `xcodebuild`
+Debug derlemesi, `quick_pitch_check.py`.
+
+### Sıradaki tek somut iş
+
+`scripts/run_external_pitch_benchmark.py` yazılacak.
+`scripts/fetch_external_pitch_datasets.py` hazır ve hangi kümenin gerçekten
+indirilebilir olduğunu kaydediyor (MDB-stem-synth, PTDB-TUG, vocadito
+otomatik; MIR-1K erişim kısıtlı). Runner `mir_eval.melody` ile RPA, RCA, GPE,
+voicing recall/false alarm raporlamalı; **RPA − RCA** birinci sınıf sütun
+olmalı, çünkü o fark tanımı gereği oktav hata oranıdır ve bu proje için en
+bilgilendirici tek sayıdır.
+
+Bu takım bir **iddia kapısıdır, ayar hedefi değildir**: klarnet yargıçları neyi
+optimize ettiğimizi söyler, bu küme neyi bozmadığımızı. Sayıları kaydedilir ve
+gerilememesi beklenir; doğrudan onlara karşı ayar yapılmaz. Motoru genel amaçlı
+diye adlandırıp yalnız klarnetle ölçmek, ölçülmemiş bir iddiadır.
+
+Ondan sonra: eski dört motorun tek commit'te silinmesi (D-037'deki ABI kuralına
+uyarak) ve `analysis_engine.cpp:538-689` ölü kodunun temizlenmesi.
 
 ## Aktif handoff özeti
 

@@ -57,7 +57,14 @@ def run(output: Path = DEFAULT_JSON, markdown: Path = DEFAULT_MARKDOWN, source_n
             for engine in sorted(selected_engines or ENGINES):
                 track = temporary / f"{source.stem}.{engine}.offline_track_v1.json"
                 started = time.monotonic()
-                extract(wav, engine, track)  # Same bundled C++ CLI contract as Study.
+                # baseline=True: this script's whole point is scoring the
+                # causal_baseline/offline_changes surfaces below, which the
+                # CLI only fills in when asked. `track` is a fresh file under
+                # this run's TemporaryDirectory (never reused across runs),
+                # so there is no stale non-baseline cache to worry about
+                # invalidating -- every run here already recomputes from
+                # scratch.
+                extract(wav, engine, track, baseline=True)  # Same bundled C++ CLI contract as Study.
                 validation = validation_for_study(source.name, wav, track, engine, prepare_display_frames)
                 assert validation is not None
                 runtime = round(time.monotonic() - started, 4)

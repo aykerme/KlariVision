@@ -4,6 +4,7 @@
 // kullanır; burada durum sahiplenilmez, yalnız bağlamalar tüketilir.
 
 import SwiftUI
+import UIKit
 
 /// Gear button that replaces the old inline `Menu`s.  Both workspaces show it
 /// in the same slot their previous menu occupied, so the control bars keep
@@ -103,6 +104,111 @@ struct iPadRecordButton: View {
         } else {
             withAnimation(.default) { isBlinking = false }
         }
+    }
+}
+
+// MARK: - "Birlikte Çal" (T6)
+
+/// Dinleme çalışma alanına eklenen "Birlikte Çal" aç/kapa denetimi.
+/// Görsel dil `loopButton` ile aynı: açıkken dolgulu, kapalıyken çerçeveli —
+/// yalnız renkle değil, doldurma durumuyla da anlatılır.
+struct iPadTogetherModeButton: View {
+    let isOn: Bool
+    let isBusy: Bool
+    let action: () -> Void
+
+    @ViewBuilder private var content: some View {
+        if isBusy {
+            ProgressView().frame(width: 44, height: 44)
+        } else {
+            Label("Birlikte Çal", systemImage: "mic.fill").labelStyle(.iconOnly)
+                .frame(minWidth: 44, minHeight: 44)
+        }
+    }
+
+    var body: some View {
+        if isOn {
+            Button(action: action) { content }
+                .buttonStyle(.borderedProminent).controlSize(.large).disabled(isBusy)
+                .accessibilityLabel("Birlikte Çal").accessibilityValue("Açık")
+                .accessibilityHint("Mikrofonu açar; çaldığınız eğri referansın üstüne ayrı renkte çizilir")
+        } else {
+            Button(action: action) { content }
+                .buttonStyle(.bordered).controlSize(.large).disabled(isBusy)
+                .accessibilityLabel("Birlikte Çal").accessibilityValue("Kapalı")
+                .accessibilityHint("Mikrofonu açar; çaldığınız eğri referansın üstüne ayrı renkte çizilir")
+        }
+    }
+}
+
+/// Yalnız referans çıkışını sessize alır — akustik geri besleme içindir.
+/// Mikrofon çizimi sürmeye devam eder (bkz. `iPadTogetherSession.setMuted`).
+/// Yalnız "Birlikte Çal" açıkken görünür.
+struct iPadTogetherMuteButton: View {
+    let isMuted: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Label(isMuted ? "Ses çıkışını aç" : "Ses çıkışını kapat",
+                  systemImage: isMuted ? "speaker.slash.fill" : "speaker.wave.2.fill")
+                .labelStyle(.iconOnly)
+        }
+        .buttonStyle(.bordered)
+        .controlSize(.large)
+        .frame(minWidth: 44, minHeight: 44)
+        .accessibilityLabel(isMuted ? "Ses çıkışını aç" : "Ses çıkışını kapat")
+        .accessibilityValue(isMuted ? "Sessiz" : "Açık")
+        .accessibilityHint("Akustik geri beslemeyi önlemek için yalnız referans sesini sessize alır")
+    }
+}
+
+/// Mod açıkken görünen, tek satırlık kulaklık önerisi. Gerekçe: hoparlörden
+/// çalarken referansın kendisi mikrofona girip "kullanıcının eğrisi" gibi
+/// çizilebilir (akustik geri besleme).
+struct iPadTogetherHeadphoneHint: View {
+    var body: some View {
+        Label("Birlikte Çal açık — kulaklık kullanın, aksi halde referans sesi mikrofona karışabilir", systemImage: "headphones")
+            .font(.caption)
+            .foregroundStyle(.secondary)
+            .lineLimit(1)
+            .minimumScaleFactor(0.7)
+            .accessibilityElement(children: .combine)
+    }
+}
+
+/// Mikrofon izni reddi dahil, "Birlikte Çal" başlatma hatalarını gösterir.
+struct iPadTogetherErrorText: View {
+    let message: String
+
+    var body: some View {
+        Label(message, systemImage: "exclamationmark.triangle.fill")
+            .font(.footnote)
+            .foregroundStyle(.red)
+            .accessibilityElement(children: .combine)
+    }
+}
+
+/// Hex string ↔ `Color` — yalnız bu dosyadaki "Birlikte Çal" renk seçicisi
+/// için. Diğer grafik renkleri (Ayarlar sekmesi) düz `TextField` ile hex
+/// string tutmaya devam ediyor; bu yalnız `ColorPicker` köprüsü.
+private extension Color {
+    init(hexString: String) {
+        var value: UInt64 = 0
+        let cleaned = hexString.trimmingCharacters(in: CharacterSet(charactersIn: "#"))
+        Scanner(string: cleaned).scanHexInt64(&value)
+        let r = Double((value >> 16) & 0xFF) / 255
+        let g = Double((value >> 8) & 0xFF) / 255
+        let b = Double(value & 0xFF) / 255
+        self.init(red: r, green: g, blue: b)
+    }
+
+    var hexString: String {
+        guard let components = UIColor(self).cgColor.components, components.count >= 3 else { return "#FF9F0A" }
+        let r = Int((components[0] * 255).rounded())
+        let g = Int((components[1] * 255).rounded())
+        let b = Int((components[2] * 255).rounded())
+        return String(format: "#%02X%02X%02X", r, g, b)
     }
 }
 
@@ -208,6 +314,7 @@ struct iPadMakamIntervalsView: View {
 /// (and its end-of-range dimming) is preserved for free.
 struct iPadStudySettingsSheet: View {
     @Bindable var study: iPadStudyState
+    @Bindable var appState: iPadAppState
     let intervals: iPadMakamIntervalsStore
     /// iPad keeps its own "Takip" toggle in the control bar; only the compact
     /// layout surfaces it here.
@@ -218,6 +325,20 @@ struct iPadStudySettingsSheet: View {
         Binding(
             get: { iPadStudyPlaybackRate.index(for: study.rate) },
             set: { study.setRate(iPadStudyPlaybackRate.rate(at: $0)) }
+        )
+    }
+
+    private var micColorBinding: Binding<Color> {
+        Binding(
+            get: { Color(hexString: appState.graphMicColor) },
+            set: { appState.graphMicColor = $0.hexString }
+        )
+    }
+
+    private var micAlignmentBinding: Binding<Double> {
+        Binding(
+            get: { appState.togetherMicAlignmentMs },
+            set: { appState.togetherMicAlignmentMs = $0 }
         )
     }
 
@@ -244,6 +365,50 @@ struct iPadStudySettingsSheet: View {
                     Section("Grafik") {
                         Toggle("Eğriyi takip et", isOn: Binding(get: { study.followsCurve }, set: { _ in study.toggleFollow() }))
                     }
+                }
+                Section {
+                    ColorPicker("Mikrofon eğrisi rengi", selection: micColorBinding, supportsOpacity: false)
+                } header: {
+                    Text("Birlikte Çal")
+                } footer: {
+                    Text("Mikrofonla çaldığınız eğri bu renkle, referansın üstüne çizilir.")
+                }
+                Section {
+                    Slider(value: micAlignmentBinding, in: -200...200, step: 5) {
+                        Text("Mikrofon hizalama")
+                    } minimumValueLabel: {
+                        Text("−200").font(.caption).monospacedDigit()
+                    } maximumValueLabel: {
+                        Text("+200").font(.caption).monospacedDigit()
+                    }
+                    .accessibilityLabel("Mikrofon hizalama")
+                    .accessibilityValue("\(Int(appState.togetherMicAlignmentMs)) milisaniye")
+                    LabeledContent("Hizalama") {
+                        Text("\(Int(appState.togetherMicAlignmentMs)) ms").monospacedDigit()
+                    }
+                    if appState.togetherMicAlignmentMs != 0 {
+                        Button("Sıfırla") { appState.togetherMicAlignmentMs = 0 }
+                    }
+                    if let source = study.togetherLatencySource {
+                        LabeledContent("Ölçülen gecikme") {
+                            if let ms = study.togetherLatencyMilliseconds {
+                                Text("\(Int(ms)) ms").monospacedDigit()
+                            } else {
+                                Text("—")
+                            }
+                        }
+                        Text(source.rawValue)
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                    } else {
+                        Text("Ölçüm için Birlikte Çal'ı bir kez açın.")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                    }
+                } header: {
+                    Text("Mikrofon hizalama")
+                } footer: {
+                    Text("Bu ince ayardır: uygulama giriş gecikmesini cihazdan ölçer, kaydırıcı yalnız kalan sapmayı düzeltir. 5 ms adımlarla, −200…+200 ms arası.")
                 }
                 iPadMusicContextSection(
                     makam: Binding(get: { study.currentStudy?.context.makam ?? .nihavend }, set: { study.updateContext(makam: $0) }),

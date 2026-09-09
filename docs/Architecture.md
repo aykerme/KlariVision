@@ -11,8 +11,8 @@ canlı ses akışları ile yaşam döngüsü diyagramları için
 2. **Platform servisleri:** AVFoundation, dosya alma, yerel kayıt, medya
    oynatma ve kalıcı ayarlar.
 3. **Pitch adaptörü:** 48 kHz mono Float32 PCM'i C ABI v1 oturumuna verir.
-4. **C++ çekirdek:** YIN v1, Pitch Engine v2 ve VPM-benzeri motorlardan zaman,
-   frekans, güven ve seslilik kareleri üretir.
+4. **C++ çekirdek:** tek motor `unified_v1` ile zaman, frekans, güven ve
+   seslilik kareleri üretir (D-039; ABI kimlikleri 0–3 rezerve).
 5. **Görselleştirme:** Swift'in hazırladığı veriyi kalıcı bir WKWebView canvas
    üzerinde çizer; makam/karar kılavuzları ölçümü değiştirmez.
 

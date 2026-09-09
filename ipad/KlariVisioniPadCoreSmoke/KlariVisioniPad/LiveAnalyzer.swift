@@ -286,8 +286,8 @@ final class iPadLiveState {
 
     var musicContext: iPadMusicContext { iPadMusicContext(makam: makam, karar: karar, followsCurve: followsCurve, scaleDisplay: scaleDisplay) }
 
-    func configure(graphPitchColor: String, guideColor: String, makamIntervals: iPadMakamIntervalsStore? = nil) {
-        graph.setStyle(pitchColor: graphPitchColor, guideColor: guideColor, makamIntervals: makamIntervals)
+    func configure(graphPitchColor: String, guideColor: String, kararColor: String, makamIntervals: iPadMakamIntervalsStore? = nil) {
+        graph.setStyle(pitchColor: graphPitchColor, guideColor: guideColor, kararColor: kararColor, makamIntervals: makamIntervals)
         publishContext()
     }
 

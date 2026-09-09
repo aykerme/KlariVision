@@ -44,3 +44,10 @@ buildServer.json
 # Local-only tool state
 .claude/settings.local.json
 .ua/
+
+# Graphify üretilmiş bilgi grafiği (graphify update . ile yeniden üretilir)
+graphify-out/
+.claude/settings.json.graphify-bak
+
+# Dış perde değerlendirme kümeleri (indirilir, Git'e girmez)
+data/external/

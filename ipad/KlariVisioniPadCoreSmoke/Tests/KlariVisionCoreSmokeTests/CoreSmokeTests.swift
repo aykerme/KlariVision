@@ -9,16 +9,28 @@ final class CoreSmokeTests: XCTestCase {
         XCTAssertEqual(contract.sample_rate_hz, 48_000)
         XCTAssertEqual(contract.window_size, 1_536)
         XCTAssertEqual(contract.hop_size, 512)
+        // Reserved field: it described pitch_engine_v2, which D-039 removed.
+        // The struct layout and this value are the frozen part, not the
+        // meaning; the live engine's lag is kv_unified_lag_frames().
         XCTAssertEqual(contract.v2_fixed_lag_frames, 5)
-        XCTAssertNotEqual(contract.capabilities & UInt32(KV_CAP_ENGINE_YIN_V1), 0)
-        XCTAssertNotEqual(contract.capabilities & UInt32(KV_CAP_ENGINE_V2), 0)
-        XCTAssertNotEqual(contract.capabilities & UInt32(KV_CAP_ENGINE_VPM_LIKE), 0)
-        XCTAssertNotEqual(contract.capabilities & UInt32(KV_CAP_ENGINE_HAPT_V1), 0)
+        XCTAssertNotEqual(contract.capabilities & UInt32(KV_CAP_ENGINE_UNIFIED_V1), 0)
+        // Removed engines: the bit position stays reserved and reads clear.
+        XCTAssertEqual(contract.capabilities & UInt32(KV_CAP_ENGINE_YIN_V1), 0)
+        XCTAssertEqual(contract.capabilities & UInt32(KV_CAP_ENGINE_V2), 0)
+        XCTAssertEqual(contract.capabilities & UInt32(KV_CAP_ENGINE_VPM_LIKE), 0)
+        XCTAssertEqual(contract.capabilities & UInt32(KV_CAP_ENGINE_HAPT_V1), 0)
+
+        // A reserved engine id is refused, never served by the survivor.
+        for removed in [KV_ENGINE_YIN_V1, KV_ENGINE_V2, KV_ENGINE_VPM_LIKE, KV_ENGINE_HAPT_V1] {
+            XCTAssertNil(kv_production_pitch_session_create(
+                Int32(removed), contract.default_minimum_rms
+            ))
+        }
 
         let sampleRate = 48_000.0
         let windowSize = Int(contract.window_size)
         let hopSize = Int(contract.hop_size)
-        for engine in [KV_ENGINE_YIN_V1, KV_ENGINE_V2, KV_ENGINE_VPM_LIKE, KV_ENGINE_HAPT_V1] {
+        for engine in [KV_ENGINE_UNIFIED_V1] {
             guard let session = kv_production_pitch_session_create(Int32(engine), contract.default_minimum_rms) else {
                 return XCTFail("C ABI oturumu oluşturulamadı: \(engine)")
             }

@@ -1,0 +1,9 @@
+#!/bin/sh
+# KlariVision Android derleme sarmalayıcısı.
+# Sistem Java'sı yok; JDK Homebrew altında keg-only kurulu. Bu betik yalnız
+# ortamı sabitler ve Gradle wrapper'ını çağırır. Tüm derlemeler bununla koşar.
+export JAVA_HOME="${JAVA_HOME:-/opt/homebrew/opt/openjdk@21}"
+export ANDROID_HOME="${ANDROID_HOME:-/opt/homebrew/share/android-commandlinetools}"
+export ANDROID_NDK_HOME="${ANDROID_NDK_HOME:-$ANDROID_HOME/ndk/27.3.13750724}"
+export PATH="$ANDROID_HOME/platform-tools:$PATH"
+exec "$(dirname "$0")/gradlew" "$@"

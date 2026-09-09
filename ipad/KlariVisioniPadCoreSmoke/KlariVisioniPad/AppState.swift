@@ -79,20 +79,18 @@ struct iPadCompactNavigationState: Equatable {
     }
 }
 
+/// One case since D-039. The raw values are persisted in `Studies-v1.json`
+/// and in UserDefaults, so decoding a study recorded under a removed engine
+/// must not throw -- see `engine(_:)`, which maps any unknown or removed id
+/// onto the engine this build has.
 enum iPadPitchEngine: String, CaseIterable, Identifiable, Codable {
-    case yinV1 = "yin_v1"
-    case pitchEngineV2 = "pitch_engine_v2"
-    case vpmLike = "vpm_like"
-    case haptV1 = "hapt_v1"
+    case unifiedV1 = "unified_v1"
 
     var id: String { rawValue }
 
     var title: String {
         switch self {
-        case .yinV1: "YIN v1"
-        case .pitchEngineV2: "Pitch Engine v2"
-        case .vpmLike: "VPM-benzeri"
-        case .haptV1: "Harmonik-Faz (HAPT)"
+        case .unifiedV1: "Birleşik (Unified v1)"
         }
     }
 }
@@ -215,8 +213,8 @@ struct iPadMusicContext: Codable, Equatable {
     /// already clips to whatever's currently visible, so this just needs to
     /// cover any vertical range/zoom/follow position the graph can reach,
     /// not just the one octave straight above the karar.
-    func guideNotes(commas overrideCommas: [Int]? = nil) -> [(name: String, hz: Double)] {
-        if scaleDisplay == .turkish { return iPadTurkishPitchReference.notes }
+    func guideNotes(commas overrideCommas: [Int]? = nil) -> [(name: String, hz: Double, isKarar: Bool)] {
+        if scaleDisplay == .turkish { return iPadTurkishPitchReference.notes.map { ($0.name, $0.hz, false) } }
         let cycle = Self.perdeCycle
         guard let rootIndex = cycle.firstIndex(of: karar) else { return [] }
         let rootKoma = Self.naturalKoma(for: karar)
@@ -224,7 +222,7 @@ struct iPadMusicContext: Codable, Equatable {
         // 7 within-octave degrees is only listed once, then re-added at every
         // octave shift below.
         let degreeCommas = Array((overrideCommas ?? makam.guideCommas).dropLast())
-        var notes: [(name: String, hz: Double)] = []
+        var notes: [(name: String, hz: Double, isKarar: Bool)] = []
         notes.reserveCapacity(degreeCommas.count * 7)
         for octaveShift in -3...3 {
             for degree in degreeCommas.indices {
@@ -236,7 +234,7 @@ struct iPadMusicContext: Codable, Equatable {
                 let suffix = adjustment == 0 ? "" : " \(adjustment > 0 ? "♯" : "♭")\(abs(adjustment))"
                 let midi = Int((69 + 12 * log2(hz / 440)).rounded())
                 let octave = midi / 12 - 1
-                notes.append(("\(base.rawValue)\(octave)\(suffix)", hz))
+                notes.append(("\(base.rawValue)\(octave)\(suffix)", hz, degree == 0))
             }
         }
         return notes
@@ -336,7 +334,10 @@ final class iPadAppState {
     static let liveGateKey = "klarivision-ipad-live-signal-gate-dbfs-v1"
     static let graphPitchColorKey = "klarivision-ipad-graph-pitch-color-v1"
     static let graphGuideColorKey = "klarivision-ipad-graph-guide-color-v1"
+    static let graphKararColorKey = "klarivision-ipad-graph-karar-color-v1"
+    static let graphMicColorKey = "klarivision-ipad-graph-mic-color-v1"
     static let komaIntervalsKey = "klarivision-ipad-53-koma-intervals-v1"
+    static let togetherMicAlignmentMsKey = "klarivision-ipad-together-mic-alignment-ms-v1"
     static let defaultKomaIntervals = [4, 4, 5, 4, 4, 5, 4, 4, 5, 4, 5, 5]
 
     var selection: iPadSection = .home
@@ -346,6 +347,9 @@ final class iPadAppState {
     var liveSignalGateDbFS: Double { didSet { defaults.set(Self.clampedGate(liveSignalGateDbFS), forKey: Self.liveGateKey) } }
     var graphPitchColor: String { didSet { defaults.set(graphPitchColor, forKey: Self.graphPitchColorKey) } }
     var graphGuideColor: String { didSet { defaults.set(graphGuideColor, forKey: Self.graphGuideColorKey) } }
+    var graphKararColor: String { didSet { defaults.set(graphKararColor, forKey: Self.graphKararColorKey) } }
+    var graphMicColor: String { didSet { defaults.set(graphMicColor, forKey: Self.graphMicColorKey) } }
+    var togetherMicAlignmentMs: Double { didSet { defaults.set(Self.clampedMicAlignmentMs(togetherMicAlignmentMs), forKey: Self.togetherMicAlignmentMsKey) } }
     var komaIntervals: [Int] { didSet { if Self.validKomaIntervals(komaIntervals) { defaults.set(komaIntervals, forKey: Self.komaIntervalsKey) } } }
     /// Shared, single instance — Study and Live graphs both read this via
     /// `configure(...)` so an edit in Settings updates both immediately.
@@ -362,16 +366,24 @@ final class iPadAppState {
         liveSignalGateDbFS = Self.clampedGate(defaults.object(forKey: Self.liveGateKey) as? Double ?? -42)
         graphPitchColor = defaults.string(forKey: Self.graphPitchColorKey) ?? "#67d5ff"
         graphGuideColor = defaults.string(forKey: Self.graphGuideColorKey) ?? "#b7d8ff"
+        graphKararColor = defaults.string(forKey: Self.graphKararColorKey) ?? "#E75A5A"
+        graphMicColor = defaults.string(forKey: Self.graphMicColorKey) ?? "#FF9F0A"
+        togetherMicAlignmentMs = Self.clampedMicAlignmentMs(defaults.object(forKey: Self.togetherMicAlignmentMsKey) as? Double ?? 0)
         let storedIntervals = defaults.array(forKey: Self.komaIntervalsKey) as? [Int] ?? Self.defaultKomaIntervals
         komaIntervals = Self.validKomaIntervals(storedIntervals) ? storedIntervals : Self.defaultKomaIntervals
     }
 
+    /// Fresh installs, unreadable values and any id naming one of the four
+    /// engines removed in D-039 all resolve to unified_v1 -- the only engine
+    /// this build can run. Previously analysed studies keep their own stored
+    /// results; only the *selection* falls back.
     static func engine(_ value: String?) -> iPadPitchEngine {
-        iPadPitchEngine(rawValue: value ?? "") ?? .yinV1
+        iPadPitchEngine(rawValue: value ?? "") ?? .unifiedV1
     }
 
     static func clampedGate(_ dbFS: Double) -> Double { min(-20, max(-60, dbFS)) }
     static func rms(forDbFS dbFS: Double) -> Double { pow(10, clampedGate(dbFS) / 20) }
+    static func clampedMicAlignmentMs(_ valueMs: Double) -> Double { max(-200, min(200, valueMs)) }
     static func validKomaIntervals(_ values: [Int]) -> Bool { values.count == 12 && values.allSatisfy { $0 > 0 } && values.reduce(0, +) == 53 }
     func resetKomaIntervals() { komaIntervals = Self.defaultKomaIntervals; defaults.set(komaIntervals, forKey: Self.komaIntervalsKey) }
 }

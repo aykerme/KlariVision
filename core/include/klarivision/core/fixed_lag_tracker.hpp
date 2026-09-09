@@ -1,6 +1,6 @@
 #pragma once
 
-#include "klarivision/core/pitch_engine_v2.hpp"
+#include "klarivision/core/pitch_candidate.hpp"
 
 #include <cstddef>
 #include <deque>

@@ -3,46 +3,61 @@ import XCTest
 @testable import KlariVisionApp
 
 final class LiveNotationTests: XCTestCase {
-    func testPitchEngineSettingsKeepsFourNeutralUserChoices() {
-        XCTAssertEqual(
-            PitchEngineSettings.userChoices.map(\.id),
-            ["yin_v1", "pitch_engine_v2", "vpm_like", "hapt_v1"]
-        )
-        XCTAssertEqual(
-            PitchEngineSettings.userChoices.map(\.title),
-            ["YIN v1", "Pitch Engine v2", "VPM-benzeri", "Harmonik-Faz (HAPT)"]
-        )
-        XCTAssertEqual(PitchEngineSettings.initialEngine, "yin_v1")
-        XCTAssertEqual(PitchEngineSettings.resolvedSelection(nil), "yin_v1")
-        XCTAssertEqual(PitchEngineSettings.resolvedSelection("not-a-pitch-engine"), "yin_v1")
+    func testPitchEngineSettingsExposesTheOneRemainingEngine() {
+        XCTAssertEqual(PitchEngineSettings.userChoices.map(\.id), ["unified_v1"])
+        XCTAssertEqual(PitchEngineSettings.userChoices.map(\.title), ["Birleşik (Unified v1)"])
+        XCTAssertEqual(PitchEngineSettings.initialEngine, "unified_v1")
+        XCTAssertEqual(PitchEngineSettings.resolvedSelection(nil), "unified_v1")
+        XCTAssertEqual(PitchEngineSettings.resolvedSelection("not-a-pitch-engine"), "unified_v1")
         for engine in PitchEngineSettings.userChoices {
             XCTAssertEqual(PitchEngineSettings.resolvedSelection(engine.id), engine.id)
             XCTAssertFalse(engine.title.localizedCaseInsensitiveContains("deneysel"))
         }
     }
 
+    /// An install that still holds a removed engine's id must resolve to the
+    /// engine this build has, on every surface, rather than keeping a dead
+    /// selection alive or failing to start.
+    func testStoredSelectionOfARemovedEngineFallsBackToTheSurvivor() {
+        let suiteName = "KlariVisionRemovedEngineFallback-\(UUID().uuidString)"
+        let defaults = try! XCTUnwrap(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        for removed in ["yin_v1", "pitch_engine_v2", "vpm_like", "hapt_v1"] {
+            XCTAssertEqual(PitchEngineSettings.resolvedSelection(removed), "unified_v1")
+            for key in [PitchEngineSettings.studyEngineKey,
+                        PitchEngineSettings.liveEngineKey,
+                        PitchEngineSettings.togetherEngineKey] {
+                defaults.set(removed, forKey: key)
+                XCTAssertEqual(
+                    PitchEngineSettings.storedSelection(for: key, defaults: defaults),
+                    "unified_v1"
+                )
+            }
+        }
+    }
+
+    /// The three keys stay separate even though they can currently only hold
+    /// one value: the separation is the persisted contract, and collapsing it
+    /// would silently merge three user settings if a second engine returns.
     func testPitchEngineSelectionPersistsIndependentlyForStudyAndLiveModes() {
         let suiteName = "KlariVisionPitchEngineSettingsTests-\(UUID().uuidString)"
         let defaults = try! XCTUnwrap(UserDefaults(suiteName: suiteName))
         defer { defaults.removePersistentDomain(forName: suiteName) }
 
-        defaults.set("vpm_like", forKey: PitchEngineSettings.studyEngineKey)
-        defaults.set("pitch_engine_v2", forKey: PitchEngineSettings.liveEngineKey)
+        XCTAssertNotEqual(PitchEngineSettings.studyEngineKey, PitchEngineSettings.liveEngineKey)
+        XCTAssertNotEqual(PitchEngineSettings.studyEngineKey, PitchEngineSettings.togetherEngineKey)
+        XCTAssertNotEqual(PitchEngineSettings.liveEngineKey, PitchEngineSettings.togetherEngineKey)
 
+        defaults.set("unified_v1", forKey: PitchEngineSettings.studyEngineKey)
         XCTAssertEqual(
             PitchEngineSettings.storedSelection(
                 for: PitchEngineSettings.studyEngineKey,
                 defaults: defaults
             ),
-            "vpm_like"
+            "unified_v1"
         )
-        XCTAssertEqual(
-            PitchEngineSettings.storedSelection(
-                for: PitchEngineSettings.liveEngineKey,
-                defaults: defaults
-            ),
-            "pitch_engine_v2"
-        )
+        XCTAssertNil(defaults.string(forKey: PitchEngineSettings.liveEngineKey))
     }
 
     func testAppThemeHasStablePersistedChoices() {
@@ -56,8 +71,8 @@ final class LiveNotationTests: XCTestCase {
     func testAccessibilityCopyKeepsEngineChoiceNeutralAndDropFailureActionable() {
         XCTAssertEqual(AccessibilityText.listeningStatus, "Dinleme durumu")
         XCTAssertEqual(AccessibilityText.practiceStatus, "Çalma durumu")
-        XCTAssertTrue(AccessibilityText.enginePickerHint.contains("eşit kullanıcı seçenekleridir"))
-        XCTAssertFalse(AccessibilityText.enginePickerHint.localizedCaseInsensitiveContains("öner"))
+        XCTAssertTrue(AccessibilityText.engineDescription.contains("Birleşik (Unified v1)"))
+        XCTAssertFalse(AccessibilityText.engineDescription.localizedCaseInsensitiveContains("öner"))
 
         let library = RecentLibrary()
         library.reportDroppedFileFailure()
@@ -345,6 +360,75 @@ final class LiveNotationTests: XCTestCase {
 
         clock.applySnapshot(time: 0.4, duration: 1, isPlaying: false, rate: 2, discontinuity: false, at: 0.10)
         XCTAssertEqual(clock.advance(to: 1), 0.4, accuracy: 0.000_001)
+    }
+
+    // "Birlikte Çal" mikrofon karesi → medya zamanı eşlemesi. Kare, kulağa
+    // duyulan andan `TogetherSession.fixedLatency` kadar geriden geldiği için
+    // bir mikrofon karesinin medya zamanı, o anki sunum saatinden hem bu
+    // sabit gecikme hem de kullanıcı hizalaması kadar geride olmalıdır.
+    func testTogetherSessionMapsMicrophoneFrameToMediaTimeUsingFixedLatencyAndAlignment() {
+        // Kare tam "şimdi" (wallNow) yakalandı, oynatma hızı 1×, kullanıcı
+        // hizalaması yok: medya zamanı yalnız sabit gecikme kadar gerisin.
+        let atNow = TogetherSession.mapFrameToMediaTime(
+            clockNow: 10.0,
+            wallNow: 100.0,
+            frameTime: 100.0,
+            rate: 1.0,
+            userAlignment: 0
+        )
+        XCTAssertEqual(atNow, 10.0 - TogetherSession.fixedLatency, accuracy: 0.000_001)
+
+        // Kare 0,20 saniye önce yakalandıysa (işlem gecikmesi), 2× hızda bu
+        // fark iki katına çıkar.
+        let delayed = TogetherSession.mapFrameToMediaTime(
+            clockNow: 10.0,
+            wallNow: 100.0,
+            frameTime: 99.8,
+            rate: 2.0,
+            userAlignment: 0
+        )
+        XCTAssertEqual(delayed, 10.0 - 0.40 - TogetherSession.fixedLatency, accuracy: 0.000_001)
+
+        // Kullanıcı hizalaması (saniyeye çevrilmiş) doğrudan çıkarılır.
+        let aligned = TogetherSession.mapFrameToMediaTime(
+            clockNow: 10.0,
+            wallNow: 100.0,
+            frameTime: 100.0,
+            rate: 1.0,
+            userAlignment: 0.05
+        )
+        XCTAssertEqual(aligned, 10.0 - TogetherSession.fixedLatency - 0.05, accuracy: 0.000_001)
+    }
+
+    // Regresyon: "Birlikte Çal" seçilip dosya analizi bittiğinde route
+    // `.listening`'e düşüyor, mod sessizce Dinleme Modu'na dönüşüyordu.  Kök
+    // neden, `activeViewer` senkronunun yazdığı seçimin kullanıcı tıklaması
+    // sayılmasıydı.
+    func testViewerDrivenSelectionSyncIsNotTreatedAsAUserSidebarClick() {
+        var sync = StudySelectionSync()
+
+        // Analiz biter, `activeViewer` dolar: seçim yazılmalı ama bu bir
+        // kullanıcı tıklaması sayılmamalı.
+        XCTAssertTrue(sync.viewerChanged(to: "yeni-kayit", currentSelection: nil))
+        XCTAssertFalse(sync.selectionChangeIsUserDriven())
+
+        // Bayrak tek seferliktir: sonraki gerçek tıklama yutulmamalı.
+        XCTAssertTrue(sync.selectionChangeIsUserDriven())
+    }
+
+    func testUnchangedViewerDoesNotArmTheSyncFlagAndSwallowTheNextClick() {
+        var sync = StudySelectionSync()
+
+        // Aynı değer yeniden yazılırsa SwiftUI `onChange` tetiklemez; bayrak
+        // burada kurulursa bir sonraki gerçek tıklamayı yutar.
+        XCTAssertFalse(sync.viewerChanged(to: "ayni", currentSelection: "ayni"))
+        XCTAssertTrue(sync.selectionChangeIsUserDriven())
+    }
+
+    func testSidebarClickWithoutAViewerSyncStaysUserDriven() {
+        var sync = StudySelectionSync()
+        XCTAssertTrue(sync.selectionChangeIsUserDriven())
+        XCTAssertTrue(sync.selectionChangeIsUserDriven())
     }
 
     func testStudySettingsDraftParsesCompleteValidSnapshot() {

@@ -74,6 +74,7 @@ struct StudySettingsView: View {
                 Section("Görünüm") {
                     ColorPicker("Pitch eğrisi", selection: graphColorBinding(\.pitchHex))
                     ColorPicker("Nota kılavuzları", selection: graphColorBinding(\.noteGuideHex))
+                    ColorPicker("Karar sesi", selection: graphColorBinding(\.kararHex))
                     Button("Varsayılan renklere dön") { draft.graphAppearance = GraphAppearance() }
                 }
 
@@ -163,6 +164,7 @@ struct LivePracticeSettingsView: View {
                 Section("Grafik renkleri") {
                     ColorPicker("Pitch eğrisi", selection: graphColorBinding(\.pitchHex))
                     ColorPicker("Nota kılavuzları", selection: graphColorBinding(\.noteGuideHex))
+                    ColorPicker("Karar sesi", selection: graphColorBinding(\.kararHex))
                     Button("Varsayılan renklere dön") {
                         draftGraphAppearance = GraphAppearance()
                     }
@@ -243,6 +245,7 @@ struct LivePracticeView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @AppStorage(GraphAppearance.pitchColorKey) private var graphPitchHex = GraphAppearance.defaultPitchHex
     @AppStorage(GraphAppearance.noteGuideColorKey) private var graphNoteGuideHex = GraphAppearance.defaultNoteGuideHex
+    @AppStorage(GraphAppearance.kararColorKey) private var graphKararHex = GraphAppearance.defaultKararHex
     let close: () -> Void
 
     var body: some View {
@@ -268,7 +271,7 @@ struct LivePracticeView: View {
 
                 LivePitchGraph(
                         frames: analyzer.frames,
-                        appearance: GraphAppearance(pitchHex: graphPitchHex, noteGuideHex: graphNoteGuideHex),
+                        appearance: GraphAppearance(pitchHex: graphPitchHex, noteGuideHex: graphNoteGuideHex, micHex: GraphAppearance.defaultMicHex, kararHex: graphKararHex),
                         scale: scale,
                         tonic: tonic,
                         makamIntervals: activeMakamIntervals,

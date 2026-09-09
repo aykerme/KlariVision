@@ -1,5 +1,11 @@
 # Harmonik-Faz (HAPT) Pitch Motoru
 
+> **TARİHSEL BELGE — bu motor koddan kaldırıldı (D-039, 6 Eylül 2026).**
+> Aşağıdakiler kaldırılma anındaki yöntem, kalibrasyon ve ölçüm kaydıdır ve
+> kanıt zinciri olarak korunur. Buradaki komutlar artık koşmaz, eşikler artık
+> hiçbir kodu yönetmez. Çalışan tek motor `unified_v1`'dir; güncel durum
+> `docs/PROJECT_STATE.md` ve `docs/TEST_BASELINE.md`'dedir.
+
 `hapt_v1`, YIN v1, Pitch Engine v2 ve VPM-benzeri'nin yanında dördüncü, eşit
 kullanıcı seçeneğidir. Bir kalite sırası, öneri veya varsayılan değişikliği
 değildir; `PitchEngineSettings.initialEngine` hâlâ `yin_v1`dir.

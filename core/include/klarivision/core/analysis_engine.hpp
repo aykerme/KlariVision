@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstddef>
+#include <functional>
 #include <memory>
 #include <optional>
 #include <span>
@@ -9,16 +10,54 @@
 
 namespace klarivision::core {
 
-enum class PitchEngineId { yin_v1, pitch_engine_v2, vpm_like, hapt_v1 };
+// Appended, never reordered: these values are the persisted C ABI enum, so
+// 0-3 keep their meaning even after the engines behind them are removed.
+//
+// D-039 removed the four engines that used to occupy 0-3. Their slots stay
+// reserved and are never reused or renumbered -- a stored selection or an
+// older caller that still names one must be recognised as "an engine that
+// existed once", not silently resolved to whatever engine now sits at that
+// number. The names carry the `_removed` suffix so any code still trying to
+// run one fails to compile instead of quietly changing meaning.
+enum class PitchEngineId {
+    yin_v1_removed = 0,
+    pitch_engine_v2_removed = 1,
+    vpm_like_removed = 2,
+    hapt_v1_removed = 3,
+    unified_v1 = 4,
+};
+
+/// True for the one engine this build can actually run. Every other value is
+/// a reserved historical slot (see PitchEngineId).
+[[nodiscard]] constexpr bool is_supported(const PitchEngineId id) {
+    return id == PitchEngineId::unified_v1;
+}
 enum class PitchEngineProfile { realtime, offline_track };
 
 struct PitchEngineConfig {
-    double minimum_frequency_hz{80.0};
+    // Lowest pitch the production session may hypothesise.  This is not a
+    // display preference: it caps the autocorrelation lag search
+    // (`rate / minimum_frequency_hz`), and an over-wide lag range is what lets
+    // ACF lock onto a multiple of the true period and report a subharmonic.
+    //
+    // 80 Hz was far below anything the instrument can produce.  Measured on the
+    // Şükrü Tunar verdict set, every downward octave error the listener marked
+    // landed between 83 and 160 Hz, and no frame the engines agreed on fell
+    // below 146 Hz.  Raising the floor to 120 Hz halved VPM-like's octave
+    // errors (18 -> 9) with no engine getting worse.  That measurement was
+    // made while four engines still shared this floor; the unified session
+    // widens to its own 65 Hz estimator floor internally, so lowering this
+    // default would move the baseline the unified engine was measured against.
+    //
+    // 120 Hz is chosen to clear the Turkish G clarinet ("sol klarnet"), whose
+    // lowest sounding note is about 123.5 Hz -- a tighter floor would gain a
+    // little more accuracy here but would clip real low notes on that
+    // instrument.
+    double minimum_frequency_hz{120.0};
     double maximum_frequency_hz{1500.0};
     double minimum_rms{0.015};
     std::size_t window_size{1536};
     std::size_t hop_size{512};
-    bool enable_vpm_diagnostics{false};
 };
 
 struct EngineFrame {
@@ -27,27 +66,16 @@ struct EngineFrame {
     double confidence{};
 };
 
-/// Test/CLI-only trace of the VPM-like publication state machine.  This is
-/// deliberately separate from the offline_track_v1 JSON contract.
-struct VPMSessionDiagnostic {
-    double input_time_seconds{};
-    double rms{};
-    double recent_rms_peak{};
-    double rms_to_peak_ratio{};
-    double strongest_periodicity{};
-    std::optional<double> normal_estimate_hz;
-    std::optional<double> weak_estimate_hz;
-    std::optional<double> last_strong_contour_hz;
-    double direct_fundamental_support{};
-    double recent_direct_support_peak{};
-    std::optional<double> established_upper_to_estimate_ratio;
-    bool signal_eligible{};
-    bool release_suspected{};
-    bool harmonic_veto{};
-    std::size_t pending_gap_frames{};
-    std::size_t bridged_frames{};
-    std::string publication_reason;
-};
+/// Optional, in-process progress signal: `(done, total)` in frame counts.
+/// Every offline entry point below defaults this to an empty
+/// `std::function`, so an unchecked call site pays nothing beyond the
+/// `if (callback)` test the implementation already has to do -- there is no
+/// separate no-op path to keep in sync. Callers that do supply one should
+/// expect it to fire from inside a hot per-frame loop, so it must be cheap
+/// and must not throw; implementations throttle how often they actually
+/// invoke it (see collect_unified_evidence's own throttling), so a callback
+/// should not assume every frame produces a call.
+using PitchProgressCallback = std::function<void(std::size_t done, std::size_t total)>;
 
 /// Canonical frame-at-a-time production boundary shared by microphone and
 /// file analysis. It owns every causal publication decision for the selected
@@ -69,7 +97,6 @@ public:
     /// Complete a capture without inventing more input frames.  It is
     /// idempotent; reset() is required before accepting more input.
     [[nodiscard]] std::vector<EngineFrame> finish();
-    [[nodiscard]] const VPMSessionDiagnostic& last_vpm_diagnostic() const;
     void reset();
     void set_minimum_rms(double minimum_rms);
 
@@ -86,15 +113,17 @@ public:
     PitchEngine(PitchEngineId id, PitchEngineProfile profile, PitchEngineConfig config = {});
     void reset();
     void push(std::span<const float> mono_samples, double sample_rate);
-    [[nodiscard]] std::vector<EngineFrame> finish();
+    [[nodiscard]] std::vector<EngineFrame> finish(PitchProgressCallback on_progress = {});
     [[nodiscard]] std::vector<EngineFrame> analyse(
         std::span<const float> mono_samples,
-        double sample_rate
+        double sample_rate,
+        PitchProgressCallback on_progress = {}
     );
     /// Exact shared live trace before any file-only refinement or tail flush.
     [[nodiscard]] std::vector<EngineFrame> analyse_causal(
         std::span<const float> mono_samples,
-        double sample_rate
+        double sample_rate,
+        PitchProgressCallback on_progress = {}
     );
 
 private:

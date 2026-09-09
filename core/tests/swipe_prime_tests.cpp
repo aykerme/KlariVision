@@ -1,5 +1,6 @@
 #include "klarivision/core/swipe_prime.hpp"
-#include "klarivision/core/pitch_engine_v2.hpp"
+
+#include "klarivision/core/frame_spectrum.hpp"
 
 #include <array>
 #include <cassert>
@@ -8,10 +9,8 @@
 #include <numbers>
 #include <vector>
 
+using klarivision::core::compute_frame_spectrum;
 using klarivision::core::v2::swipe_prime_harmonic_supports;
-using klarivision::core::v2::CandidateSource;
-using klarivision::core::v2::PitchCandidate;
-using klarivision::core::v2::select_candidate;
 
 namespace {
 
@@ -36,20 +35,12 @@ int main() {
     constexpr double fundamental = 220.0;
     const auto samples = harmonic_tone(fundamental);
     const std::array candidates{fundamental, fundamental / 2.0, fundamental * 2.0};
-    const auto supports = swipe_prime_harmonic_supports(samples, 44'100.0, candidates);
+    const auto spectrum = compute_frame_spectrum(samples, 44'100.0);
+    const auto supports = swipe_prime_harmonic_supports(spectrum, candidates);
     assert(supports.size() == candidates.size());
     assert(supports[0] > supports[1] + 0.10);
     assert(supports[0] > supports[2] + 0.10);
     assert(supports[0] > 0.50);
-
-    const std::array scored_candidates{
-        PitchCandidate{candidates[0], 0.80, supports[0], CandidateSource::yin},
-        PitchCandidate{candidates[1], 0.80, supports[1], CandidateSource::mpm},
-        PitchCandidate{candidates[2], 0.80, supports[2], CandidateSource::autocorrelation},
-    };
-    const auto selected = select_candidate(scored_candidates);
-    assert(selected);
-    assert(std::abs(selected->candidate.frequency_hz - fundamental) < 0.001);
 
     // With a 330 Hz fundamental, both f/2 and f/3 are inside the live engine's
     // candidate range. Prime-only credit must keep both below the true pitch.
@@ -60,14 +51,17 @@ int main() {
         second_fundamental / 2.0,
         second_fundamental / 3.0,
     };
+    const auto second_spectrum = compute_frame_spectrum(second_samples, 44'100.0);
     const auto subharmonic_supports = swipe_prime_harmonic_supports(
-        second_samples, 44'100.0, subharmonics
+        second_spectrum, subharmonics
     );
     assert(subharmonic_supports[0] > subharmonic_supports[1] + 0.10);
     assert(subharmonic_supports[0] > subharmonic_supports[2] + 0.10);
 
     const std::vector<float> silence(4'096, 0.0F);
-    const auto silent_support = swipe_prime_harmonic_supports(silence, 44'100.0, candidates);
+    const auto silent_support = swipe_prime_harmonic_supports(
+        compute_frame_spectrum(silence, 44'100.0), candidates
+    );
     for (const auto support : silent_support) {
         assert(std::abs(support) < 1e-12);
     }

@@ -4,6 +4,7 @@
 // Sıra: layout → workspace → playback → graph → AppKit → LocalViewer köprüsü.
 
 import AppKit
+import Combine
 import Foundation
 import SwiftUI
 import WebKit
@@ -59,6 +60,9 @@ private struct ResponsiveWorkspaceLayout: Layout {
 struct WorkspaceView: View {
     let viewer: URL
     @Bindable var library: RecentLibrary
+    // "Birlikte Çal" modunda mikrofon perdesi ikinci renkle aynı grafiğe eklenir.
+    // Bu görevde bayrağın davranışı yok; yalnız doğru route'tan gelip gelmediğini taşır.
+    var isTogetherMode: Bool = false
     @Environment(\.appTheme) private var appTheme
     @State private var webView: WKWebView?
     @State private var isEditingStudy = false
@@ -69,6 +73,11 @@ struct WorkspaceView: View {
     @StateObject private var playback = StudyPlaybackState()
     @AppStorage(GraphAppearance.pitchColorKey) private var graphPitchHex = GraphAppearance.defaultPitchHex
     @AppStorage(GraphAppearance.noteGuideColorKey) private var graphNoteGuideHex = GraphAppearance.defaultNoteGuideHex
+    @AppStorage(GraphAppearance.micColorKey) private var graphMicHex = GraphAppearance.defaultMicHex
+    // "Birlikte Çal" mikrofon oturumu ve viewer köprüsüne erişim. İkisi de
+    // yalnız isTogetherMode == true iken kullanılır; Dinleme modunda nil kalır.
+    @State private var togetherSession: TogetherSession?
+    @State private var micCoordinator: LocalViewer.Coordinator?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -90,7 +99,7 @@ struct WorkspaceView: View {
                 .accessibilityLabel("Seçili makam ve karar: \(library.studySummary(for: item))")
             }
 
-            StudyPlaybackBar(playback: playback) { command in
+            StudyPlaybackBar(playback: playback, isTogetherMode: isTogetherMode, toggleMute: toggleMuted) { command in
                 sendPlaybackCommand(command)
             }
             .overlay(alignment: .bottom) { Divider() }
@@ -185,7 +194,41 @@ struct WorkspaceView: View {
                 webViewReloadToken += 1
             }
         }
-        .onDisappear { sendPlaybackCommand("pause") }
+        .onChange(of: playback.isReady) { wasReady, isReady in
+            // Sayfa yüklenip medya hazır olduktan sonra başlat: daha erken
+            // başlatmanın bir zararı yok ama `displayTime()`/`rate` henüz
+            // anlamlı değerler taşımıyor olabilir.
+            // `!wasReady` koşulu bilinçli olarak yok: bu görünüm hazır bir
+            // oynatma durumuyla da kurulabilir ve o durumda geçiş hiç
+            // gözlenmez.  `startTogetherSessionIfNeeded` zaten idempotent.
+            _ = wasReady
+            guard isTogetherMode, isReady else { return }
+            startTogetherSessionIfNeeded()
+        }
+        .onDisappear {
+            sendPlaybackCommand("pause")
+            togetherSession?.stop()
+            togetherSession = nil
+        }
+    }
+
+    /// "Birlikte Çal" mikrofon oturumunu başlatır. Yakalanan her kare
+    /// `TogetherSession` içinde medya zamanına çevrilip 30 fps'e kısılarak
+    /// `LocalViewer.Coordinator.sendMicPoints(_:)` üzerinden viewer'a gider.
+    private func startTogetherSessionIfNeeded() {
+        guard isTogetherMode, togetherSession == nil else { return }
+        let session = TogetherSession()
+        togetherSession = session
+        session.start(clock: playback) { points in
+            micCoordinator?.sendMicPoints(points)
+        }
+    }
+
+    /// Yalnız dosyanın ses ÇIKIŞINI aç/kapatır; mikrofon çizimi devam eder.
+    /// Durum `StudyPlaybackState.muted` üzerinden aynalanır — burada yerel
+    /// bir `@State` tutulmaz, `apply(_:)` periyodik anlık görüntüden okur.
+    private func toggleMuted() {
+        webView?.evaluateJavaScript("window.klariVisionStudyViewer?.setMuted?.(\(!playback.muted));")
     }
 
     private var studyMedia: some View {
@@ -195,9 +238,10 @@ struct WorkspaceView: View {
             study: library.item(for: viewer).map { library.study(for: $0) },
             playback: playback,
             appTheme: appTheme,
-            graphAppearance: GraphAppearance(pitchHex: graphPitchHex, noteGuideHex: graphNoteGuideHex),
+            graphAppearance: GraphAppearance(pitchHex: graphPitchHex, noteGuideHex: graphNoteGuideHex, micHex: graphMicHex),
             reloadToken: webViewReloadToken,
-            webView: $webView
+            webView: $webView,
+            micCoordinator: $micCoordinator
         )
         .frame(minWidth: 300)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -240,6 +284,11 @@ struct WorkspaceView: View {
     /// can orphan an audible media element, so wait until the page has paused
     /// its actual HTMLMediaElement before removing the view.
     private func closeWorkspaceAfterPausing() {
+        // Tek teardown noktası: "Birlikte Çal" mikrofonu açık kaldıysa burada
+        // mutlaka durur, aksi halde çalışmalar listesine dönüldüğünde
+        // mikrofon donanımı arka planda açık kalırdı.
+        togetherSession?.stop()
+        togetherSession = nil
         guard let webView else {
             library.closeWorkspace()
             return
@@ -277,6 +326,11 @@ struct WorkspaceView: View {
             pitchTrack = nil
             playback.pitchPoints = []
             pitchTrackError = "Pitch eğrisi okunamadı: \(error.localizedDescription)"
+        }
+        // Yeni dosya seçilince/viewer yeniden yüklenince mikrofon eğrisi
+        // sıfırlanmalı; eski çalışmanın mikrofon çizgisi yeni kayıtla karışmasın.
+        if isTogetherMode {
+            micCoordinator?.clearMicPoints()
         }
     }
 
@@ -358,6 +412,117 @@ struct StudyPlaybackClock {
     }
 }
 
+/// "Birlikte Çal" modunun asıl davranışı: mikrofonu çalıştırır, her perde
+/// karesini medyanın zaman eksenine çevirir ve yalnız oynatma sürerken
+/// viewer'a yollar. Loop B→A dönüşü ve zamanda geri sürükleme burada ELE
+/// ALINMAZ — viewer sayfası kendi `tick()` döngüsünde medya saatinin geriye
+/// sıçramasını tespit edip `micTruncate` çağırıyor (frequency_viewer.py).
+@MainActor
+final class TogetherSession {
+    private let analyzer = LivePitchAnalyzer()
+    private var frameCancellable: AnyCancellable?
+    /// Son işlenen mikrofon karesinin zamanı. `LiveWebPitchGraph.Coordinator
+    /// .enqueue`'daki (LiveVisuals.swift) `lastSentPointTime` kalıbının aynısı:
+    /// analyzer'ın `frames` yayını kümülatif geldiği için, bu sınır önceki
+    /// turda işlenmiş karelerin bir daha işlenmesini önler.
+    private var lastSeenFrameTime: TimeInterval?
+
+    /// Analiz penceresinin merkezi + tipik CoreAudio giriş gecikmesi.
+    /// Pencere 1536 örnek / 48 kHz ≈ 32,0 ms sürer; bir kareye damgalanan
+    /// zaman pencerenin başlangıcı değil ortası olduğundan yarısı (~16,0 ms)
+    /// eklenir. Kalan ~10 ms, CoreAudio giriş arabelleğinin ve donanımın
+    /// tipik toplam gecikmesidir. İkisi birlikte "bu kare kulağa aslında ne
+    /// kadar geriden geldi" sorusuna sabit bir yanıt oluşturur.
+    nonisolated static let fixedLatency: TimeInterval = (1_536.0 / 2.0) / 48_000.0 + 0.010
+
+    /// Saf ve test edilebilir zaman eşlemesi. `frameTime` ve `wallNow` aynı
+    /// duvar-saati taban çizgisini (`Date().timeIntervalSinceReferenceDate`)
+    /// paylaşır; `clockNow`, sunum saatinin (`StudyPlaybackClock`) o anki
+    /// `displayedTime` değeridir. `userAlignment` saniye cinsindendir
+    /// (`MicrophoneSettings.clampedMicAlignment(...)` milisaniyeyi 1000'e
+    /// bölerek burada saniyeye çevrilir).
+    nonisolated static func mapFrameToMediaTime(
+        clockNow: Double,
+        wallNow: Double,
+        frameTime: Double,
+        rate: Double,
+        userAlignment: Double,
+        fixedLatency: Double = TogetherSession.fixedLatency
+    ) -> Double {
+        clockNow - (wallNow - frameTime) * rate - fixedLatency - userAlignment
+    }
+
+    /// Mikrofonu motoru `togetherEngineKey`'den seçerek başlatır ve
+    /// `analyzer.$frames`'i dinlemeye başlar. `clock` yalnız okunur: oynatma
+    /// durumu, sunum saati ve hız buradan alınır.
+    fileprivate func start(clock: StudyPlaybackState, sendPoints: @escaping ([StudyPitchPoint]) -> Void) {
+        lastSeenFrameTime = nil
+        frameCancellable = analyzer.$frames.sink { [weak self, weak clock] frames in
+            guard let self, let clock else { return }
+            self.handle(frames, clock: clock, sendPoints: sendPoints)
+        }
+        analyzer.startForTogetherMode()
+    }
+
+    /// Tek teardown noktası: mikrofonu kapatır. `WorkspaceView` bunu görünüm
+    /// kapanırken/moddan çıkarken mutlaka çağırmalı (bkz.
+    /// `closeWorkspaceAfterPausing`), aksi halde mikrofon açık kalır.
+    func stop() {
+        frameCancellable?.cancel()
+        frameCancellable = nil
+        analyzer.stop()
+        lastSeenFrameTime = nil
+    }
+
+    private func handle(
+        _ frames: [LivePitchFrame],
+        clock: StudyPlaybackState,
+        sendPoints: ([StudyPitchPoint]) -> Void
+    ) {
+        // Yalnız oynarken üret. Medya duraklatılmışken hiç nokta yollama;
+        // mikrofon donanımı açık kalır, yalnız çizim durur — bilinçli bir
+        // karar. İmleci yine de ilerlet ki oynatma yeniden başladığında
+        // duraklama sırasında biriken kareler toptan gönderilmesin.
+        guard clock.isPlaying else {
+            lastSeenFrameTime = frames.last?.time ?? lastSeenFrameTime
+            return
+        }
+        let cursor = lastSeenFrameTime
+        let additions = frames.filter { frame in cursor.map { frame.time > $0 } ?? true }
+        lastSeenFrameTime = frames.last?.time ?? lastSeenFrameTime
+        guard !additions.isEmpty else { return }
+
+        // Kareler 33 ms'lik topluca gelebilir; her karenin kendi `time`'ı
+        // üzerinden çevrildiği için toplu gönderim doğru yere oturur — tüm
+        // partiye tek bir zaman damgası verilmez.
+        let wallNow = Date().timeIntervalSinceReferenceDate
+        let clockNow = clock.displayTime()
+        let rate = clock.rate
+        let userAlignment = MicrophoneSettings.clampedMicAlignment(
+            UserDefaults.standard.double(forKey: MicrophoneSettings.micAlignmentKey)
+        ) / 1_000
+
+        // Sessiz/güvensiz kareleri ele: Dinleme tarafındaki
+        // `StudyPitchTrack.prepareDisplayPoints` (StudyModels.swift) ile aynı
+        // eşikler (voiced, ≥80 Hz, confidence ≥ 0.20) kullanılır.
+        let points = additions.compactMap { frame -> StudyPitchPoint? in
+            guard frame.frequency.isFinite, frame.frequency >= 80,
+                  frame.confidence >= StudyPitchTrack.minimumConfidence else { return nil }
+            let mediaTime = Self.mapFrameToMediaTime(
+                clockNow: clockNow,
+                wallNow: wallNow,
+                frameTime: frame.time,
+                rate: rate,
+                userAlignment: userAlignment
+            )
+            guard mediaTime.isFinite, mediaTime >= 0 else { return nil }
+            return StudyPitchPoint(time: mediaTime, frequency: frame.frequency)
+        }
+        guard !points.isEmpty else { return }
+        sendPoints(points)
+    }
+}
+
 /// Oynatma boyunca saniyede ~20 kez değişen iki değer.  Bunlar bilinçli olarak
 /// `StudyPlaybackState`'ten ayrı tutuluyor: aynı nesnede olduklarında her tik
 /// bütün çalışma alanını (toolbar, GeometryReader, ScrollView ve WKWebView
@@ -382,6 +547,9 @@ private final class StudyPlaybackState: ObservableObject {
     @Published var loopA = 0.0
     @Published var loopB = 0.0
     @Published var followsCurve = false
+    /// Yalnız "Birlikte Çal" hoparlör düğmesi için: dosyanın ses ÇIKIŞININ
+    /// kapalı olup olmadığı. Mikrofon çizimini etkilemez — bkz. `TogetherSession`.
+    @Published var muted = false
     @Published var theme = "focus"
     var frequency: Double? { ticker.frequency }
     @Published var scale: LiveScale = .nihavent
@@ -452,6 +620,7 @@ private final class StudyPlaybackState: ObservableObject {
         publish((values["loopA"] as? NSNumber)?.doubleValue ?? loopA, to: \.loopA)
         publish((values["loopB"] as? NSNumber)?.doubleValue ?? loopB, to: \.loopB)
         publish((values["followsCurve"] as? Bool) ?? followsCurve, to: \.followsCurve)
+        publish((values["muted"] as? Bool) ?? muted, to: \.muted)
         if let proposedTheme = values["theme"] as? String,
            ["focus", "studio", "classic"].contains(proposedTheme) {
             publish(proposedTheme, to: \.theme)
@@ -473,6 +642,13 @@ private final class StudyPlaybackState: ObservableObject {
 
 private struct StudyPlaybackBar: View {
     @ObservedObject var playback: StudyPlaybackState
+    /// Mikrofon eğrisinin dosya eğrisine göre kaydırılması (ms).  Genel
+    /// Ayarlar'da değil burada duruyor: doğru değer kulaklığa, arabirime ve
+    /// parçaya göre değişiyor ve ancak çalarken eğriye bakarak bulunuyor —
+    /// ayrı bir pencereye gidip gelmek bu ayarı kullanılamaz kılıyordu.
+    @AppStorage(MicrophoneSettings.micAlignmentKey) private var micAlignment = MicrophoneSettings.defaultMicAlignment
+    var isTogetherMode: Bool = false
+    var toggleMute: () -> Void = {}
     let command: (String) -> Void
 
     var body: some View {
@@ -543,9 +719,57 @@ private struct StudyPlaybackBar: View {
                         .disabled(!playback.isReady)
                 }
             }
+
+            // Yalnız "Birlikte Çal" modunda görünür. Yalnız dosyanın ses
+            // ÇIKIŞINI kapatır — mikrofon çizimi sessizken de devam eder.
+            if isTogetherMode {
+                ControlGroup {
+                    HoverTooltip(playback.muted ? "Ses çıkışını aç" : "Ses çıkışını kapat") {
+                        Button { toggleMute() } label: {
+                            Image(systemName: playback.muted ? "speaker.slash" : "speaker.wave.2")
+                        }
+                        .accessibilityLabel(playback.muted ? "Ses çıkışını aç" : "Ses çıkışını kapat")
+                        .disabled(!playback.isReady)
+                    }
+                }
+
+                micAlignmentControl
+            }
         }
         .font(.callout.weight(.medium))
         .controlSize(.large)
+    }
+
+    /// Çalarken eğriye bakıp kaydırmak için: −200…+200 ms, 5 ms adım.  Değer
+    /// etiketine tıklamak sıfıra döndürür.  Kalıcı anahtar Ayarlar'dakiyle
+    /// aynıydı; artık tek yer burası.
+    private var micAlignmentControl: some View {
+        HStack(spacing: 6) {
+            Image(systemName: "waveform.badge.magnifyingglass")
+                .foregroundStyle(.secondary)
+                .accessibilityHidden(true)
+            Slider(
+                value: Binding(
+                    get: { MicrophoneSettings.clampedMicAlignment(micAlignment) },
+                    set: { micAlignment = MicrophoneSettings.clampedMicAlignment(($0 / 5).rounded() * 5) }
+                ),
+                in: -200...200
+            )
+            .frame(width: 132)
+            .accessibilityLabel("Mikrofon hizalaması")
+            .accessibilityValue(String(format: "%.0f milisaniye", micAlignment))
+            Button {
+                micAlignment = 0
+            } label: {
+                Text(String(format: "%+.0f ms", micAlignment))
+                    .font(.caption.monospacedDigit())
+                    .frame(width: 54, alignment: .trailing)
+            }
+            .buttonStyle(.plain)
+            .help("Mikrofon eğrisini dosya eğrisine göre kaydırır. Sıfırlamak için tıklayın.")
+            .accessibilityLabel("Mikrofon hizalamasını sıfırla")
+        }
+        .controlSize(.small)
     }
 
     private var tuner: some View {
@@ -887,6 +1111,9 @@ private struct LocalViewer: NSViewRepresentable {
     let graphAppearance: GraphAppearance
     let reloadToken: Int
     @Binding var webView: WKWebView?
+    // "Birlikte Çal" mikrofon köprüsü buradan dışarı verilir; `webView`
+    // bindingi ile aynı desen (bkz. makeNSView sonundaki DispatchQueue.main.async).
+    @Binding var micCoordinator: Coordinator?
 
     func makeCoordinator() -> Coordinator {
         Coordinator(playback: playback)
@@ -1348,7 +1575,7 @@ private struct LocalViewer: NSViewRepresentable {
             send(true);
         })();
         """
-        let appearanceJSON = "{\"pitchHex\":\"\(graphAppearance.pitchHex)\",\"noteGuideHex\":\"\(graphAppearance.noteGuideHex)\"}"
+        let appearanceJSON = "{\"pitchHex\":\"\(graphAppearance.pitchHex)\",\"noteGuideHex\":\"\(graphAppearance.noteGuideHex)\",\"micHex\":\"\(graphAppearance.micHex)\"}"
         let graphAppearanceBridge = """
         (() => {
             window.klariVisionStudyViewer?.setGraphAppearance?.(\(appearanceJSON), { persist: false, notify: false });
@@ -1365,7 +1592,11 @@ private struct LocalViewer: NSViewRepresentable {
         webView.setValue(false, forKey: "drawsBackground")
         webView.loadFileURL(viewer, allowingReadAccessTo: readAccessRoot)
         context.coordinator.lastAppliedReloadToken = reloadToken
-        DispatchQueue.main.async { self.webView = webView }
+        context.coordinator.webView = webView
+        DispatchQueue.main.async {
+            self.webView = webView
+            self.micCoordinator = context.coordinator
+        }
         return webView
     }
 
@@ -1420,7 +1651,10 @@ private struct LocalViewer: NSViewRepresentable {
     }
 
     private func applyGraphAppearance(to webView: WKWebView) {
-        let payload = "{\"pitchHex\":\"\(graphAppearance.pitchHex)\",\"noteGuideHex\":\"\(graphAppearance.noteGuideHex)\"}"
+        // pitch/guide/mic üçü aynı `graphAppearance` değerinin parçası olarak
+        // atomik yollanır — sayfa da renk ayarları formunda üçünü birlikte
+        // güncelliyor (frequency_viewer.py, `makamSettingsApply.onclick`).
+        let payload = "{\"pitchHex\":\"\(graphAppearance.pitchHex)\",\"noteGuideHex\":\"\(graphAppearance.noteGuideHex)\",\"micHex\":\"\(graphAppearance.micHex)\"}"
         webView.evaluateJavaScript("window.klariVisionStudyViewer?.setGraphAppearance?.(\(payload), { persist: false, notify: false });")
     }
 
@@ -1440,6 +1674,11 @@ private struct LocalViewer: NSViewRepresentable {
         var lastAppliedGraphAppearance: GraphAppearance?
         var lastAppliedTheme: AppTheme?
         var lastAppliedReloadToken: Int?
+        // "Birlikte Çal" mikrofon köprüsü. `weak`: WKWebView'in kendisi bu
+        // temsilcinin ömrünü belirler, tersi değil.
+        weak var webView: WKWebView?
+        private var pendingMicPoints: [StudyPitchPoint] = []
+        private var micSendScheduled = false
 
         init(playback: StudyPlaybackState) {
             self.playback = playback
@@ -1454,9 +1693,38 @@ private struct LocalViewer: NSViewRepresentable {
                   let values = message.body as? [String: Any] else { return }
             let appearance = GraphAppearance(
                 pitchHex: values["pitchHex"] as? String ?? GraphAppearance.defaultPitchHex,
-                noteGuideHex: values["noteGuideHex"] as? String ?? GraphAppearance.defaultNoteGuideHex
+                noteGuideHex: values["noteGuideHex"] as? String ?? GraphAppearance.defaultNoteGuideHex,
+                micHex: values["micHex"] as? String ?? GraphAppearance.defaultMicHex
             )
             appearance.save()
+        }
+
+        /// Mikrofon noktalarını 30 fps'e kısarak yollar — `LiveWebPitchGraph
+        /// .Coordinator.enqueue`'daki (LiveVisuals.swift)
+        /// `DispatchQueue.main.asyncAfter(1/30)` kalıbının aynısı. Her
+        /// `TogetherSession` karesi için ayrı bir köprü geçişi yapılmaz;
+        /// biriktirilip tek `evaluateJavaScript` çağrısında yollanır.
+        func sendMicPoints(_ points: [StudyPitchPoint]) {
+            guard !points.isEmpty else { return }
+            pendingMicPoints.append(contentsOf: points)
+            guard !micSendScheduled else { return }
+            micSendScheduled = true
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0 / 30.0) { [weak self] in
+                guard let self else { return }
+                self.micSendScheduled = false
+                guard !self.pendingMicPoints.isEmpty else { return }
+                let batch = self.pendingMicPoints
+                self.pendingMicPoints.removeAll(keepingCapacity: true)
+                guard let data = try? JSONSerialization.data(withJSONObject: batch.map { ["t": $0.time, "hz": $0.frequency] }),
+                      let json = String(data: data, encoding: .utf8) else { return }
+                self.webView?.evaluateJavaScript("window.klariVisionStudyViewer?.micAppend?.(\(json));")
+            }
+        }
+
+        /// Yeni dosya seçilince/viewer yeniden yüklenince çağrılır.
+        func clearMicPoints() {
+            pendingMicPoints.removeAll()
+            webView?.evaluateJavaScript("window.klariVisionStudyViewer?.micClear?.();")
         }
     }
 }

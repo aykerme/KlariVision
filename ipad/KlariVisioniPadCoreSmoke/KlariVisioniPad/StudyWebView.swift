@@ -76,8 +76,8 @@ final class iPadStudyWebViewStore: NSObject, ObservableObject, WKNavigationDeleg
         switch command {
         case let .load(url, frames):
             payload = ["type": "load", "url": url.absoluteString, "frames": frames.map { ["t": $0.time, "f": $0.frequency, "c": $0.confidence, "v": $0.voiced] }]
-        case let .context(context, pitchColor, guideColor, komaOverride):
-            payload = ["type": "context", "makam": context.makam.rawValue, "karar": context.karar.rawValue, "guides": context.guideNotes(commas: komaOverride).map { ["name": $0.name, "hz": $0.hz] }, "pitchColor": pitchColor, "guideColor": guideColor]
+        case let .context(context, pitchColor, guideColor, kararColor, komaOverride):
+            payload = ["type": "context", "makam": context.makam.rawValue, "karar": context.karar.rawValue, "guides": context.guideNotes(commas: komaOverride).map { ["name": $0.name, "hz": $0.hz, "karar": $0.isKarar] }, "pitchColor": pitchColor, "guideColor": guideColor, "kararColor": kararColor]
         case .playPause: payload = ["type": "playPause"]
         case .pause: payload = ["type": "pause"]
         case let .seek(time): payload = ["type": "seek", "time": time]
@@ -87,6 +87,12 @@ final class iPadStudyWebViewStore: NSObject, ObservableObject, WKNavigationDeleg
         case .loop: payload = ["type": "loop"]
         case .follow: payload = ["type": "follow"]
         case let .setVideoFullscreen(isVideo): payload = ["type": "setMode", "mode": isVideo ? "video" : "graph"]
+        // "Birlikte Çal" mikrofon köprüsü — macOS'un `LocalViewer.Coordinator
+        // .sendMicPoints`/`clearMicPoints` karşılığı (bkz. TogetherSession.swift).
+        case .micClear: payload = ["type": "micClear"]
+        case let .micAppend(points): payload = ["type": "micAppend", "points": points.map { ["t": $0.time, "hz": $0.frequency] }]
+        case let .micTruncate(time): payload = ["type": "micTruncate", "time": time]
+        case let .setMicColor(hex): payload = ["type": "setMicColor", "hex": hex]
         }
         guard let data = try? JSONSerialization.data(withJSONObject: payload),
               let json = String(data: data, encoding: .utf8)
@@ -166,6 +172,6 @@ enum iPadStudyViewerResource {
         // immediately follows this with its own context command carrying the
         // real makam-interval overrides, so this one is just a same-frame
         // placeholder until that lands.
-        store.enqueue(.context(study.context, pitchColor: "#67d5ff", guideColor: "#b7d8ff", komaOverride: study.context.makam.guideCommas))
+        store.enqueue(.context(study.context, pitchColor: "#67d5ff", guideColor: "#b7d8ff", kararColor: "#E75A5A", komaOverride: study.context.makam.guideCommas))
     }
 }

@@ -1,5 +1,6 @@
 import json
 
+from klarivision.pitch.cpp_engine import OFFLINE_TRACK_REVISION
 from klarivision.frequency_viewer import build_frequency_viewer, prepare_display_frames
 
 
@@ -132,7 +133,7 @@ def test_frequency_viewer_uses_physical_hertz_grid(tmp_path) -> None:
     assert "klarivision-tooltip" in html
     assert "transport-more" not in html
     assert "graphAppearanceKey='klarivision-graph-appearance-v1'" in html
-    assert "defaultGraphAppearance={pitchHex:'#0A84FF',noteGuideHex:'#8E8E93'}" in html
+    assert "defaultGraphAppearance={pitchHex:'#0A84FF',noteGuideHex:'#8E8E93',kararHex:'#E75A5A'}" in html
     assert "function setGraphAppearance(value" in html
     assert "setGraphAppearance," in html
     assert "settingsSnapshot()" in html
@@ -210,3 +211,180 @@ def test_frequency_viewer_keeps_supported_low_register_pitch() -> None:
         {"time_seconds": 0.0, "frequency_hz": 82.4069, "voiced": True, "confidence": .9},
     ]})
     assert result == [{"t": 0.0, "hz": 82.4069}]
+
+
+def test_frequency_viewer_includes_engine_identity_in_title_and_meta(tmp_path) -> None:
+    pitch_json = tmp_path / "pitch.json"
+    pitch_json.write_text(json.dumps({"frames": []}), encoding="utf-8")
+    output = tmp_path / "viewer.html"
+    build_frequency_viewer(pitch_json, "audio.wav", output, engine="vpm_like")
+
+    html = output.read_text(encoding="utf-8")
+    # A study analysed before D-039 keeps its own engine id, and the viewer
+    # names that engine truthfully -- including that it no longer exists.
+    assert '<title>KlariVision v0.6 Beta 1 — VPM-benzeri (kaldırıldı) · Pitch konturu</title>' in html
+    assert '<meta name="klarivision-engine" content="vpm_like">' in html
+    assert '<meta name="klarivision-offline-revision" content="' + OFFLINE_TRACK_REVISION + '">' in html
+    assert 'Motor: VPM-benzeri' in html
+
+
+def test_frequency_viewer_preserves_backward_compatibility_without_engine(tmp_path) -> None:
+    pitch_json = tmp_path / "pitch.json"
+    pitch_json.write_text(json.dumps({"frames": []}), encoding="utf-8")
+    output = tmp_path / "viewer.html"
+    build_frequency_viewer(pitch_json, "audio.wav", output)
+
+    html = output.read_text(encoding="utf-8")
+    assert '<title>KlariVision v0.6 Beta 1 — Duyulan frekans</title>' in html
+    assert 'klarivision-engine' not in html
+    assert 'klarivision-offline-revision' not in html
+
+
+def test_frequency_viewer_uses_cpp_engine_revision_only_for_cpp_engines(tmp_path) -> None:
+    pitch_json = tmp_path / "pitch.json"
+    pitch_json.write_text(json.dumps({"frames": []}), encoding="utf-8")
+    output = tmp_path / "viewer.html"
+    build_frequency_viewer(pitch_json, "audio.wav", output, engine="vamp")
+
+    html = output.read_text(encoding="utf-8")
+    assert '<meta name="klarivision-engine" content="vamp">' in html
+    assert 'klarivision-offline-revision' not in html
+    assert 'Motor: Vamp pYIN (referans)' in html
+
+
+def test_frequency_viewer_adds_microphone_api_methods(tmp_path) -> None:
+    pitch_json = tmp_path / "pitch.json"
+    pitch_json.write_text(json.dumps({"frames": []}), encoding="utf-8")
+    output = tmp_path / "viewer.html"
+    build_frequency_viewer(pitch_json, "audio.wav", output)
+
+    html = output.read_text(encoding="utf-8")
+    # Birlikte Çal modunun mikrofon API adları
+    assert "micAppend" in html
+    assert "micClear" in html
+    assert "micTruncate" in html
+    assert "setMicColor" in html
+    assert "setMuted" in html
+
+
+def test_frequency_viewer_includes_microphone_color_in_defaults(tmp_path) -> None:
+    pitch_json = tmp_path / "pitch.json"
+    pitch_json.write_text(json.dumps({"frames": []}), encoding="utf-8")
+    output = tmp_path / "viewer.html"
+    build_frequency_viewer(pitch_json, "audio.wav", output)
+
+    html = output.read_text(encoding="utf-8")
+    # Mikrofon eğrisi varsayılan rengi
+    assert "defaultGraphAppearance.micHex='#FF9F0A'" in html
+
+
+def test_frequency_viewer_adds_microphone_color_settings_ui(tmp_path) -> None:
+    pitch_json = tmp_path / "pitch.json"
+    pitch_json.write_text(json.dumps({"frames": []}), encoding="utf-8")
+    output = tmp_path / "viewer.html"
+    build_frequency_viewer(pitch_json, "audio.wav", output)
+
+    html = output.read_text(encoding="utf-8")
+    # Grafik renkleri ayarlarında mikrofon eğrisi rengi input'u
+    assert "mic.id='graph-mic-color'" in html
+    assert "Mikrofon eğrisi" in html
+
+
+def test_frequency_viewer_snapshot_includes_muted_state(tmp_path) -> None:
+    pitch_json = tmp_path / "pitch.json"
+    pitch_json.write_text(json.dumps({"frames": []}), encoding="utf-8")
+    output = tmp_path / "viewer.html"
+    build_frequency_viewer(pitch_json, "audio.wav", output)
+
+    html = output.read_text(encoding="utf-8")
+    # snapshot() fonksiyonu muted durumunu içeriyor
+    assert "muted:!!media.muted" in html
+
+
+def test_frequency_viewer_chart_palette_includes_microphone_color(tmp_path) -> None:
+    pitch_json = tmp_path / "pitch.json"
+    pitch_json.write_text(json.dumps({"frames": []}), encoding="utf-8")
+    output = tmp_path / "viewer.html"
+    build_frequency_viewer(pitch_json, "audio.wav", output)
+
+    html = output.read_text(encoding="utf-8")
+    # chartPalette() üç temanın hepsinde mic: alanını veriyor
+    assert "mic:graphAppearance.micHex" in html
+
+
+def test_frequency_viewer_includes_karar_color_defaults(tmp_path) -> None:
+    pitch_json = tmp_path / "pitch.json"
+    pitch_json.write_text(json.dumps({"frames": []}), encoding="utf-8")
+    output = tmp_path / "viewer.html"
+    build_frequency_viewer(pitch_json, "audio.wav", output)
+
+    html = output.read_text(encoding="utf-8")
+    # Karar sesi varsayılan rengi tanımlanmalı
+    assert "kararHex:'#E75A5A'" in html
+    assert "defaultGraphAppearance={pitchHex:'#0A84FF',noteGuideHex:'#8E8E93',kararHex:'#E75A5A'}" in html
+
+
+def test_frequency_viewer_karar_appears_in_normalizeGraphAppearance(tmp_path) -> None:
+    pitch_json = tmp_path / "pitch.json"
+    pitch_json.write_text(json.dumps({"frames": []}), encoding="utf-8")
+    output = tmp_path / "viewer.html"
+    build_frequency_viewer(pitch_json, "audio.wav", output)
+
+    html = output.read_text(encoding="utf-8")
+    # normalizeGraphAppearance kararHex alanını işlemeli
+    assert "kararHex:validGraphColor(value?.kararHex)||defaultGraphAppearance.kararHex" in html
+
+
+def test_frequency_viewer_chart_palette_includes_karar_color(tmp_path) -> None:
+    pitch_json = tmp_path / "pitch.json"
+    pitch_json.write_text(json.dumps({"frames": []}), encoding="utf-8")
+    output = tmp_path / "viewer.html"
+    build_frequency_viewer(pitch_json, "audio.wav", output)
+
+    html = output.read_text(encoding="utf-8")
+    # chartPalette() üç temanın hepsinde karar: alanını veriyor
+    assert "karar:graphAppearance.kararHex" in html
+
+
+def test_frequency_viewer_karar_color_settings_ui(tmp_path) -> None:
+    pitch_json = tmp_path / "pitch.json"
+    pitch_json.write_text(json.dumps({"frames": []}), encoding="utf-8")
+    output = tmp_path / "viewer.html"
+    build_frequency_viewer(pitch_json, "audio.wav", output)
+
+    html = output.read_text(encoding="utf-8")
+    # Grafik renkleri ayarlarında karar sesi rengi input'u
+    assert "karar.id='graph-karar-color'" in html
+    assert "kararLabel.textContent='Karar sesi'" in html
+
+
+def test_frequency_viewer_scale_notes_includes_karar_flag(tmp_path) -> None:
+    pitch_json = tmp_path / "pitch.json"
+    pitch_json.write_text(json.dumps({"frames": []}), encoding="utf-8")
+    output = tmp_path / "viewer.html"
+    build_frequency_viewer(pitch_json, "audio.wav", output)
+
+    html = output.read_text(encoding="utf-8")
+    # scaleNotes() fonksiyonu karar bayrağı ile tuples döndürmeli
+    assert "for(const [name,hz,isKarar] of scaleNotes())" in html
+    # makamNotes karar mantığı: degree === 0
+    assert "isKarar=degree===0" in html
+    # notesForMode karar mantığı: midi%12 === soundingTonic
+    assert "isKarar=midi%12===soundingTonic" in html
+    # turkishNotes: karar yok
+    assert "return turkishReference.map(note=>[note.display_notation,note.frequency_hz,false])" in html
+
+
+def test_frequency_viewer_karar_drawing_with_distinct_style(tmp_path) -> None:
+    pitch_json = tmp_path / "pitch.json"
+    pitch_json.write_text(json.dumps({"frames": []}), encoding="utf-8")
+    output = tmp_path / "viewer.html"
+    build_frequency_viewer(pitch_json, "audio.wav", output)
+
+    html = output.read_text(encoding="utf-8")
+    # Çizim döngüsünde karar çizgisi farklı stil ile çizilmeli
+    assert "ctx.strokeStyle=colorWithAlpha(palette.karar,.75)" in html
+    assert "ctx.lineWidth=2" in html
+    assert "ctx.fillStyle=colorWithAlpha(palette.karar,1)" in html
+    # Döngüden sonra lineWidth sıfırlanmalı
+    assert "ctx.lineWidth=1;" in html

@@ -231,3 +231,129 @@ def test_parse_byte_range_supports_media_seeking() -> None:
     assert _parse_byte_range(None, 10_000) is None
     with pytest.raises(ValueError):
         _parse_byte_range("bytes=10000-", 10_000)
+
+
+def test_refresh_existing_viewer_selects_correct_engine_by_meta_tag(tmp_path, monkeypatch) -> None:
+    import json as json_module
+    outputs = tmp_path / "outputs"
+    viewer = outputs / "ornek.html"
+    audio = tmp_path / "data" / "audio" / "ornek.wav"
+    pitch_vpm = outputs / f"ornek.vpm_like.offline_track_v1.{OFFLINE_TRACK_REVISION}.json"
+    pitch_yin = outputs / f"ornek.yin_v1.offline_track_v1.{OFFLINE_TRACK_REVISION}.json"
+    outputs.mkdir(parents=True)
+    audio.parent.mkdir(parents=True)
+    audio.write_bytes(b"wav")
+    
+    # Create two pitch files with different mtime (vpm is newer)
+    pitch_yin.write_text('{"frames":[]}', encoding="utf-8")
+    pitch_vpm.write_text('{"frames":[]}', encoding="utf-8")
+    pitch_vpm.touch()
+    
+    # Viewer has meta tag pointing to vpm_like (even though yin is newer by mtime)
+    viewer.write_text(
+        '<meta name="klarivision-engine" content="vpm_like">'
+        '<video id="media" src="video.mp4"></video>',
+        encoding="utf-8"
+    )
+    
+    monkeypatch.setattr("klarivision.local_app.OUTPUTS_DIR", outputs)
+    monkeypatch.setattr("klarivision.local_app.AUDIO_DIR", audio.parent)
+    
+    captured = {}
+    def fake_build_frequency_viewer(pitch_json, *args, **kwargs):
+        captured["pitch_json"] = pitch_json
+        captured["engine"] = kwargs.get("engine")
+    
+    monkeypatch.setattr("klarivision.local_app.build_frequency_viewer", fake_build_frequency_viewer)
+    
+    refresh_existing_viewer(viewer)
+    
+    assert captured["pitch_json"] == pitch_vpm
+    assert captured["engine"] == "vpm_like"
+
+
+def test_refresh_existing_viewer_with_explicit_engine(tmp_path, monkeypatch) -> None:
+    outputs = tmp_path / "outputs"
+    viewer = outputs / "ornek.html"
+    audio = tmp_path / "data" / "audio" / "ornek.wav"
+    pitch_vpm = outputs / f"ornek.vpm_like.offline_track_v1.{OFFLINE_TRACK_REVISION}.json"
+    pitch_yin = outputs / f"ornek.yin_v1.offline_track_v1.{OFFLINE_TRACK_REVISION}.json"
+    outputs.mkdir(parents=True)
+    audio.parent.mkdir(parents=True)
+    audio.write_bytes(b"wav")
+    
+    pitch_yin.write_text('{"frames":[]}', encoding="utf-8")
+    pitch_vpm.write_text('{"frames":[]}', encoding="utf-8")
+    
+    viewer.write_text(
+        '<meta name="klarivision-engine" content="yin_v1">'
+        '<video id="media" src="video.mp4"></video>',
+        encoding="utf-8"
+    )
+    
+    monkeypatch.setattr("klarivision.local_app.OUTPUTS_DIR", outputs)
+    monkeypatch.setattr("klarivision.local_app.AUDIO_DIR", audio.parent)
+    
+    captured = {}
+    def fake_build_frequency_viewer(pitch_json, *args, **kwargs):
+        captured["pitch_json"] = pitch_json
+        captured["engine"] = kwargs.get("engine")
+    
+    monkeypatch.setattr("klarivision.local_app.build_frequency_viewer", fake_build_frequency_viewer)
+    
+    # Explicitly request vpm_like, even though meta says yin_v1
+    refresh_existing_viewer(viewer, engine="vpm_like")
+    
+    assert captured["pitch_json"] == pitch_vpm
+    assert captured["engine"] == "vpm_like"
+
+
+def test_refresh_existing_viewer_raises_error_when_engine_file_missing(tmp_path, monkeypatch) -> None:
+    outputs = tmp_path / "outputs"
+    viewer = outputs / "ornek.html"
+    audio = tmp_path / "data" / "audio" / "ornek.wav"
+    outputs.mkdir(parents=True)
+    audio.parent.mkdir(parents=True)
+    audio.write_bytes(b"wav")
+    
+    viewer.write_text('<video id="media" src="video.mp4"></video>', encoding="utf-8")
+    
+    monkeypatch.setattr("klarivision.local_app.OUTPUTS_DIR", outputs)
+    monkeypatch.setattr("klarivision.local_app.AUDIO_DIR", audio.parent)
+    
+    with pytest.raises(FileNotFoundError):
+        refresh_existing_viewer(viewer, engine="vpm_like")
+
+
+def test_refresh_existing_viewer_falls_back_to_mtime_for_old_pages(tmp_path, monkeypatch) -> None:
+    outputs = tmp_path / "outputs"
+    viewer = outputs / "ornek.html"
+    audio = tmp_path / "data" / "audio" / "ornek.wav"
+    pitch_vamp = outputs / "ornek.vamp.json"
+    pitch_yin = outputs / f"ornek.yin_v1.offline_track_v1.{OFFLINE_TRACK_REVISION}.json"
+    outputs.mkdir(parents=True)
+    audio.parent.mkdir(parents=True)
+    audio.write_bytes(b"wav")
+    
+    # Create two pitch files with vamp being newer
+    pitch_yin.write_text('{"frames":[]}', encoding="utf-8")
+    pitch_vamp.write_text('{"frames":[]}', encoding="utf-8")
+    pitch_vamp.touch()
+    
+    # Old page without meta tag
+    viewer.write_text('<video id="media" src="video.mp4"></video>', encoding="utf-8")
+    
+    monkeypatch.setattr("klarivision.local_app.OUTPUTS_DIR", outputs)
+    monkeypatch.setattr("klarivision.local_app.AUDIO_DIR", audio.parent)
+    
+    captured = {}
+    def fake_build_frequency_viewer(pitch_json, *args, **kwargs):
+        captured["pitch_json"] = pitch_json
+        captured["engine"] = kwargs.get("engine")
+    
+    monkeypatch.setattr("klarivision.local_app.build_frequency_viewer", fake_build_frequency_viewer)
+    
+    refresh_existing_viewer(viewer)
+    
+    assert captured["pitch_json"] == pitch_vamp
+    assert captured["engine"] == "vamp"

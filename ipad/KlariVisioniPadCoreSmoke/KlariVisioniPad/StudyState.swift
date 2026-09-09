@@ -86,6 +86,21 @@ final class iPadStudyState {
     private var idleTimerWasDisabled = false
     private let libraryStore: iPadStudyLibraryStore?
     private let viewerLoader: @MainActor (iPadStudyWebViewStore, iPadStudy) throws -> Void
+
+    // MARK: - "Birlikte Çal" (T6)
+    //
+    // Oturum burada, `iPadStudyState` üzerinde tutulur — bir View'da değil —
+    // çünkü bu sınıfın zaten var olan üç ayrılış noktası
+    // (`pauseForLeavingWorkspace()`, `close()`, `handleSceneBackground()`)
+    // hepsi buradan `stopTogetherMode()` çağırabilir. Mikrofonu yalnız
+    // `.onDisappear`'a bağlamak sahne arka plana geçişini KAÇIRIR (view
+    // kaybolmaz, uygulama arka plana düşer) — macOS'un
+    // `closeWorkspaceAfterPausing` yorumlarında uyarılan tuzağın SwiftUI
+    // muadili budur.
+    private let togetherSession = iPadTogetherSession()
+    private(set) var isTogetherModeOn = false
+    private(set) var isTogetherMuted = false
+    var togetherMicErrorMessage: String?
     // Recorded WAV files live outside Imports until this state successfully
     // copies and analyzes them.  Keep this transient guard separate from the
     // persisted study model so Studies-v1.json remains unchanged.
@@ -93,6 +108,7 @@ final class iPadStudyState {
     private var retryableCompletedRecording: URL?
     private var pitchColor = "#67d5ff"
     private var guideColor = "#b7d8ff"
+    private var kararColor = "#E75A5A"
     private var makamIntervals = iPadMakamIntervalsStore()
 
     init(
@@ -146,7 +162,7 @@ final class iPadStudyState {
             }.value
             let asset = AVURLAsset(url: copied)
             let duration = max(((try? await asset.load(.duration))?.seconds) ?? 0, 0)
-            let study = iPadStudy(id: UUID(), sourceURL: copied, title: source.deletingPathExtension().lastPathComponent, duration: duration, frames: frames, engine: engine, context: iPadMusicContext(), analyzedAt: Date())
+            let study = iPadStudy(id: UUID(), sourceURL: copied, title: source.deletingPathExtension().lastPathComponent, duration: duration, frames: frames, engine: engine, context: iPadMusicContext(), analyzedAt: Date(), pipelineRevision: iPadOfflinePitchAnalyzer.pipelineRevision)
             // Prepare the viewer before committing the study. If this late step
             // fails, retry must not find a persisted record and create a second
             // study for the same completed recording.
@@ -200,9 +216,10 @@ final class iPadStudyState {
         command(.setVideoFullscreen(isVideoFullscreen))
     }
 
-    func configure(graphPitchColor: String, guideColor: String, makamIntervals: iPadMakamIntervalsStore? = nil) {
+    func configure(graphPitchColor: String, guideColor: String, kararColor: String, makamIntervals: iPadMakamIntervalsStore? = nil) {
         pitchColor = graphPitchColor
         self.guideColor = guideColor
+        self.kararColor = kararColor
         if let makamIntervals { self.makamIntervals = makamIntervals }
         if let currentStudy { webView.enqueue(contextCommand(for: currentStudy.context)) }
     }
@@ -233,7 +250,7 @@ final class iPadStudyState {
     }
 
     private func contextCommand(for context: iPadMusicContext) -> iPadStudyCommand {
-        .context(context, pitchColor: pitchColor, guideColor: guideColor, komaOverride: makamIntervals.commas(for: context.makam))
+        .context(context, pitchColor: pitchColor, guideColor: guideColor, kararColor: kararColor, komaOverride: makamIntervals.commas(for: context.makam))
     }
 
     func updateTitle(_ title: String) {
@@ -255,6 +272,10 @@ final class iPadStudyState {
     func pauseForLeavingWorkspace() {
         command(.pause)
         setPlaying(false)
+        // Çalışma alanından her ayrılış (gezinme, kütüphaneye dönüş, sahne
+        // arka plana geçişi) mikrofonu da kapatmalı — aksi halde donanım
+        // görünmeyen bir ekranın arkasında açık kalır.
+        stopTogetherMode()
     }
 
     func handleSceneBackground() { pauseForLeavingWorkspace() }
@@ -270,6 +291,58 @@ final class iPadStudyState {
         hasVideo = false
         isVideoFullscreen = false
         setPlaying(false)
+    }
+
+    /// Mikrofonu başlatır; izin reddedilirse veya başka bir hata oluşursa
+    /// `togetherMicErrorMessage` Türkçe açıklamayla dolar ve mod açılmaz.
+    /// `minimumRMS`, Çalma Modu'nun sinyal kapısıyla aynı ölçekte —
+    /// ayrı bir "Birlikte Çal" kapısı icat edilmiyor.
+    func startTogetherMode(engine: iPadPitchEngine, minimumRMS: Double, micColorHex: String) async {
+        guard !isTogetherModeOn else { return }
+        togetherMicErrorMessage = nil
+        do {
+            try await togetherSession.start(state: self, engine: engine, minimumRMS: minimumRMS, micColorHex: micColorHex)
+            isTogetherModeOn = true
+        } catch {
+            isTogetherModeOn = false
+            togetherMicErrorMessage = (error as? LocalizedError)?.errorDescription
+                ?? "Birlikte Çal mikrofonu başlatılamadı."
+        }
+    }
+
+    /// Tek teardown noktası burada sarmalanır. İdempotent: zaten kapalıyken
+    /// çağrılması güvenlidir.
+    func stopTogetherMode() {
+        togetherSession.stop()
+        isTogetherModeOn = false
+        isTogetherMuted = false
+    }
+
+    /// Yalnız referans çıkışını sessize alır/açar — akustik geri besleme
+    /// içindir, mikrofon çizimi sürer (bkz. `iPadTogetherSession.setMuted`).
+    func toggleTogetherMute() {
+        guard isTogetherModeOn else { return }
+        isTogetherMuted.toggle()
+        togetherSession.setMuted(isTogetherMuted)
+    }
+
+    /// Tanılama satırı için: ölçülen giriş gecikmesi kaynağı. `TogetherSession`
+    /// bu değeri kendi `measureInputLatency()`'siyle oturum başlatılırken
+    /// ölçer; burada yalnız hangi kaynağın kullanıldığını okuyoruz.
+    var togetherLatencySource: iPadMicLatencySource? { togetherSession.lastLatencySource }
+
+    /// `togetherLatencySource` ile aynı anda okunacak, kaba bir gecikme
+    /// tahmini. `TogetherSession` ölçtüğü kesin saniye değerini dışarı
+    /// vermiyor (dosyaya dokunulmuyor), bu yüzden tanılama satırı aynı
+    /// AVAudioSession değerlerini burada ayrıca okur — oturum etkinken bu,
+    /// oturumun kendi ölçümüyle aynı değerdir.
+    var togetherLatencyMilliseconds: Double? {
+        guard isTogetherModeOn else { return nil }
+        let session = AVAudioSession.sharedInstance()
+        let input = session.inputLatency
+        let buffer = session.ioBufferDuration
+        guard input.isFinite, buffer.isFinite else { return nil }
+        return (input + buffer) * 1_000
     }
 
     private func applySnapshot(_ values: [String: Any]) {

@@ -16,7 +16,9 @@ def main() -> None:
     parser.add_argument("--makam", default="huzzam")
     parser.add_argument("--karar", default="dugah")
     parser.add_argument(
-        "--engine", choices=("yin_v1", "pitch_engine_v2", "vpm_like", "hapt_v1"), default="yin_v1"
+        # One engine since D-039. A command line still naming a removed engine
+        # is rejected by argparse rather than silently analysed with another.
+        "--engine", choices=("unified_v1",), default="unified_v1"
     )
     arguments = parser.parse_args()
 
