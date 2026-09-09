@@ -540,8 +540,20 @@ class LiveAudioCapture(
      */
     private fun registerDeviceCallback() {
         val am = audioManagerOrNull() ?: return
+        // `registerAudioDeviceCallback` KAYIT ANINDA `onAudioDevicesAdded`'ı
+        // o an bağlı olan bütün cihazlarla bir kez çağırır. Dahili mikrofon da
+        // bir kaynak olduğu için bu ilk çağrı "yeni giriş cihazı geldi" gibi
+        // görünür ve rota politikası oturumu daha başlamadan kapatırdı —
+        // Çalma Modu cihazda "Ses rotası değişti" diyerek anında düşüyordu.
+        // Bu yüzden ilk teslim yutulur; yalnız SONRAKİ değişimler gerçek rota
+        // olayıdır. (Cihazda gözlendi: SM-A736B.)
+        var primed = false
         val callback = object : AudioDeviceCallback() {
             override fun onAudioDevicesAdded(addedDevices: Array<AudioDeviceInfo>) {
+                if (!primed) {
+                    primed = true
+                    return
+                }
                 if (addedDevices.none { it.isSource }) return
                 applyRouteChange(RouteChangePolicy.REASON_NEW_DEVICE_AVAILABLE)
             }

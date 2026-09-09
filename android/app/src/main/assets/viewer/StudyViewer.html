@@ -7,10 +7,14 @@
 <html lang="tr">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <style>
+  /* Güvenli alan: WKWebView `env(safe-area-inset-*)`'i doğru doldurur.
+     Android WebView ise yalnız ekran çentiğini bildirir, durum/gezinme
+     çubuğunu bildirmez; barındırıcı ölçtüğü değeri `--kv-inset-top/bottom`
+     olarak yazar, burada ikisinin BÜYÜĞÜ alınır. */
   :root { color-scheme: light dark; background:#111827; color:#f4f7fb; font-family:-apple-system,system-ui,sans-serif; --marker-a:#49e3a1; --marker-b:#ffc35c; --marker-label:#101827; }
   @media (prefers-color-scheme: light) { :root { --marker-a:#087f5b; --marker-b:#a55a00; --marker-label:#ffffff; } }
   html,body,#stage { margin:0; width:100%; height:100%; height:100dvh; min-height:0; overflow:hidden; background:#111827; }
-  #stage { position:relative; padding-top:env(safe-area-inset-top); padding-bottom:env(safe-area-inset-bottom); box-sizing:border-box; }
+  #stage { position:relative; padding-top:max(env(safe-area-inset-top), var(--kv-inset-top, 0px)); padding-bottom:max(env(safe-area-inset-bottom), var(--kv-inset-bottom, 0px)); box-sizing:border-box; }
   #curve, #mediaSlot { position:absolute; inset:0; width:100%; height:100%; min-height:0; box-sizing:border-box; }
   /* Every graph gesture is handled by this page's own touch handlers, so the
      browser must not claim the one-finger drag for scrolling or a long-press
@@ -53,7 +57,8 @@
   const stage = document.getElementById('stage');
   const setMode = mode => { stage.classList.toggle('mode-video', mode === 'video'); stage.classList.toggle('mode-graph', mode !== 'video'); resize(); };
   var media = null, frames = [], a = null, b = null, looping = false, following = false, verticalCenter = null;
-  let context = {guides:[], makam:'', karar:'', pitchColor:'#67d5ff', guideColor:'#b7d8ff'};
+  let micFrames = [];
+  let context = {guides:[], makam:'', karar:'', pitchColor:'#67d5ff', guideColor:'#b7d8ff', micColor:'#FF9F0A'};
   const verticalSpan = 2400;
   const cents = frequency => 1200*Math.log2(frequency/440);
   const median = values => { const sorted=[...values].sort((x,y)=>x-y), middle=Math.floor(sorted.length/2);return sorted.length%2?sorted[middle]:(sorted[middle-1]+sorted[middle])/2; };
@@ -109,6 +114,14 @@
     while (low < high) { const middle = (low + high) >> 1; if (frames[middle].t < time) low = middle + 1; else high = middle; }
     return low;
   };
+  // micFrames on binlerce nokta olabilir; frameIndexAtOrAfter ile aynı ikili
+  // arama kalıbı, görünür pencereyi tüm diziyi taramadan bulur.
+  const micIndexAtOrAfter = time => {
+    let low = 0, high = micFrames.length;
+    while (low < high) { const middle = (low + high) >> 1; if (micFrames[middle].t < time) low = middle + 1; else high = middle; }
+    return low;
+  };
+  const micRangeFor = (start, end) => [micIndexAtOrAfter(start), micIndexAtOrAfter(end + 1e-9)];
   const send = () => bridge?.postMessage({time:Number(media?.currentTime)||0,duration:Number(media?.duration)||0,isPlaying:media ? !media.paused : false,rate:Number(media?.playbackRate)||1,loopA:a,loopB:b,loopEnabled:looping,followsCurve:following});
   const resize = () => { const r=canvas.getBoundingClientRect(), scale=devicePixelRatio||1; canvas.width=r.width*scale; canvas.height=r.height*scale; ctx.setTransform(scale,0,0,scale,0,0); draw(); };
   // Visible time-window length (seconds) and vertical pitch-range multiplier.
@@ -131,6 +144,10 @@
   let viewport = null;
   // Tanı sayacı: takılmanın kaynağını ayırmak için — kareler gerçekten
   // düşüyorsa "atlanan" artar, akış saati sorunluysa "donan"/"geri" artar.
+  // Tanılama kutusu bir GELİŞTİRME aracıdır, ürün yüzeyi değil:
+  // varsayılan olarak kapalıdır. Sayaçlar yine de işler ki mod açıkken
+  // takılma incelenirken geçmiş kaybolmasın.
+  let diagnosticsOn = false;
   let diagFrames = [], diagDropped = 0, diagWorst = 0, diagFrozen = 0, diagBack = 0, diagLastView = null;
   const noteFrame = (ts, viewTime) => {
     const previous = diagFrames.length ? diagFrames[diagFrames.length - 1] : null;
@@ -142,7 +159,7 @@
     else diagLastView = null;
   };
   const drawDiagnostics = () => {
-    if (diagFrames.length < 2) return;
+    if (!diagnosticsOn || diagFrames.length < 2) return;
     const seconds = (diagFrames[diagFrames.length - 1] - diagFrames[0]) / 1000, fps = seconds > 0 ? (diagFrames.length - 1) / seconds : 0;
     const lines = [`${fps.toFixed(1)} fps`, `atlanan ${diagDropped} · en uzun ${diagWorst.toFixed(0)} ms`, `donan ${diagFrozen} · geri ${diagBack}`];
     ctx.save(); ctx.font = '600 10px ui-monospace,SFMono-Regular,Menlo,monospace'; ctx.textAlign = 'left';
@@ -221,6 +238,11 @@
     if(extent.voiced){
       ctx.strokeStyle=context.pitchColor;ctx.lineWidth=1.8;ctx.lineJoin='round';ctx.beginPath();let open=false;
       for(let i=frameIndexAtOrAfter(windowStart);i<frames.length;i++){const x=frames[i];if(x.t>windowEnd)break;if(!x.v||!x.f){open=false;continue;}const px=timeX(x.t), py=h-(verticalValue(x.f)-lo)/(hi-lo)*h;if(py<0||py>h){open=false;continue;}if(!open){ctx.moveTo(px,py);open=true}else ctx.lineTo(px,py)}ctx.stroke();}
+    // Mikrofon eğrisi: aynı x()/y() geometrisi, görünür pencereye ikili aramayla
+    // düşen noktalar. 0,12 sn'yi aşan boşluklarda yol kırılır (loop/seek/geri sıçrama).
+    if(micFrames.length){
+      ctx.strokeStyle=context.micColor;ctx.lineWidth=1.7;ctx.lineJoin='round';ctx.lineCap='round';ctx.beginPath();let micPrevious=null;
+      for(let i=micIndexAtOrAfter(windowStart);i<micFrames.length;i++){const x=micFrames[i];if(x.t>windowEnd)break;const px=timeX(x.t), py=h-(verticalValue(x.hz)-lo)/(hi-lo)*h;if(py<0||py>h){micPrevious=null;continue;}if(!micPrevious||x.t-micPrevious.t>.12){ctx.moveTo(px,py)}else ctx.lineTo(px,py);micPrevious=x;}ctx.stroke();}
     const drawMarker = (time,label,colorVariable,labelTop) => {
       if(time===null||time<windowStart||time>windowEnd) return;
       const x=Math.max(1,Math.min(w-1,timeX(time))), color=markerColors[colorVariable], labelColor=markerColors['--marker-label'];
@@ -310,9 +332,38 @@
   const endTouch=e=>{ if(e.touches.length<2) pinch=null; if(e.touches.length===1) seedDrag(e.touches[0]); else if(!e.touches.length) drag=null; };
   canvas.addEventListener('touchend',endTouch);
   canvas.addEventListener('touchcancel',endTouch);
+  // Bir mikrofon noktasi dogasi geregi calma basinin GERISINDEDIR: zaten
+  // olmus bir sesi anlatir ve Swift sabit gecikmeyi ayrica duser. Calma
+  // basinin belirgin olcude ONUNDE gelen nokta yalnizca su durumda
+  // uretilir: arama ya da loop B->A donusu olmus, ama Swift'in sunum
+  // saati (50 ms'lik anlik goruntuyle beslendigi icin) sicramayi henuz
+  // gormemis; o kare hala B civarina damgalaniyor. Bu BAYAT nokta
+  // alinirsa `lastT` B'ye kacar ve donusten sonraki gercek noktalarin
+  // hepsi asagidaki `t<lastT` elemesine takilir -> o loop turu hic
+  // cizilmez. Yaris her turda yeniden atildigi icin belirti "3-4 loop'ta
+  // bir cizmiyor" seklinde gorunur. Tolerans sayfanin kendi sicrama
+  // esigiyle ayni (0,35 sn); kullanici hizalamasi +/-200 ms oldugundan
+  // gercek noktalar bu ufku asamaz.
+  const micAppend = (points) => {
+    if (!Array.isArray(points) || !points.length) return;
+    const horizon = (Number(media?.currentTime) || 0) + 0.35;
+    let lastT = micFrames.length ? micFrames[micFrames.length - 1].t : -Infinity;
+    for (const point of points) {
+      if (!point || typeof point !== 'object') continue;
+      const t = Number(point.t), hz = Number(point.hz);
+      if (!Number.isFinite(t) || t < lastT || t > horizon) continue;
+      if (!Number.isFinite(hz) || hz <= 0) continue;
+      micFrames.push({t, hz});
+      lastT = t;
+    }
+    draw();
+  };
+  const micClear = () => { micFrames = []; draw(); };
+  const micTruncate = (time) => { const cutoff = micIndexAtOrAfter(Number(time) || 0); micFrames.length = cutoff; draw(); };
+  const setMicColor = (hex) => { context.micColor = hex; draw(); };
   const install = (url, data) => {
     if(media){media.pause();media.remove();}
-    frames=data||[];extentCache=null;verticalCenter=null;verticalOffset=0;drag=null;pinch=null;shownTime=0;shownAt=performance.now();
+    frames=data||[];micFrames=[];extentCache=null;verticalCenter=null;verticalOffset=0;drag=null;pinch=null;shownTime=0;shownAt=performance.now();
     const isVideo=/\.(mp4|mov|m4v)$/i.test(url);
     media=document.createElement(isVideo?'video':'audio');
     // Playback is driven by the SwiftUI floating controls via the bridge and by
@@ -326,7 +377,34 @@
     ['seeking','seeked','play','playing','ratechange','loadedmetadata','ended'].forEach(e=>media.addEventListener(e,snapClock));
     media.addEventListener('loadedmetadata',()=>{resize();send();});
   };
-  window.kvStudy={receive(p){switch(p.type){case'load':install(p.url,p.frames);break;case'context':Object.assign(context,p);extentCache=null;break;case'playPause':media?.paused?media.play():media?.pause();break;case'pause':media?.pause();break;case'seek':if(media){media.currentTime=Math.max(0,Math.min(p.time,media.duration||p.time));snapClock();}break;case'rate':if(media)media.playbackRate=p.rate;break;case'markA':a=media?.currentTime||0;break;case'markB':b=media?.currentTime||0;break;case'loop':looping=!looping;break;case'follow':following=!following;if(following)verticalOffset=0;break;case'setMode':setMode(p.mode);break;}send();draw();}};
+  window.kvStudy={
+    setDiagnostics(flag){diagnosticsOn=!!flag;draw();},
+    micAppend,
+    micClear,
+    micTruncate,
+    setMicColor,
+    receive(p){
+      switch(p.type){
+        case'load':install(p.url,p.frames);break;
+        case'context':Object.assign(context,p);extentCache=null;break;
+        case'playPause':media?.paused?media.play():media?.pause();break;
+        case'pause':media?.pause();break;
+        case'seek':if(media){media.currentTime=Math.max(0,Math.min(p.time,media.duration||p.time));snapClock();}break;
+        case'rate':if(media)media.playbackRate=p.rate;break;
+        case'markA':a=media?.currentTime||0;break;
+        case'markB':b=media?.currentTime||0;break;
+        case'loop':looping=!looping;break;
+        case'follow':following=!following;if(following)verticalOffset=0;break;
+        case'setMode':setMode(p.mode);break;
+        case'micAppend':micAppend(p.points);break;
+        case'micClear':micClear();break;
+        case'micTruncate':micTruncate(p.time);break;
+        case'setMicColor':setMicColor(p.hex);break;
+        case'mute':if(media)media.muted=!!p.muted;break;
+      }
+      send();draw();
+    }
+  };
   addEventListener('resize',resize); resize(); requestAnimationFrame(tick);
 })();
 </script></body></html>

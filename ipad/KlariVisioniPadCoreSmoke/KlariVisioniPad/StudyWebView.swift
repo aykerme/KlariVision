@@ -87,6 +87,12 @@ final class iPadStudyWebViewStore: NSObject, ObservableObject, WKNavigationDeleg
         case .loop: payload = ["type": "loop"]
         case .follow: payload = ["type": "follow"]
         case let .setVideoFullscreen(isVideo): payload = ["type": "setMode", "mode": isVideo ? "video" : "graph"]
+        // "Birlikte Çal" mikrofon köprüsü — macOS'un `LocalViewer.Coordinator
+        // .sendMicPoints`/`clearMicPoints` karşılığı (bkz. TogetherSession.swift).
+        case .micClear: payload = ["type": "micClear"]
+        case let .micAppend(points): payload = ["type": "micAppend", "points": points.map { ["t": $0.time, "hz": $0.frequency] }]
+        case let .micTruncate(time): payload = ["type": "micTruncate", "time": time]
+        case let .setMicColor(hex): payload = ["type": "setMicColor", "hex": hex]
         }
         guard let data = try? JSONSerialization.data(withJSONObject: payload),
               let json = String(data: data, encoding: .utf8)

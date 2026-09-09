@@ -22,6 +22,13 @@ import kotlinx.serialization.json.putJsonArray
 data class GuidePayload(val name: String, val hz: Double, val karar: Boolean)
 
 /**
+ * Birlikte Çal modunda mikrofon aynasına eklenen tek nokta —
+ * StudyViewer.html'in `micAppend(points)` beklediği `{t, hz}` şekliyle
+ * birebir eşleşir (bkz. `micAppend` JS gövdesi).
+ */
+data class MicPoint(val time: Double, val frequency: Double)
+
+/**
  * `window.kvStudy.receive(payload)` çağrısına konacak komutlardan biri.
  * Her alt tip `iPadStudyCommand`'daki karşılığıyla aynı `type` ayırıcısını ve
  * alan adlarını üretir.
@@ -52,6 +59,23 @@ sealed class StudyCommand {
 
     /** Sahneyi dolduran taraf: true → video, false → grafik. */
     data class SetMode(val isVideo: Boolean) : StudyCommand()
+
+    // ==================== Birlikte Çal (T3) ====================
+
+    /** Mikrofon aynasına yeni noktalar ekle — kareler zaten medya zamanına çevrilmiş gelir. */
+    data class MicAppend(val points: List<MicPoint>) : StudyCommand()
+
+    /** Mikrofon aynasını tamamen boşalt (mod açılırken/oturum sıfırlanırken). */
+    data object MicClear : StudyCommand()
+
+    /** Mikrofon aynasını `time`'dan sonrasını at — geriye arama/loop B→A dönüşü. */
+    data class MicTruncate(val time: Double) : StudyCommand()
+
+    /** Mikrofon aynasının rengini ayarlardan gelen hex koduna ayarla. */
+    data class SetMicColor(val hex: String) : StudyCommand()
+
+    /** Medya elemanının sesini kapat/aç — akustik geri besleme (hoparlör→mikrofon) önlemi. */
+    data class Mute(val muted: Boolean) : StudyCommand()
 
     /** `window.kvStudy.receive(...)` çağrısına konacak JSON gövdesi. */
     fun toJsonObject(): JsonObject = when (this) {
@@ -107,6 +131,34 @@ sealed class StudyCommand {
         is SetMode -> buildJsonObject {
             put("type", "setMode")
             put("mode", if (isVideo) "video" else "graph")
+        }
+
+        is MicAppend -> buildJsonObject {
+            put("type", "micAppend")
+            putJsonArray("points") {
+                points.forEach { point ->
+                    addJsonObject {
+                        put("t", point.time)
+                        put("hz", point.frequency)
+                    }
+                }
+            }
+        }
+
+        MicClear -> buildJsonObject { put("type", "micClear") }
+        is MicTruncate -> buildJsonObject {
+            put("type", "micTruncate")
+            put("time", time)
+        }
+
+        is SetMicColor -> buildJsonObject {
+            put("type", "setMicColor")
+            put("hex", hex)
+        }
+
+        is Mute -> buildJsonObject {
+            put("type", "mute")
+            put("muted", muted)
         }
     }
 

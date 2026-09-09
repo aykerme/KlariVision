@@ -305,6 +305,22 @@ class StudyOrchestrator(
     }
 
     /** Bir çalışmayı kütüphaneden kaldırır (medya dosyasına dokunmaz). */
+    /**
+     * Açık çalışmayı kapatır: oynatmayı durdurur ve faz [StudyPhase.IDLE]'a
+     * döner. Çalışma KÜTÜPHANEDE KALIR, medya silinmez — bu yalnız "şu an
+     * açık değil" demektir.
+     *
+     * Bu, UI katmanının kendi görünürlük bayrağının yerini alır: o bayrak
+     * ekranla birlikte yeniden kurulduğu için kullanıcı Çalışmalar'dan çıkıp
+     * döndüğünde kapattığı çalışma yeniden açılıyordu (cihazda gözlendi).
+     */
+    fun closeCurrent() {
+        if (_uiState.value.phase == StudyPhase.IDLE) return
+        pause()
+        _uiState.update { it.copy(phase = StudyPhase.IDLE, current = null, playback = null) }
+        bridge?.close()
+    }
+
     fun removeStudy(id: String) {
         pauseForLeavingWorkspace()
         val state = _uiState.value

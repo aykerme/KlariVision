@@ -36,6 +36,9 @@ object SettingsKeys {
     const val GRAPH_KARAR_COLOR = "klarivision-android-graph-karar-color-v1"
     const val GRAPH_KARAR_COLOR_DEFAULT = "#E75A5A"
 
+    const val GRAPH_MIC_COLOR = "klarivision-android-graph-mic-color-v1"
+    const val GRAPH_MIC_COLOR_DEFAULT = "#FF9F0A"
+
     // 53-koma sistem ayarları (12 aralık, toplam 53 koma)
     const val KOMA_INTERVALS_53 = "klarivision-android-53-koma-intervals-v1"
     val KOMA_INTERVALS_53_DEFAULT = listOf(4, 4, 5, 4, 4, 5, 4, 4, 5, 4, 5, 5)
@@ -80,4 +83,8 @@ object SettingsKeys {
 
     // Tüm geçerli ölçek gösterimi modları
     val ALL_SCALE_DISPLAYS = listOf("Makam", "Türk Müziği (Sol Klarnet)")
+
+    // Birlikte Çal modunda mikrofon hizalaması (ms)
+    const val TOGETHER_MIC_ALIGNMENT_MS = "klarivision-android-together-mic-alignment-ms-v1"
+    const val TOGETHER_MIC_ALIGNMENT_MS_DEFAULT = 0.0
 }

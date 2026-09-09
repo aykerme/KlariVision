@@ -128,4 +128,15 @@ object SettingsValidation {
     fun defaultIntervalsForMakam(makamName: String): List<Int> {
         return SettingsKeys.MAKAM_DEFAULTS[makamName] ?: emptyList()
     }
+
+    /**
+     * Mikrofon hizalamasını −200…+200 ms aralığına kelepçeler.
+     * Çalarken eğriye bakıp kaydırmak için, 5 ms adım.
+     *
+     * @param valueMs Hizalama (milisaniye)
+     * @return Clamp'lenmiş hizalama (milisaniye)
+     */
+    fun clampMicAlignmentMs(valueMs: Double): Double {
+        return maxOf(-200.0, minOf(200.0, valueMs))
+    }
 }

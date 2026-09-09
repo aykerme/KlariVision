@@ -87,15 +87,20 @@ class LiveGraphBridge(context: Context, importsDir: File) {
 
     private val assetLoader = ViewerAssets.buildAssetLoader(context, importsDir)
     private var ready = false
+    private var safeTopDp = 0f
+    private var safeBottomDp = 0f
     private var isRunning = false
     private var lastContext: LiveContextPayload? = null
     private val pendingFrames = mutableListOf<PitchFrame>()
 
     init {
+        ViewerAssets.applyFullSizeLayout(webView)
         ViewerAssets.configureSecurity(webView)
+        ViewerAssets.attachConsoleBridge(webView)
         ViewerAssets.disableNativeGestures(webView)
-        webView.webViewClient = ViewerWebViewClient(assetLoader) {
+        webView.webViewClient = ViewerWebViewClient(assetLoader, importsDir) {
             ready = true
+            sendSafeAreaInsets()
             sendContext()
             sendRunning()
             flush()
@@ -150,6 +155,32 @@ class LiveGraphBridge(context: Context, importsDir: File) {
     private fun sendRunning() {
         if (!ready) return
         evaluate("window.kvLive && window.kvLive.setRunning($isRunning);")
+    }
+
+
+    /**
+     * Sistem çubuğu boşluklarını sayfaya CSS değişkeni olarak bildirir.
+     *
+     * `WKWebView` `env(safe-area-inset-*)`'i doğru doldurur; Android WebView
+     * oraya yalnız EKRAN ÇENTİĞİNİ koyar, durum/gezinme çubuğunu koymaz.
+     * Grafik kasten kenardan kenara çizildiği için bu bilgi olmadan sayfanın
+     * üst etiketi durum çubuğunun altında kalıyor. Değer Compose tarafından
+     * (`WindowInsets.safeDrawing`) ölçülüp buraya verilir; sayfa CSS'i
+     * `env()` ile bu değişkenin BÜYÜĞÜNÜ alır, böylece iki platform da aynı
+     * sayfayı bozmadan kullanır.
+     */
+    fun setSafeAreaInsets(topDp: Float, bottomDp: Float) {
+        safeTopDp = topDp
+        safeBottomDp = bottomDp
+        sendSafeAreaInsets()
+    }
+
+    private fun sendSafeAreaInsets() {
+        if (!ready) return
+        evaluate(
+            "document.documentElement.style.setProperty('--kv-inset-top','${safeTopDp}px');" +
+                "document.documentElement.style.setProperty('--kv-inset-bottom','${safeBottomDp}px');",
+        )
     }
 
     private fun evaluate(script: String) {

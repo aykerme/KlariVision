@@ -9,10 +9,12 @@ import SwiftUI
 /// playback or analysis state.
 struct iPadCompactStudyWorkspace: View {
     @Bindable var study: iPadStudyState
+    @Bindable var appState: iPadAppState
     let intervals: iPadMakamIntervalsStore
     let close: () -> Void
     let retryCompletedRecording: () -> Void
     @State private var isPresentingSettings = false
+    @State private var isTogglingTogetherMode = false
 
     var body: some View {
         NavigationStack {
@@ -74,6 +76,27 @@ struct iPadCompactStudyWorkspace: View {
                 }
             }
         }
+        // Ek güvenlik ağı: `study.close()`/`pauseForLeavingWorkspace()` zaten
+        // her ayrılış yolunda mikrofonu durdurur (bkz. StudyState.swift), ama
+        // bu görünüm beklenmedik biçimde kaybolursa (ör. sekme değişimi
+        // sırasında route sıfırlanmadan) burası ikinci bir fren.
+        .onDisappear { study.stopTogetherMode() }
+    }
+
+    private func toggleTogetherMode() {
+        if study.isTogetherModeOn {
+            study.stopTogetherMode()
+            return
+        }
+        isTogglingTogetherMode = true
+        Task {
+            await study.startTogetherMode(
+                engine: appState.studyEngine,
+                minimumRMS: iPadAppState.rms(forDbFS: appState.liveSignalGateDbFS),
+                micColorHex: appState.graphMicColor
+            )
+            isTogglingTogetherMode = false
+        }
     }
 
     /// Shows the icon of the side tapping it would switch to (a video icon
@@ -117,11 +140,22 @@ struct iPadCompactStudyWorkspace: View {
                 Spacer(minLength: 8)
                 settingsButton
             }
+            HStack(spacing: compact ? 8 : 10) {
+                iPadTogetherModeButton(isOn: study.isTogetherModeOn, isBusy: isTogglingTogetherMode, action: toggleTogetherMode)
+                if study.isTogetherModeOn {
+                    iPadTogetherMuteButton(isMuted: study.isTogetherMuted) { study.toggleTogetherMute() }
+                    iPadTogetherHeadphoneHint()
+                }
+                Spacer(minLength: 0)
+            }
+            if let message = study.togetherMicErrorMessage {
+                iPadTogetherErrorText(message: message)
+            }
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
         .sheet(isPresented: $isPresentingSettings) {
-            iPadStudySettingsSheet(study: study, intervals: intervals)
+            iPadStudySettingsSheet(study: study, appState: appState, intervals: intervals)
         }
     }
 

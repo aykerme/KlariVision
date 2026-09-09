@@ -30,14 +30,18 @@ class StudyGraphBridge(
     private val assetLoader = ViewerAssets.buildAssetLoader(context, importsDir)
     private val queue = StudyCommandQueue()
     private var ready = false
+    private var safeTopDp = 0f
+    private var safeBottomDp = 0f
     private var handlerInstalled = false
 
     init {
+        ViewerAssets.applyFullSizeLayout(webView)
         ViewerAssets.configureSecurity(webView)
         ViewerAssets.disableNativeGestures(webView)
         installBridgeInterface()
-        webView.webViewClient = ViewerWebViewClient(assetLoader) {
+        webView.webViewClient = ViewerWebViewClient(assetLoader, importsDir) {
             ready = true
+            sendSafeAreaInsets()
             flushIfReady()
         }
     }
@@ -84,6 +88,24 @@ class StudyGraphBridge(
 
     private fun send(command: StudyCommand) {
         evaluateRaw("window.kvStudy && window.kvStudy.receive(${command.toJsonString()});")
+    }
+
+    /**
+     * Sistem çubuğu boşluklarını sayfaya CSS değişkeni olarak bildirir —
+     * gerekçe için bkz. [LiveGraphBridge.setSafeAreaInsets].
+     */
+    fun setSafeAreaInsets(topDp: Float, bottomDp: Float) {
+        safeTopDp = topDp
+        safeBottomDp = bottomDp
+        sendSafeAreaInsets()
+    }
+
+    private fun sendSafeAreaInsets() {
+        if (!ready) return
+        evaluateRaw(
+            "document.documentElement.style.setProperty('--kv-inset-top','${safeTopDp}px');" +
+                "document.documentElement.style.setProperty('--kv-inset-bottom','${safeBottomDp}px');",
+        )
     }
 
     private fun evaluateRaw(script: String) {

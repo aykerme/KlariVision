@@ -1,6 +1,9 @@
-// KlariVision Android — Kütüphane ekranı, Swift iPadLibraryView/
-// iPadStudyLibraryList/iPadCompactLibraryView'den port edildi. Çalışma
-// listesi, açma ve kaldırma (kaldırma medyayı silmez) burada.
+// KlariVision Android — Çalışmalar ekranı, Swift iPadLibraryView/
+// iPadStudyLibraryList'ten port edildi. Study.phase IDLE iken çalışma listesi
+// gösterilir (Swift `study.phase == .idle` dalı); IDLE dışındaki her fazda
+// (import/analiz/hata/hazır) aynı ekran `StudyWorkspace`'in kendisine döner —
+// Dinleme, kök sekme değil buradan girilen bir çalışma alanıdır (D-01).
+// Listeden kaldırma yalnız kayıt meta-verisini siler, kaynak medyaya dokunmaz.
 
 package com.aykerme.klarivision.ui
 
@@ -22,31 +25,64 @@ import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import com.aykerme.klarivision.music.MakamIntervalsStore
+import com.aykerme.klarivision.state.StudyOrchestrator
+import com.aykerme.klarivision.state.StudyPhase
 import com.aykerme.klarivision.study.Study
+import com.aykerme.klarivision.together.TogetherOrchestrator
 
 /**
- * Kütüphane ekranı: kayıtlı çalışmaların listesi. Boşken bilgilendirici bir
- * mesaj gösterir; her satır açma ve kaldırma sunar — kaldırma yalnız kayıt
- * meta-verisini siler, kaynak medya dosyasına dokunmaz.
+ * Çalışmalar ekranı: boşta çalışma listesi, aksi halde gömülü Dinleme çalışma
+ * alanı (import/analiz ilerlemesi, hata kartı ya da hazır oynatıcı).
  */
 @Composable
 fun LibraryScreen(
     studies: List<Study>,
+    orchestrator: StudyOrchestrator,
+    intervalsStore: MakamIntervalsStore,
+    togetherOrchestrator: TogetherOrchestrator,
+    studyGraphContent: @Composable () -> Unit,
     onOpen: (Study) -> Unit,
     onRemove: (Study) -> Unit,
+    widthClass: KvWidthClass,
     modifier: Modifier = Modifier,
+    onRequestMicPermission: () -> Unit = {},
 ) {
+    val uiState by orchestrator.uiState.collectAsState()
+
+    val showWorkspace = uiState.phase != StudyPhase.IDLE
+    if (showWorkspace) {
+        StudyWorkspace(
+            orchestrator = orchestrator,
+            intervalsStore = intervalsStore,
+            togetherOrchestrator = togetherOrchestrator,
+            graphContent = studyGraphContent,
+            widthClass = widthClass,
+            onClose = { orchestrator.closeCurrent() },
+            modifier = modifier,
+            onRequestMicPermission = onRequestMicPermission,
+        )
+        return
+    }
+
     if (studies.isEmpty()) {
         Column(
-            modifier = modifier.fillMaxSize().padding(32.dp),
+            modifier = modifier.fillMaxSize().padding(KvSpacing.xxxl),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
         ) {
+            Icon(KvIcons.Studies, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
             Text("Kayıt Bulunmadı", style = MaterialTheme.typography.titleLarge)
             Text(
                 "Dinleme Modu'ndan yerel bir ses veya video dosyası seçin.",
@@ -57,7 +93,7 @@ fun LibraryScreen(
         return
     }
 
-    LazyColumn(modifier = modifier.fillMaxSize(), contentPadding = PaddingValues(12.dp)) {
+    LazyColumn(modifier = modifier.fillMaxSize(), contentPadding = PaddingValues(KvSpacing.md)) {
         items(studies, key = { it.id }) { study ->
             Card(
                 modifier = Modifier

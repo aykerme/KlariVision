@@ -336,15 +336,20 @@ fun ProgressStatus(title: String, detail: String, progress: Float?, modifier: Mo
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        if (progress != null) {
-            androidx.compose.material3.LinearProgressIndicator(progress = { progress })
-        } else {
-            androidx.compose.material3.LinearProgressIndicator()
-        }
+        // Sıra: başlık → açıklama → yüzde → çubuk. Çubuk yüzdenin ALTINDA
+        // durur; okuma yönü yukarıdan aşağı olduğu için sayı önce gelir.
         Text(title, style = MaterialTheme.typography.titleMedium)
         Text(detail, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         if (progress != null) {
             Text("%${(progress * 100).toInt()}", style = MaterialTheme.typography.labelLarge)
+            androidx.compose.material3.LinearProgressIndicator(
+                progress = { progress },
+                modifier = Modifier.fillMaxWidth(),
+            )
+        } else {
+            // progress == null: belirsiz aşama (çevrimdışı motorun tek
+            // bloklayıcı `finish()` çağrısı) — donmuş yüzde gösterilmez.
+            androidx.compose.material3.LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
         }
     }
 }

@@ -276,6 +276,15 @@ enum iPadStudyCommand: Equatable {
     /// floating toggle button so it stays tappable regardless of the
     /// WebView's own pinch-zoom state (see `iPadStudyWebView`).
     case setVideoFullscreen(Bool)
+
+    // "Birlikte Çal" mikrofon köprüsü (bkz. TogetherSession.swift). macOS'un
+    // StudyWorkspace.swift'teki LocalViewer.Coordinator köprüsünün karşılığı;
+    // StudyViewer.html'deki (T1) `window.kvStudy.receive` ayırıcısı bu dört
+    // tipi zaten tanıyor.
+    case micClear
+    case micAppend([iPadTogetherMicPoint])
+    case micTruncate(Double)
+    case setMicColor(String)
 }
 
 struct iPadStudyCommandQueue {

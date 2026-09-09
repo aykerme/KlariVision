@@ -85,7 +85,7 @@ struct iPadRootView: View {
         } detail: {
             switch state.selection {
             case .home: iPadHomeView(state: state, study: study, live: live, addRecordedStudy: addCompletedRecordingToStudies)
-            case .library: iPadLibraryView(study: study, intervals: state.makamIntervals, retryCompletedRecording: retryCompletedRecording)
+            case .library: iPadLibraryView(study: study, appState: state, intervals: state.makamIntervals, retryCompletedRecording: retryCompletedRecording)
             case .settings: iPadSettingsView(state: state)
             }
         }
@@ -95,7 +95,7 @@ struct iPadRootView: View {
     @ViewBuilder private var compactBody: some View {
         switch compactNavigation.route {
         case .listening:
-            iPadCompactStudyWorkspace(study: study, intervals: state.makamIntervals, close: { compactNavigation.closeWorkspace() }, retryCompletedRecording: retryCompletedRecording)
+            iPadCompactStudyWorkspace(study: study, appState: state, intervals: state.makamIntervals, close: { compactNavigation.closeWorkspace() }, retryCompletedRecording: retryCompletedRecording)
                 .toolbar(.hidden, for: .tabBar)
         case .live:
             iPadCompactLiveWorkspace(state: state, live: live, study: study, close: { compactNavigation.closeWorkspace() }, addToStudies: addCompletedRecordingToStudies)
@@ -322,6 +322,7 @@ private struct iPadLiveWorkspace: View {
 
 private struct iPadLibraryView: View {
     @Bindable var study: iPadStudyState
+    @Bindable var appState: iPadAppState
     let intervals: iPadMakamIntervalsStore
     let retryCompletedRecording: () -> Void
 
@@ -343,7 +344,7 @@ private struct iPadLibraryView: View {
                     }
                 }
             case .ready:
-                iPadStudyWorkspace(study: study, intervals: intervals)
+                iPadStudyWorkspace(study: study, appState: appState, intervals: intervals)
             }
         }
         .navigationTitle("Çalışmalar")
@@ -375,8 +376,10 @@ private struct iPadStudyProgressView: View {
 
 private struct iPadStudyWorkspace: View {
     @Bindable var study: iPadStudyState
+    @Bindable var appState: iPadAppState
     let intervals: iPadMakamIntervalsStore
     @State private var isPresentingSettings = false
+    @State private var isTogglingTogetherMode = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -398,9 +401,19 @@ private struct iPadStudyWorkspace: View {
                     Button("B'yi İşaretle") { study.command(.markB) }
                     Toggle("Loop", isOn: Binding(get: { study.looping }, set: { _ in study.command(.loop) }))
                     Toggle("Takip", isOn: Binding(get: { study.followsCurve }, set: { _ in study.command(.follow) }))
+                    iPadTogetherModeButton(isOn: study.isTogetherModeOn, isBusy: isTogglingTogetherMode, action: toggleTogetherMode)
+                    if study.isTogetherModeOn {
+                        iPadTogetherMuteButton(isMuted: study.isTogetherMuted) { study.toggleTogetherMute() }
+                    }
                     Spacer()
                     Text(iPadStudyPlaybackRate.label(for: study.rate)).monospacedDigit().foregroundStyle(.secondary)
                     iPadWorkspaceSettingsButton(label: "Çalışma ayarları") { isPresentingSettings = true }
+                }
+                if study.isTogetherModeOn {
+                    HStack { iPadTogetherHeadphoneHint(); Spacer() }
+                }
+                if let message = study.togetherMicErrorMessage {
+                    HStack { iPadTogetherErrorText(message: message); Spacer() }
                 }
             }
             .padding()
@@ -409,7 +422,25 @@ private struct iPadStudyWorkspace: View {
         .sheet(isPresented: $isPresentingSettings) {
             // "Takip" already has its own switch in this bar, so the sheet
             // omits it here and only the compact layout shows it.
-            iPadStudySettingsSheet(study: study, intervals: intervals, showsFollowToggle: false)
+            iPadStudySettingsSheet(study: study, appState: appState, intervals: intervals, showsFollowToggle: false)
+        }
+        // Ek güvenlik ağı — bkz. iPadCompactStudyWorkspace'teki aynı yorum.
+        .onDisappear { study.stopTogetherMode() }
+    }
+
+    private func toggleTogetherMode() {
+        if study.isTogetherModeOn {
+            study.stopTogetherMode()
+            return
+        }
+        isTogglingTogetherMode = true
+        Task {
+            await study.startTogetherMode(
+                engine: appState.studyEngine,
+                minimumRMS: iPadAppState.rms(forDbFS: appState.liveSignalGateDbFS),
+                micColorHex: appState.graphMicColor
+            )
+            isTogglingTogetherMode = false
         }
     }
 }

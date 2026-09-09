@@ -35,6 +35,8 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.aykerme.klarivision.music.Makam
 import com.aykerme.klarivision.music.MakamIntervalsStore
+import com.aykerme.klarivision.together.InputLatencySource
+import com.aykerme.klarivision.together.TogetherOrchestrator
 // SettingsKeys, SettingsValidation.kt ile birlikte paket bildirimi olmadan
 // (kök pakette) tanımlı — Kotlin'de kök paket üyeleri modül genelinde
 // içe aktarma gerekmeden görünür (settings/SettingsStore.kt'nin kendisi de
@@ -51,6 +53,7 @@ import kotlinx.coroutines.launch
 fun SettingsScreen(
     settingsStore: SettingsStore,
     intervalsStore: MakamIntervalsStore,
+    togetherOrchestrator: TogetherOrchestrator,
     onOpenMakamIntervals: (Makam) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -62,7 +65,10 @@ fun SettingsScreen(
     val pitchColor by settingsStore.graphPitchColor().collectAsState(initial = SettingsKeys.GRAPH_PITCH_COLOR_DEFAULT)
     val guideColor by settingsStore.graphGuideColor().collectAsState(initial = SettingsKeys.GRAPH_GUIDE_COLOR_DEFAULT)
     val kararColor by settingsStore.graphKararColor().collectAsState(initial = SettingsKeys.GRAPH_KARAR_COLOR_DEFAULT)
+    val micColor by settingsStore.graphMicColor().collectAsState(initial = SettingsKeys.GRAPH_MIC_COLOR_DEFAULT)
+    val micAlignmentMs by settingsStore.togetherMicAlignmentMs().collectAsState(initial = SettingsKeys.TOGETHER_MIC_ALIGNMENT_MS_DEFAULT)
     val komaIntervals by settingsStore.komaIntervals53().collectAsState(initial = SettingsKeys.KOMA_INTERVALS_53_DEFAULT)
+    val togetherUiState by togetherOrchestrator.uiState.collectAsState()
 
     LazyColumn(modifier = modifier.fillMaxWidth(), contentPadding = PaddingValues(16.dp)) {
         item { SectionHeader("Görünüm") }
@@ -111,6 +117,54 @@ fun SettingsScreen(
                 ColorField("Pitch rengi", pitchColor) { scope.launch { settingsStore.setGraphPitchColor(it) } }
                 ColorField("Kılavuz rengi", guideColor) { scope.launch { settingsStore.setGraphGuideColor(it) } }
                 ColorField("Karar rengi", kararColor) { scope.launch { settingsStore.setGraphKararColor(it) } }
+                ColorField("Mikrofon eğrisi rengi", micColor) { scope.launch { settingsStore.setGraphMicColor(it) } }
+            }
+        }
+
+        item { HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp)) }
+        item { SectionHeader("Birlikte Çal — Mikrofon Hizalaması") }
+        item {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    "Bu ince ayardır: uygulama giriş gecikmesini cihazdan ölçer, kaydırıcı yalnız " +
+                        "kalan sapmayı düzeltir. Çalarken eğriye bakıp ayarlayın.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text("Hizalama")
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(
+                            "%+.0f ms".format(micAlignmentMs),
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                        androidx.compose.material3.TextButton(
+                            onClick = { scope.launch { settingsStore.setTogetherMicAlignmentMs(0.0) } },
+                            modifier = Modifier.semantics { contentDescription = "Mikrofon hizalamasını sıfırla" },
+                        ) { Text("Sıfırla") }
+                    }
+                }
+                Slider(
+                    value = micAlignmentMs.toFloat(),
+                    onValueChange = { raw ->
+                        val snapped = (raw / 5f).let { kotlin.math.round(it) } * 5f
+                        scope.launch { settingsStore.setTogetherMicAlignmentMs(snapped.toDouble()) }
+                    },
+                    valueRange = -200f..200f,
+                    steps = 79,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .semantics { contentDescription = "Mikrofon hizalaması: %+.0f milisaniye".format(micAlignmentMs) },
+                )
+                Text(
+                    "Ölçülen giriş gecikmesi: ${togetherLatencyLabel(togetherUiState.latencySeconds, togetherUiState.latencySource)}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
         }
 
@@ -165,6 +219,21 @@ fun SettingsScreen(
             }
         }
     }
+}
+
+/**
+ * Tanılama satırı metni: kaydırıcının neye göre ayarlandığını kullanıcıya
+ * gösterir. Mod bu oturumda hiç başlatılmadıysa [TogetherUiState.latencySeconds]
+ * `null`dır — ölçüm yalnız `start()` çağrıldığında yapılır.
+ */
+private fun togetherLatencyLabel(latencySeconds: Double?, source: InputLatencySource?): String {
+    if (latencySeconds == null || source == null) return "Henüz ölçülmedi — Birlikte Çal'ı bir kez başlatın."
+    val sourceLabel = when (source) {
+        InputLatencySource.AUDIO_TIMESTAMP -> "donanım zaman damgası"
+        InputLatencySource.BUFFER_ESTIMATE -> "arabellek tahmini"
+        InputLatencySource.FALLBACK_DEFAULT -> "varsayılan, ölçülemedi"
+    }
+    return "${(latencySeconds * 1_000).toInt()} ms ($sourceLabel)"
 }
 
 @Composable

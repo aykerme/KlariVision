@@ -8,13 +8,18 @@
 <html lang="tr">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <style>
+  /* Güvenli alan: WKWebView `env(safe-area-inset-*)`'i doğru doldurur.
+     Android WebView ise yalnız ekran çentiğini bildirir, durum/gezinme
+     çubuğunu bildirmez; o yüzden barındırıcı ölçtüğü değeri
+     `--kv-inset-top/bottom` olarak yazar ve burada ikisinin BÜYÜĞÜ
+     alınır. İki platform da aynı sayfayı kullanır. */
   :root { background: #0d1725 }
   html, body { margin: 0; width: 100%; height: 100%; min-height: 100dvh; overflow: hidden; background: #0d1725 }
   /* Grafiğin bütün jestleri bu sayfanın kendi touch handler'larıyla işlenir;
      tarayıcı tek parmak sürüklemeyi kaydırma, iki parmağı sayfa zoom'u diye
      sahiplenmemeli. (WebView'in kendi scrollView/pinch'i de kapalı — bu, işin
      sayfa tarafı.) */
-  canvas { display: block; width: 100%; height: 100%; padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom); box-sizing: border-box; touch-action: none }
+  canvas { display: block; width: 100%; height: 100%; padding: max(env(safe-area-inset-top), var(--kv-inset-top, 0px)) 0 max(env(safe-area-inset-bottom), var(--kv-inset-bottom, 0px)); box-sizing: border-box; touch-action: none }
 </style>
 <canvas></canvas>
 <script>
@@ -104,6 +109,10 @@
 
   // Tanı sayacı: takılmanın kaynağını ayırmak için — kareler gerçekten
   // düşüyorsa "atlanan" artar, akış saati sorunluysa "donan"/"geri" artar.
+  // Tanılama kutusu bir GELİŞTİRME aracıdır, ürün yüzeyi değil:
+  // varsayılan olarak kapalıdır. Sayaçlar yine de işler ki mod açıkken
+  // takılma incelenirken geçmiş kaybolmasın.
+  let diagnosticsOn = false;
   let diagFrames = [], diagDropped = 0, diagWorst = 0, diagFrozen = 0, diagBack = 0, diagLastView = null;
   const noteFrame = (ts, graphNow) => {
     const previous = diagFrames.length ? diagFrames[diagFrames.length - 1] : null;
@@ -114,7 +123,7 @@
     else diagLastView = null;
   };
   const drawDiagnostics = () => {
-    if (diagFrames.length < 2) return;
+    if (!diagnosticsOn || diagFrames.length < 2) return;
     const seconds = (diagFrames[diagFrames.length - 1] - diagFrames[0]) / 1000, fps = seconds > 0 ? (diagFrames.length - 1) / seconds : 0;
     const lines = [`${fps.toFixed(1)} fps`, `atlanan ${diagDropped} · en uzun ${diagWorst.toFixed(0)} ms`, `donan ${diagFrozen} · geri ${diagBack}`];
     drawing.save(); drawing.font = '600 10px ui-monospace,SFMono-Regular,Menlo,monospace'; drawing.textAlign = 'left';
@@ -139,6 +148,13 @@
       canvas.width = backingWidth;
       canvas.height = backingHeight;
     }
+
+    // Üst güvenli alan: canvas'ın CSS `padding-top`'u hem `env(safe-area-inset-top)`
+    // hem barındırıcının yazdığı `--kv-inset-top` değişkenini çözer. Canvas'ta
+    // CSS dolgusu çizim koordinatlarını KAYDIRMAZ (yüzey border-box'ı kaplar),
+    // bu yüzden değeri okuyup çizimi elle kaydırmak gerekir — aksi halde üst
+    // etiket durum çubuğunun altında kalır.
+    const safeTop = parseFloat(getComputedStyle(canvas).paddingTop) || 0;
 
     drawing.setTransform(scale, 0, 0, scale, 0, 0);
     drawing.clearRect(0, 0, width, height);
@@ -256,7 +272,7 @@
 
     drawing.fillStyle = context.guideColor;
     drawing.font = '12px -apple-system';
-    drawing.fillText(`${context.makam || 'Makam'} · ${context.karar || 'Karar'}`, 12, 20);
+    drawing.fillText(`${context.makam || 'Makam'} · ${context.karar || 'Karar'}`, 12, safeTop + 20);
 
     // Pitch path, with the macOS live graph's break rules (LiveVisuals.swift):
     // the segment is only continued when time actually moved FORWARD, moved
@@ -372,6 +388,7 @@
   };
 
   window.kvLive = {
+    setDiagnostics(flag) { diagnosticsOn = !!flag; needsDraw = true; },
     append: values => {
       if (!values || !values.length) return;
       // The capture timeline restarts at zero whenever a new session starts

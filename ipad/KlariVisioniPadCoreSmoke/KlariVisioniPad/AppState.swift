@@ -335,7 +335,9 @@ final class iPadAppState {
     static let graphPitchColorKey = "klarivision-ipad-graph-pitch-color-v1"
     static let graphGuideColorKey = "klarivision-ipad-graph-guide-color-v1"
     static let graphKararColorKey = "klarivision-ipad-graph-karar-color-v1"
+    static let graphMicColorKey = "klarivision-ipad-graph-mic-color-v1"
     static let komaIntervalsKey = "klarivision-ipad-53-koma-intervals-v1"
+    static let togetherMicAlignmentMsKey = "klarivision-ipad-together-mic-alignment-ms-v1"
     static let defaultKomaIntervals = [4, 4, 5, 4, 4, 5, 4, 4, 5, 4, 5, 5]
 
     var selection: iPadSection = .home
@@ -346,6 +348,8 @@ final class iPadAppState {
     var graphPitchColor: String { didSet { defaults.set(graphPitchColor, forKey: Self.graphPitchColorKey) } }
     var graphGuideColor: String { didSet { defaults.set(graphGuideColor, forKey: Self.graphGuideColorKey) } }
     var graphKararColor: String { didSet { defaults.set(graphKararColor, forKey: Self.graphKararColorKey) } }
+    var graphMicColor: String { didSet { defaults.set(graphMicColor, forKey: Self.graphMicColorKey) } }
+    var togetherMicAlignmentMs: Double { didSet { defaults.set(Self.clampedMicAlignmentMs(togetherMicAlignmentMs), forKey: Self.togetherMicAlignmentMsKey) } }
     var komaIntervals: [Int] { didSet { if Self.validKomaIntervals(komaIntervals) { defaults.set(komaIntervals, forKey: Self.komaIntervalsKey) } } }
     /// Shared, single instance — Study and Live graphs both read this via
     /// `configure(...)` so an edit in Settings updates both immediately.
@@ -363,6 +367,8 @@ final class iPadAppState {
         graphPitchColor = defaults.string(forKey: Self.graphPitchColorKey) ?? "#67d5ff"
         graphGuideColor = defaults.string(forKey: Self.graphGuideColorKey) ?? "#b7d8ff"
         graphKararColor = defaults.string(forKey: Self.graphKararColorKey) ?? "#E75A5A"
+        graphMicColor = defaults.string(forKey: Self.graphMicColorKey) ?? "#FF9F0A"
+        togetherMicAlignmentMs = Self.clampedMicAlignmentMs(defaults.object(forKey: Self.togetherMicAlignmentMsKey) as? Double ?? 0)
         let storedIntervals = defaults.array(forKey: Self.komaIntervalsKey) as? [Int] ?? Self.defaultKomaIntervals
         komaIntervals = Self.validKomaIntervals(storedIntervals) ? storedIntervals : Self.defaultKomaIntervals
     }
@@ -377,6 +383,7 @@ final class iPadAppState {
 
     static func clampedGate(_ dbFS: Double) -> Double { min(-20, max(-60, dbFS)) }
     static func rms(forDbFS dbFS: Double) -> Double { pow(10, clampedGate(dbFS) / 20) }
+    static func clampedMicAlignmentMs(_ valueMs: Double) -> Double { max(-200, min(200, valueMs)) }
     static func validKomaIntervals(_ values: [Int]) -> Bool { values.count == 12 && values.allSatisfy { $0 > 0 } && values.reduce(0, +) == 53 }
     func resetKomaIntervals() { komaIntervals = Self.defaultKomaIntervals; defaults.set(komaIntervals, forKey: Self.komaIntervalsKey) }
 }

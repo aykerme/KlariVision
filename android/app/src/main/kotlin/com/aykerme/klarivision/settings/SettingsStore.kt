@@ -249,4 +249,34 @@ class SettingsStore(private val context: Context) {
                 SettingsValidation.validateScaleDisplay(mode)
         }
     }
+
+    // ==================== Birlikte Çal Modu Ayarları ====================
+
+    fun togetherMicAlignmentMs(): Flow<Double> = dataStore.data.map { preferences ->
+        SettingsValidation.clampMicAlignmentMs(
+            preferences[doublePreferencesKey(SettingsKeys.TOGETHER_MIC_ALIGNMENT_MS)]
+                ?: SettingsKeys.TOGETHER_MIC_ALIGNMENT_MS_DEFAULT
+        )
+    }
+
+    suspend fun setTogetherMicAlignmentMs(valueMs: Double) {
+        dataStore.edit { preferences ->
+            preferences[doublePreferencesKey(SettingsKeys.TOGETHER_MIC_ALIGNMENT_MS)] =
+                SettingsValidation.clampMicAlignmentMs(valueMs)
+        }
+    }
+
+    fun graphMicColor(): Flow<String> = dataStore.data.map { preferences ->
+        SettingsValidation.validateColor(
+            preferences[stringPreferencesKey(SettingsKeys.GRAPH_MIC_COLOR)],
+            SettingsKeys.GRAPH_MIC_COLOR_DEFAULT
+        )
+    }
+
+    suspend fun setGraphMicColor(color: String) {
+        dataStore.edit { preferences ->
+            preferences[stringPreferencesKey(SettingsKeys.GRAPH_MIC_COLOR)] =
+                SettingsValidation.validateColor(color, SettingsKeys.GRAPH_MIC_COLOR_DEFAULT)
+        }
+    }
 }
