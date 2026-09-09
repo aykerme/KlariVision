@@ -64,3 +64,9 @@ ortamında aynı komut tüm turnuva denetimlerini de çalıştırır.
 - `docs/*ACCEPTANCE*.md`: fiziksel ve otomatik kabul kanıtları
 - `docs/MeetingNotes.md`, `docs/PRD.md`, `docs/RoadMap.md`: tarihsel başlangıç
   kayıtları; güncel durum kaynağı değildir
+
+## Lisans
+
+GNU Affero General Public License v3.0 veya sonrası (AGPL-3.0-or-later) —
+tam metin [LICENSE](LICENSE) dosyasındadır. Kodu ağ üzerinden servis olarak
+sunmak da dahil, türev çalışmaların kaynağı aynı lisansla açık tutulmalıdır.
