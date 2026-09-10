@@ -6,6 +6,7 @@
 package com.aykerme.klarivision
 
 import android.Manifest
+import android.content.pm.ApplicationInfo
 import android.os.Bundle
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
@@ -17,6 +18,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import com.aykerme.klarivision.music.MakamIntervalsStore
+import com.aykerme.klarivision.profiling.LiveInstrumentation
 import com.aykerme.klarivision.settings.SettingsStore
 import com.aykerme.klarivision.state.LiveAudioCaptureEngine
 import com.aykerme.klarivision.state.LiveOrchestrator
@@ -35,6 +37,17 @@ class MainActivity : ComponentActivity() {
     @OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // Canlı yol profillemesi YALNIZ hata ayıklama derlemesinde açılır:
+        // sürüm derlemesinde bu bayrak false kalır, sıcak yol tek bir Boolean
+        // kontrolüne indirgenir ve hiçbir ölçüm yapılmaz. `BuildConfig` yerine
+        // çalışma zamanı bayrağı okunuyor çünkü bu modülde `buildFeatures`
+        // içinde `buildConfig` açık değil ve profilleme için proje geneli bir
+        // derleme ayarı açmaya değmez. Amaç, WebView köprüsünün gerçekten
+        // darboğaz olup olmadığını sökmeden önce ölçmek —
+        // bkz. android/LIVE_PROFILING.md.
+        LiveInstrumentation.enabled =
+            (applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0
 
         // Kullanıcı kararı: uygulama açık olduğu SÜRECE ekran kapanmaz.
         // Çalışma sırasında telefona dokunulmuyor (klarnet çalınıyor, nota

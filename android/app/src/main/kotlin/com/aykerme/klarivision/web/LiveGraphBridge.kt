@@ -9,6 +9,7 @@ import android.content.Context
 import android.os.Handler
 import android.os.Looper
 import android.webkit.WebView
+import com.aykerme.klarivision.profiling.LiveInstrumentation
 import com.aykerme.klarivision.study.PitchFrame
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.addJsonObject
@@ -174,7 +175,22 @@ class LiveGraphBridge(context: Context, importsDir: File) {
         if (pendingFrames.isEmpty()) return
         val batch = pendingFrames.toList()
         pendingFrames.clear()
-        evaluate("window.kvLive && window.kvLive.append(${LiveFramePayload.toJsonString(batch)});")
+        evaluate("window.kvLive && window.kvLive.append(${serializeFrames(batch)});")
+    }
+
+    /**
+     * [LiveFramePayload.toJsonString] çağrısını sarar — enstrümantasyon
+     * açıkken hem serileştirme süresini hem üretilen string'in UTF-8 bayt
+     * boyutunu kaydeder (bkz. LiveInstrumentation.jsonSerializeNanos/jsonByteSize).
+     * Kapalıyken sarmalama tek bir Boolean kontrolüne indirgenir.
+     */
+    private fun serializeFrames(frames: List<PitchFrame>): String {
+        if (!LiveInstrumentation.enabled) return LiveFramePayload.toJsonString(frames)
+        val t0 = System.nanoTime()
+        val json = LiveFramePayload.toJsonString(frames)
+        LiveInstrumentation.jsonSerializeNanos.record(System.nanoTime() - t0)
+        LiveInstrumentation.jsonByteSize.record(json.toByteArray(Charsets.UTF_8).size.toLong())
+        return json
     }
 
     private fun sendContext() {
@@ -215,6 +231,12 @@ class LiveGraphBridge(context: Context, importsDir: File) {
     }
 
     private fun evaluate(script: String) {
+        if (!LiveInstrumentation.enabled) {
+            webView.evaluateJavascript(script, null)
+            return
+        }
+        val t0 = System.nanoTime()
         webView.evaluateJavascript(script, null)
+        LiveInstrumentation.evaluateNanos.record(System.nanoTime() - t0)
     }
 }

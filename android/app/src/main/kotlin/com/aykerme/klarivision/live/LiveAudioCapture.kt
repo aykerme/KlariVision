@@ -19,10 +19,13 @@ import android.media.AudioFocusRequest
 import android.media.AudioFormat
 import android.media.AudioManager
 import android.media.AudioRecord
+import android.hardware.display.DisplayManager
 import android.media.AudioTimestamp
 import android.os.Handler
 import android.os.Looper
 import android.os.Process
+import android.util.Log
+import android.view.Display
 import android.view.Window
 import android.view.WindowManager
 import androidx.core.content.ContextCompat
@@ -30,6 +33,9 @@ import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import com.aykerme.klarivision.core.LivePitchSession
 import com.aykerme.klarivision.core.PitchFrame as CorePitchFrame
+import com.aykerme.klarivision.profiling.FrameDropWatcher
+import com.aykerme.klarivision.profiling.LiveInstrumentation
+import com.aykerme.klarivision.profiling.LiveProfilingLog
 import com.aykerme.klarivision.study.AppDirectories
 import com.aykerme.klarivision.study.Resampler
 import java.io.File
@@ -104,6 +110,10 @@ class LiveAudioCapture(
     private var audioManager: AudioManager? = null
     private var focusRequest: AudioFocusRequest? = null
     private var deviceCallback: AudioDeviceCallback? = null
+
+    // Yalnız [LiveInstrumentation.enabled] açıkken kullanılır — kapalıyken
+    // `start()`/[performStop] tek bir Boolean kontrolünün ötesinde iş yapmaz.
+    private var frameDropWatcher: FrameDropWatcher? = null
 
     private var lifecycleOwner: LifecycleOwner? = null
     private val lifecycleObserver = object : DefaultLifecycleObserver {
@@ -215,6 +225,32 @@ class LiveAudioCapture(
         lifecycle.started()
         updatePhase(lifecycle.phase)
 
+        // Ölçüm katmanı ÜRÜN YOLUNU ASLA BOZMAMALI: burada atılan bir istisna
+        // yakalanmazsa start() yarıda kalır, ses odağı elde kalır ve Çalma
+        // Modu hiç açılmaz — bu bir varsayım değil, bir kez yaşandı
+        // ("The current thread must have a looper!", FrameDropWatcher'ın
+        // Choreographer erişimi). Sebep düzeltildi; bu kapsam yine de
+        // profillemenin bir daha ürünü düşürememesi için duruyor.
+        if (LiveInstrumentation.enabled) {
+            try {
+                LiveInstrumentation.resetAll()
+                // `window` yoksa (ekran yönetimi çağıranın işi, bkz. sınıf
+                // belgesi) ekranı DisplayManager'dan al. Bu şart: yenileme
+                // hızı okunamazsa izleyici 60 Hz'e düşer, oysa bu cihaz
+                // 120 Hz — ölçülmüş sonuç, "atlanan kare" sayacının sessizce
+                // hep 0 raporlamasıydı.
+                val display = window?.windowManager?.defaultDisplay
+                    ?: appContext.getSystemService(DisplayManager::class.java)
+                        ?.getDisplay(Display.DEFAULT_DISPLAY)
+                val watcher = FrameDropWatcher(display)
+                frameDropWatcher = watcher
+                watcher.start()
+            } catch (e: Exception) {
+                frameDropWatcher = null
+                Log.w(LiveProfilingLog.TAG, "kare izleyici başlatılamadı; ölçüm eksik sürecek", e)
+            }
+        }
+
         startCaptureThread(record, format)
     }
 
@@ -289,6 +325,12 @@ class LiveAudioCapture(
         abandonAudioFocus()
         setKeepScreenOn(false)
         flushNow()
+
+        frameDropWatcher?.stop()
+        frameDropWatcher = null
+        // Oturum kapanırken bir kerelik özet basılır (RealtimeFactorBenchmark'taki
+        // gibi) — sürekli akan bir log yerine, "bu oturumda ne oldu" sorusuna cevap.
+        LiveProfilingLog.logSummary(reason ?: "kullanıcı durdurdu")
 
         selectedSource = null
         lifecycle.stopped(reason)
@@ -406,7 +448,14 @@ class LiveAudioCapture(
             writeRecordingIfActive(samples)
 
             val frames = try {
-                processor?.process(samples)
+                if (LiveInstrumentation.enabled) {
+                    val t0 = System.nanoTime()
+                    val result = processor?.process(samples)
+                    LiveInstrumentation.jniEngineNanos.record(System.nanoTime() - t0)
+                    result
+                } else {
+                    processor?.process(samples)
+                }
             } catch (e: Exception) {
                 stop(LiveCaptureError.EngineFailed(e.message ?: "bilinmeyen hata").message)
                 return
