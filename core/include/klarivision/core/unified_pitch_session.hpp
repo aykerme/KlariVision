@@ -46,13 +46,24 @@ struct UnifiedFrameDiagnostic {
 /// this function's behaviour before that veto existed. Only
 /// `collect_unified_evidence`, which already holds the whole track, passes
 /// a real one.
+///
+/// `spectra_out`, when non-null, receives the multi-resolution spectra this
+/// call already had to build for `score_harmonic_evidence` -- populated only
+/// on the path that actually reaches that build (the early hard-silence
+/// return below leaves it untouched, hence `optional`). It exists so a
+/// caller that needs that same spectra again right after (the live path's
+/// parity update, see `UnifiedPitchSession::process_frame`) can reuse it
+/// instead of recomputing an FFT set that has not changed -- `history` and
+/// `sample_rate` are the same on both sides, so the result is definitionally
+/// identical.
 [[nodiscard]] UnifiedFrameEvidence unified_frame_evidence(
     std::span<const float> history,
     double sample_rate,
     double source_time_seconds,
     const PitchEngineConfig& config,
     const ParityEstimate& parity,
-    std::span<const float> lookahead_samples = {}
+    std::span<const float> lookahead_samples = {},
+    std::optional<MultiResolutionSpectra>* spectra_out = nullptr
 );
 
 /// Causal, frame-at-a-time driver for the live path.

@@ -119,7 +119,8 @@ UnifiedFrameEvidence unified_frame_evidence(
     const double source_time_seconds,
     const PitchEngineConfig& config,
     const ParityEstimate& parity,
-    const std::span<const float> lookahead_samples
+    const std::span<const float> lookahead_samples,
+    std::optional<MultiResolutionSpectra>* const spectra_out
 ) {
     UnifiedFrameEvidence frame{};
     frame.time_seconds = source_time_seconds;
@@ -196,11 +197,12 @@ UnifiedFrameEvidence unified_frame_evidence(
     frequencies.reserve(merged.size());
     for (const auto& [frequency_hz, probability] : merged) frequencies.push_back(frequency_hz);
 
-    const auto spectra = compute_multi_resolution_spectra(history, sample_rate);
+    auto spectra = compute_multi_resolution_spectra(history, sample_rate);
     frame.evidence = score_harmonic_evidence(
         history, spectra, sample_rate, frequencies, parity,
         unified::kSpectralAnalysisMaximumHz, lookahead_samples
     );
+    if (spectra_out) *spectra_out = std::move(spectra);
 
     frame.candidates.reserve(merged.size());
     std::vector<HarmonicEvidence> kept_evidence;
@@ -505,8 +507,13 @@ std::vector<EngineFrame> UnifiedPitchSession::process_frame(
     impl.next_frame_time_seconds =
         source_time_seconds + static_cast<double>(unified::kHopSamples) / impl.sample_rate;
 
+    // `spectra_cache` catches the multi-resolution spectra unified_frame_evidence
+    // already builds internally, so the parity update below -- which needs the
+    // exact same spectra of the exact same, still-unchanged `history` -- can
+    // reuse it instead of paying for a second identical FFT set per hop.
+    std::optional<MultiResolutionSpectra> spectra_cache{};
     auto evidence = unified_frame_evidence(
-        history, impl.sample_rate, frame_time, impl.config, impl.parity
+        history, impl.sample_rate, frame_time, impl.config, impl.parity, {}, &spectra_cache
     );
     // The margin belongs to the frame that produced it, but the decoder will
     // not resolve that frame until the lag window has elapsed, so it travels
@@ -564,10 +571,25 @@ std::vector<EngineFrame> UnifiedPitchSession::process_frame(
     };
     const auto frequency = impl.publish(decoded, margin);
     if (frequency && decoded.winner_posterior >= unified::kParityTrustPosterior) {
-        update_parity_estimate(
-            impl.parity, compute_multi_resolution_spectra(history, impl.sample_rate),
-            *frequency, impl.sample_rate
-        );
+        // `spectra_cache` was built above from this same `history` and
+        // `impl.sample_rate`, neither of which has changed since -- reusing it
+        // here is definitionally the same result as recomputing, just without
+        // a second FFT pass. Falls back to a fresh compute only in the
+        // hard-silence early-return case, where unified_frame_evidence never
+        // reached the spectra build (and a >= kParityTrustPosterior winner
+        // from a hard-silence frame should not happen, but this keeps the
+        // guarantee unconditional rather than trusting that). Branched rather
+        // than folded into a ternary so the cached-spectra path binds a
+        // reference instead of materialising a throwaway copy to match the
+        // fallback branch's prvalue.
+        if (spectra_cache) {
+            update_parity_estimate(impl.parity, *spectra_cache, *frequency, impl.sample_rate);
+        } else {
+            update_parity_estimate(
+                impl.parity, compute_multi_resolution_spectra(history, impl.sample_rate),
+                *frequency, impl.sample_rate
+            );
+        }
     } else if (!frequency) {
         note_unvoiced_frame(impl.parity);
     }
