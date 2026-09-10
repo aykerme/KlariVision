@@ -134,7 +134,11 @@ object ViewerAssets {
         if (start > end || start >= length) return null
 
         val stream = FileInputStream(file)
-        stream.skip(start)
+        // `InputStream.skip()` istenen kadar atlamayı GARANTİ ETMEZ; eksik
+        // atlarsa sunulan baytlar kayar ve medya sessizce bozulur. Ölçümde bu
+        // cihazda tam atlıyor, ama sözleşme bunu vaat etmediği için konum
+        // kanaldan kuruluyor.
+        stream.channel.position(start)
         val count = end - start + 1
         val headers = mapOf(
             "Accept-Ranges" to "bytes",

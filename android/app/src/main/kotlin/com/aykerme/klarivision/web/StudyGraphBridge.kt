@@ -37,6 +37,11 @@ class StudyGraphBridge(
     init {
         ViewerAssets.applyFullSizeLayout(webView)
         ViewerAssets.configureSecurity(webView)
+        // LiveGraphBridge'de olan bu satır burada eksikti: sayfanın konsolu
+        // hiçbir yere bağlı değildi, yani StudyViewer.html'in hataları
+        // sessizce kayboluyordu. Tanılamada bu körlük, sessizliği sağlık
+        // sanmaya yol açar.
+        ViewerAssets.attachConsoleBridge(webView)
         ViewerAssets.disableNativeGestures(webView)
         installBridgeInterface()
         webView.webViewClient = ViewerWebViewClient(assetLoader, importsDir) {
