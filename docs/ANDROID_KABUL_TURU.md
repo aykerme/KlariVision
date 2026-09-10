@@ -17,13 +17,13 @@ CODEX_HANDOFF'ta **NOT RUN** olarak duran liste ilk kez koşuldu.
 | 6 | Kütüphaneye kayıt | **geçti** | Çalışma listede görünüyor, yeniden açılıyor |
 | 7 | Çalışma görüntüleyici (grafik) | **geçti** (düzeltildi) | Boştu; kök sebep bulundu — B-2 |
 | 8 | Oynatma | **geçti** (şartlı) | Çalışıyor; erken basınca takılıyor — B-2b |
-| 9 | A/B döngüsü | **koşulmadı** | Engel kalktı, sıradaki turda koşulmalı |
-| 10 | Oynatma hızı | **BAŞARISIZ** | "Hızı artır" düğmesi ekran dışında — B-3 |
-| 11 | Video/grafik geçişi | **koşulmadı** | Engel kalktı, sıradaki turda koşulmalı |
+| 9 | A/B döngüsü | **BAŞARISIZ** | Dönüyor, sonra oynatma kilitleniyor — B-9 |
+| 10 | Oynatma hızı | **BAŞARISIZ** | Yalnız yavaşlatılabiliyor, geri hızlandırılamıyor — B-3 |
+| 11 | Video/grafik geçişi | **kısmen** | Geçiş çalışıyor, video görüntüsü gelmiyor — B-11 |
 | 12 | Kulaklık/Bluetooth rota değişimi | **koşulmadı** | Fiziksel donanım gerekir |
 | 13 | Telefon kesintisi | **koşulmadı** | Gerçek çağrı gerekir |
 | 14 | Arka plan dönüşü | **geçti** | Arka plana geçince mikrofon güvenle duruyor |
-| 15 | Yön değişimi | **koşulmadı** | 7-8 engellediği için anlamlı değil |
+| 15 | Yön değişimi | **BAŞARISIZ** | Yatay yerleşim kullanılamaz — B-10 |
 
 ## Bulgular
 
@@ -78,9 +78,10 @@ medya hazır olana kadar (~2 sn) beklenip oynatıldığında sorunsuz çalışı
 İlk turda "oynatma tamamen bozuk" görünmesinin sebebi buydu — ölçüm hatası
 değil, gerçek bir yarış durumu, ama tarifi düzeltildi.
 
-### B-3 — Alt kontrol paneli ekrandan taşıyor
+### B-3 — Hız tek yönlü: yavaşlatılabiliyor, geri hızlandırılamıyor
 "Hızı artır" düğmesinin erişilebilirlik sınırları `(0,0,0,0)` — yerleşimde yer
-almıyor, dokunulamıyor. "Hızı azalt" görünür. Panel ekranın altından kesiliyor.
+almıyor, dokunulamıyor. "Hızı azalt" erişilebilir. Pratik sonuç: kullanıcı
+hızı düşürdükten sonra 1,00×'e geri dönemez. Panel ekranın altından kesiliyor.
 
 ### B-4 — Çalışma silmede onay yok
 Çalışma kartındaki "kaldır" düğmesi tek dokunuşta, onay sormadan siliyor.
@@ -114,15 +115,58 @@ sunulan baytlar kayar ve medya sessizce bozulur. Bu cihazda tam atlıyor (yani
 B-2'nin sebebi değil), ama sözleşme bunu vaat etmiyor. `channel.position()`
 ile değiştirildi.
 
+### B-9 — A/B döngüsü birkaç turdan sonra oynatmayı kilitliyor
+
+Döngünün kendisi çalışıyor: medya B'ye ulaşınca A'ya dönüyor (ölçüldü,
+`currentTime` 17,96 → 7,52). Ama birkaç turdan sonra oynatma kalıcı olarak
+duruyor — konum 40+ saniye boyunca sabit kaldı, düğme "Duraklat" göstermeye
+devam ediyor (yani oynadığını sanıyor). Gözlenen dizi (A≈0:05, B≈0:09):
+
+    0:09 → 0:12 → 0:08 → 0:10 → 0:13 → 0:13 → 0:13 → ... (kilit)
+
+İki yan gözlem: konum B'yi aşıyor (0:09 sınırına karşı 0:12–0:13'e çıkıyor),
+yani döngü sınırları gevşek uygulanıyor.
+
+**Tanılama uyarısı:** ilk denemede sayfada bir `Uncaught TypeError: Cannot
+read properties of null (reading 'style')` göründü ve sebep sanıldı. DEĞİLDİ:
+o hata TANILAMA İÇİN ENJEKTE ETTİĞİM betikten geliyordu. Enjeksiyonlar
+tamamen söküldükten sonra kilit aynen tekrarlandı ve konsol temiz kaldı.
+
+Kök sebep bulunamadı. Döngü mantığı paylaşılan `StudyViewer.html` içindedir
+ve o dosya iPad kopyasıyla byte-eşit olmak zorundadır — düzeltme iki platformu
+birden ilgilendiren bir karardır, tek taraflı yapılmadı.
+
+### B-10 — Yatay yerleşim kullanılamaz
+
+Cihaz yatay çevrildiğinde kontrol paneli tüm ekranı kaplıyor, A ve B
+düğmeleri sol kenara dikey diziliyor, "Kapat" düğmesi durum çubuğunun altında
+kesiliyor ve grafik en altta ~60 piksellik bir şeride sıkışıyor. Çökme yok,
+ama ekran çalışılamaz durumda.
+
+### B-11 — Video görüntüsü gelmiyor; süre yanlış kalıyor
+
+Video/grafik geçişinin kendisi çalışıyor (düğme "Grafiği tam ekran yap"a
+dönüyor, sahne değişiyor). Ama video alanında gerçek kare yerine tarayıcının
+yedek oynat simgesi duruyor.
+
+Video çalışmasında süre hâlâ **0:16** görünüyor; `Studies-v1.json` aynı
+çalışma için `duration: 191,226418` tutuyor. B-2'nin kare düzeltmesi bu
+çalışmada grafiği getirdi, ama video kod çözme yolunu düzeltmedi — bunlar
+ayrı kusurlar. Aynı dosyanın SES yolu sorunsuz (mp3 çalışmasında süre
+3:04 doğru ve oynatma ilerliyor), yani sorun video kod çözmeye özgü.
+
 ## Çıkış kapısı
 
 **Geçmedi**, ama en ağır engel kalktı: Dinleme Modu'nun boş ekranı (B-2)
 çözüldü ve grafik + oynatma cihazda çalışıyor.
 
 Kapıyı hâlâ kapalı tutanlar: canlı kayıtlar erişilemez (B-1), oynatıcı erken
-basınca takılıyor (B-2b), hız düğmesi ekran dışında (B-3). A/B döngüsü,
-video/grafik geçişi ve yön değişimi artık koşulabilir durumda ama
-koşulmadı; rota değişimi ve telefon kesintisi fiziksel donanım bekliyor.
+basınca takılıyor (B-2b), hız tek yönlü (B-3), A/B döngüsü oynatmayı
+kilitliyor (B-9), yatay yerleşim kullanılamaz (B-10), video görüntüsü
+gelmiyor (B-11).
+
+Rota değişimi ve telefon kesintisi fiziksel donanım beklediği için hâlâ
+koşulmadı; listenin geri kalanı koşuldu.
 
 Otomatik kapıların hepsi yeşilken bu tablo görünmüyordu — yeşil kapı
 tablosu, koşulmamış bir turun yerini tutmaz.
