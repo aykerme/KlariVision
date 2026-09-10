@@ -6,6 +6,8 @@
 package com.aykerme.klarivision.web
 
 import android.content.Context
+import android.os.Handler
+import android.os.Looper
 import android.webkit.WebView
 import com.aykerme.klarivision.study.PitchFrame
 import kotlinx.serialization.json.JsonArray
@@ -85,6 +87,33 @@ object LiveFramePayload {
 class LiveGraphBridge(context: Context, importsDir: File) {
     val webView: WebView = WebView(context)
 
+    /**
+     * WebView'in TÜM metotları, onu yaratan thread'den (ana thread)
+     * çağrılmak ZORUNDADIR; başka bir thread'den çağrılırsa WebView
+     * `checkThread()` içinde ölümcül istisna atar ve uygulama ÇÖKER.
+     *
+     * Bu soyut bir tehlike değil, ölçülmüş bir çökmedir: `LiveAudioCapture.
+     * stop()` bir coroutine worker'ında koşuyor, oradan `flushNow()` →
+     * `LiveOrchestrator.onFrames` → [append] zinciri geliyordu ve Çalma
+     * Modu'nu her durduruşta uygulama "A WebView method was called on
+     * thread 'DefaultDispatcher-worker-N'" ile ölüyordu.
+     *
+     * Çözüm çağıranlara "ana thread'den çağır" demek DEĞİL — köprü
+     * WebView'in sahibi olduğu için thread garantisini KENDİSİ verir:
+     * aşağıdaki her genel metot gövdesi [runOnMain] ile ana Looper'a
+     * taşınır. Koşullu değil, KOŞULSUZ post edilir; bir kısmı yerinde bir
+     * kısmı ertelenmiş çalışsaydı sıra bozulabilir, ör. ana thread'den
+     * gelen bir [reset] worker'dan post edilmiş bir [append]'i geçebilirdi.
+     * Koşulsuz post, tüm çağrıların FIFO sırasını korur ve köprünün iç
+     * durumunu (`pendingFrames`, `ready`, `lastContext`) tek bir thread'e
+     * hapseder — bu yüzden ayrıca kilit gerekmez.
+     */
+    private val mainHandler = Handler(Looper.getMainLooper())
+
+    private fun runOnMain(block: () -> Unit) {
+        mainHandler.post(block)
+    }
+
     private val assetLoader = ViewerAssets.buildAssetLoader(context, importsDir)
     private var ready = false
     private var safeTopDp = 0f
@@ -108,7 +137,7 @@ class LiveGraphBridge(context: Context, importsDir: File) {
     }
 
     /** LiveViewer.html'i appassets üzerinden yükle. */
-    fun load() {
+    fun load() = runOnMain {
         ready = false
         webView.loadUrl(ViewerAssets.LIVE_VIEWER_URL)
     }
@@ -116,11 +145,13 @@ class LiveGraphBridge(context: Context, importsDir: File) {
     /** Yeni kareleri kuyrukla; sayfa hazırsa hemen yolla. */
     fun append(frames: List<PitchFrame>) {
         if (frames.isEmpty()) return
-        pendingFrames.addAll(frames)
-        if (ready) flush()
+        runOnMain {
+            pendingFrames.addAll(frames)
+            if (ready) flush()
+        }
     }
 
-    fun setContext(payload: LiveContextPayload) {
+    fun setContext(payload: LiveContextPayload) = runOnMain {
         lastContext = payload
         sendContext()
     }
@@ -129,12 +160,12 @@ class LiveGraphBridge(context: Context, importsDir: File) {
      * Grafiğin akış saatini başlatır/durdurur. Çalışırken pencere gerçek
      * zamanda kayar (sessizlik akışı kesmez); durunca olduğu yerde donar.
      */
-    fun setRunning(running: Boolean) {
+    fun setRunning(running: Boolean) = runOnMain {
         isRunning = running
         sendRunning()
     }
 
-    fun reset() {
+    fun reset() = runOnMain {
         pendingFrames.clear()
         evaluate("window.kvLive && window.kvLive.reset();")
     }
@@ -169,7 +200,7 @@ class LiveGraphBridge(context: Context, importsDir: File) {
      * `env()` ile bu değişkenin BÜYÜĞÜNÜ alır, böylece iki platform da aynı
      * sayfayı bozmadan kullanır.
      */
-    fun setSafeAreaInsets(topDp: Float, bottomDp: Float) {
+    fun setSafeAreaInsets(topDp: Float, bottomDp: Float) = runOnMain {
         safeTopDp = topDp
         safeBottomDp = bottomDp
         sendSafeAreaInsets()
