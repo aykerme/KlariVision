@@ -3,6 +3,77 @@
 Bu dosya yalnızca sonraki çalışmaları etkileyen kararları tutar. Günlük ilerleme
 notları `CODEX_HANDOFF.md`, sayısal durum `TEST_BASELINE.md` içindedir.
 
+## D-045 — Android grafiği WebView'de kalır; darboğaz motorun kuyruğudur
+
+Dış bir değerlendirme, Android canlı grafiğindeki takılmanın kaynağı olarak
+WebView + `evaluateJavascript` JSON köprüsünü gösterdi, yerine Jetpack Compose
+Canvas önerdi ve "gecikmeyi 50 ms'den 5 ms'ye düşürür, CPU kullanımını sıfıra
+yaklaştırır" dedi. Ayrıca `AudioRecord` → Oboe göçü, her karede SWIPE'/TWM'yi
+atlayan erken çıkış budaması, klarnete özgü tek-harmonik önsel ve sıfır
+gecikmeli anlık tüner önerdi.
+
+Sökmeden önce ölçüldü. Ölçüm, fiziksel SM-A736B'de gerçek klarnet çalınarak
+yapıldı (ölçüm katmanı: `android/LIVE_PROFILING.md`, etiket
+`KlariVisionLiveProf`); iddia-iddia kod doğrulaması
+`docs/DIS_DEGERLENDIRME_DOGRULAMA.md`'dedir.
+
+**Ölçüm (10,667 ms hop bütçesi, 120 Hz ekran):**
+
+| Aşama | p50 | p95 | max | n |
+|---|---:|---:|---:|---:|
+| JNI + motor | 7,679 ms | 9,684 ms | 14,167 ms | 4096 |
+| JSON serileştirme | 0,211 ms | 0,404 ms | 1,902 ms | 3539 |
+| `evaluateJavascript` | 0,162 ms | 0,326 ms | 2,448 ms | 3547 |
+| kare aralığı | 8,309 ms | 8,325 ms | 16,616 ms | 4096 |
+
+JSON yükü: p50 294 B, max 427 B.
+
+**Karar 1 — grafik WebView'de kalır.** Köprünün ana iş parçacığındaki toplam
+maliyeti hop başına 0,37 ms (p95'te 0,73 ms), yani bütçenin %3,5'i. Taşınan
+yük 294 bayttır; "devasa çöp nesne üretimi" ölçümde yoktur. Kare aralığı
+dağılımı (p50 8,309 / p95 8,325 ms, beklenen 8,33 ms) render'ın zaten
+neredeyse kusursuz düzenli olduğunu, en kötü anın tek bir kare atlaması
+olduğunu gösteriyor. Compose Canvas'a geçmek 1 ms'nin altında kazanç için
+iPad ile byte-eşit HTML sözleşmesini kırardı. **Yapılmayacak.**
+
+**Karar 2 — asıl yer motorun KUYRUĞUDUR, medyanı değil.** Motor bütçenin
+%72'sini kullanıyor; kritik olan p95'in bütçenin %91'inde olması ve max'ın
+(14,167 ms) bütçeyi aşmasıdır. Sentetik RTF ölçümü bunu göremiyor (orada p95
+7,43 ms) çünkü tek kararlı ton çalıyor; gerçek çalışta sesli/sessiz geçişler
+ve zor kareler kuyruğu şişiriyor. Bundan sonraki motor işi medyanı değil
+kuyruğu hedeflemelidir.
+
+**Karar 3 — erken çıkış budaması "bedelsiz optimizasyon" DEĞİLDİR.**
+Değerlendirme, SWIPE'/TWM'nin yalnız hakemlik yaptığını varsayıyor.
+`score_harmonic_evidence` çıktısı aynı zamanda aday KABUL/VETO kapısıdır
+(`core/src/unified_pitch_session.cpp`: düşük register presence vetosu, seri
+tutarsızlık vetosu, `emission_for`). Atlanırsa motor çıktısı değişir; bu bir
+optimizasyon değil, dondurulmuş turnuva/holdout kapı ritüeli gerektiren bir
+davranış değişikliğidir. Ölçüm bu kalemi haklı çıkarmıyor, yalnız "bakılacak
+yer burası" diyor. **Açık kalem, ölçülmüş bedeliyle savunulmadan girilmez.**
+
+**Karar 4 — `confidence` motorda normalize EDİLMEZ.** Teşhis doğrudur
+(`confidence` doğrudan `winner_posterior`'dır ve on iki adayın seyrelttiği
+bir paydır), ama `kv_pitch_frame.confidence` C ABI v1'in donmuş sözleşme
+alanıdır. Normalizasyon gösterim katmanında türetilmelidir; `family_margin`
+zaten `UnifiedFrameDiagnostic`'te mevcuttur.
+
+**Karar 5 — anlık tüner D-042'ye karşıdır.** Sıfır gecikmeli ibre, D-042'de
+kullanıcının doğruluğu tepkiselliğe açıkça tercih ederek çözdüğü alt-harmonik
+hatasını ibreye geri getirir. Ayrı bir hat olarak tartışılabilir; bir
+"iyileştirme" olarak sunulamaz.
+
+**Ölçülmeyen tek kalem: Oboe.** Giriş gecikmesi bu turda ölçülmedi.
+`InputLatencyProbe` zaten mevcuttur; kalem ayrı bir ölçüm turu gerektirir ve
+açık bırakılmıştır.
+
+**Yan bulgu (ayrı commit).** Ölçüm turu, `main` dalında Çalma Modu'nu
+durdurmanın uygulamayı çökerttiğini ortaya çıkardı: `stop()` bir coroutine
+worker'ında koşuyor ve oradan WebView'e dokunuluyordu. Otomatik kapıların
+hiçbiri bunu görmüyordu; CODEX_HANDOFF'ta "fiziksel akış kabulü NOT RUN"
+olarak duran tur tam olarak bu hatayı saklıyordu. **Ders: yeşil kapı tablosu,
+koşulmamış bir turun yerini tutmaz.**
+
 ## D-042 — D-041'in canlı yola taşınması; gecikme 53 → 85 ms
 
 Kullanıcı kararı: Şükrü Tunar hatası Çalma Modu'nda (canlı yol) duruyordu,
