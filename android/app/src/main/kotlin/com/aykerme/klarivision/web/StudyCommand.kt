@@ -9,6 +9,7 @@ package com.aykerme.klarivision.web
 import com.aykerme.klarivision.study.PitchFrame
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.addJsonObject
 import kotlinx.serialization.json.put
@@ -76,6 +77,23 @@ sealed class StudyCommand {
 
     /** Medya elemanının sesini kapat/aç — akustik geri besleme (hoparlör→mikrofon) önlemi. */
     data class Mute(val muted: Boolean) : StudyCommand()
+
+    companion object {
+        /**
+         * Kare listesini `load` komutunun beklediği `[{t,f,c,v}]` dizisine
+         * çevirir — parça parça gönderim için (bkz. StudyGraphBridge.sendLoad).
+         */
+        fun framesToJsonString(frames: List<PitchFrame>): String = buildJsonArray {
+            frames.forEach { frame ->
+                addJsonObject {
+                    put("t", frame.time)
+                    put("f", frame.frequency)
+                    put("c", frame.confidence)
+                    put("v", frame.voiced)
+                }
+            }
+        }.toString()
+    }
 
     /** `window.kvStudy.receive(...)` çağrısına konacak JSON gövdesi. */
     fun toJsonObject(): JsonObject = when (this) {

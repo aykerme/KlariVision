@@ -8,6 +8,7 @@ package com.aykerme.klarivision.web
 import android.content.Context
 import android.webkit.JavascriptInterface
 import android.webkit.WebView
+import kotlinx.serialization.json.JsonPrimitive
 import java.io.File
 
 /**
@@ -22,6 +23,14 @@ class StudyGraphBridge(
 ) {
     /** Arayüz adı tam olarak `kvStudyBridge` olmalı — StudyViewer.html bunu arar. */
     private companion object {
+        /**
+         * Tek `evaluateJavascript` çağrısına konacak kare sayısı. 1000 kare
+         * ≈ 50 KB betik — ölçülen çalışan boyutun (25 KB) iki katı, sessizce
+         * düşen boyutun (880 KB) ise yirmide biri. Sınır cihaz/WebView
+         * sürümüne göre değiştiği için geniş pay bırakılmıştır.
+         */
+        const val FRAME_CHUNK = 1000
+
         const val BRIDGE_INTERFACE_NAME = "kvStudyBridge"
     }
 
@@ -92,7 +101,47 @@ class StudyGraphBridge(
     }
 
     private fun send(command: StudyCommand) {
+        if (command is StudyCommand.Load) {
+            sendLoad(command)
+            return
+        }
         evaluateRaw("window.kvStudy && window.kvStudy.receive(${command.toJsonString()});")
+    }
+
+    /**
+     * `load` komutunu PARÇA PARÇA gönderir.
+     *
+     * `WebView.evaluateJavascript` büyük betikleri SESSİZCE düşürür: istisna
+     * atmaz, konsola bir şey yazmaz, sadece hiçbir şey olmaz. Tek parça
+     * gönderilen bir `load`, 191 saniyelik bir çalışmada 17258 kare = ~880 KB
+     * betik demektir ve bu sınırın üstündedir — ölçüldü: 17258 kareyle grafik
+     * hiç çizilmiyor, aynı çalışma 500 kareye (~25 KB) kırpıldığında perde
+     * çizgileri, nota etiketleri ve eğri eksiksiz çiziliyordu. Dinleme
+     * Modu'nun boş görünmesinin sebebi buydu.
+     *
+     * Kareler bu yüzden önce sayfada bir ara diziye [FRAME_CHUNK]'lık
+     * betiklerle biriktirilir, sonra tek bir `receive` çağrısı o diziyi
+     * kullanır. Paylaşılan StudyViewer.html'in sözleşmesi DEĞİŞMEZ (iPad
+     * kopyasıyla byte-eşit kalmalı) — çünkü sayfa yine tek bir
+     * `{type:'load', url, frames}` nesnesi görür.
+     *
+     * `concat` kullanılıyor, `push(...chunk)` değil: yayma operatörü büyük
+     * dizilerde argüman sayısı sınırına çarpar.
+     */
+    private fun sendLoad(command: StudyCommand.Load) {
+        evaluateRaw("window.__kvFrames=[];")
+        command.frames.chunked(FRAME_CHUNK).forEach { chunk ->
+            evaluateRaw(
+                "window.__kvFrames=window.__kvFrames.concat(" +
+                    "${StudyCommand.framesToJsonString(chunk)});"
+            )
+        }
+        evaluateRaw(
+            "window.kvStudy && window.kvStudy.receive(" +
+                "{\"type\":\"load\",\"url\":${JsonPrimitive(command.url)}," +
+                "\"frames\":(window.__kvFrames||[])});" +
+                "window.__kvFrames=null;"
+        )
     }
 
     /**

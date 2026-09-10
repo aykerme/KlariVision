@@ -15,11 +15,11 @@ CODEX_HANDOFF'ta **NOT RUN** olarak duran liste ilk kez koşuldu.
 | 4 | SAF ile dosya alma | **geçti** | mp4 alındı, `files/Imports/` altına kopyalandı |
 | 5 | Çözümleme | **geçti** | 191 s video ≈ 3,5 dk; `Studies-v1.json` doğru (`duration: 191,226418`, kareler tam) |
 | 6 | Kütüphaneye kayıt | **geçti** | Çalışma listede görünüyor, yeniden açılıyor |
-| 7 | Çalışma görüntüleyici (grafik) | **BAŞARISIZ** | Ekran tamamen boş — B-2 |
-| 8 | Oynatma | **BAŞARISIZ** | 0:00 / 0:16, ilerlemiyor — B-2 |
-| 9 | A/B döngüsü | **koşulamadı** | 8 engelliyor |
+| 7 | Çalışma görüntüleyici (grafik) | **geçti** (düzeltildi) | Boştu; kök sebep bulundu — B-2 |
+| 8 | Oynatma | **geçti** (şartlı) | Çalışıyor; erken basınca takılıyor — B-2b |
+| 9 | A/B döngüsü | **koşulmadı** | Engel kalktı, sıradaki turda koşulmalı |
 | 10 | Oynatma hızı | **BAŞARISIZ** | "Hızı artır" düğmesi ekran dışında — B-3 |
-| 11 | Video/grafik geçişi | **koşulamadı** | 7-8 engelliyor |
+| 11 | Video/grafik geçişi | **koşulmadı** | Engel kalktı, sıradaki turda koşulmalı |
 | 12 | Kulaklık/Bluetooth rota değişimi | **koşulmadı** | Fiziksel donanım gerekir |
 | 13 | Telefon kesintisi | **koşulmadı** | Gerçek çağrı gerekir |
 | 14 | Arka plan dönüşü | **geçti** | Arka plana geçince mikrofon güvenle duruyor |
@@ -38,24 +38,45 @@ mahsur kaldı.
 macOS kabul listesi bunu açıkça şart koşuyor: "kaydedilen WAV dosyası yeniden
 dinlenebilmelidir".
 
-### B-2 — Çalışma görüntüleyici hiçbir şey çizmiyor, oynatma çalışmıyor
-Ekran görüntüsü: grafik yok, video yok, yalnız koyu zemin ve alt panel.
-Süre `0:00 / 0:16` gösteriyor; gerçek süre **191,2 s** ve `Studies-v1.json`
-bunu doğru tutuyor. Oynat'a dokununca konum ilerlemiyor ve süre `0:00`'a
-düşüyor.
+### B-2 — ÇÖZÜLDÜ: `load` yükü `evaluateJavascript`'in sınırını aşıyordu
 
-**Elenenler (ölçüldü, sebep DEĞİL):**
-- Görüntüleyici HTML'leri sağlam ve iPad kanonik kopyasıyla byte-eşit.
-- Medya taşıma katmanı çalışıyor: range istekleri doğru sunuluyor
-  (`bytes=819200-` → `skipped=819200`), 206 yolu işliyor.
-- Sayfa yükleniyor ve WebView tam ekran çiziyor (`onDraw` akıyor).
-- Uygulama çökmüyor, JS konsolunda hata yok.
+**Kök sebep bulundu ve düzeltildi.** `StudyGraphBridge` `load` komutunu TEK
+`evaluateJavascript` çağrısında gönderiyordu. 191 saniyelik bir çalışma
+17258 kare = **~880 KB betik** demektir; `WebView.evaluateJavascript` bu
+boyuttaki betiği **sessizce düşürüyor** — istisna atmıyor, konsola bir şey
+yazmıyor, sadece hiçbir şey olmuyor. Sayfa ilk (boş) durumunda kalıyordu.
 
-**Bilinen:** H.264 çözücü (`c2.qti.avc.decoder`) oynat'a basınca kuruluyor ve
-hemen `RELEASED` durumuna geçip yıkılıyor.
+Kanıt, ikili deney:
 
-**Kök sebep BULUNAMADI.** Bu bir hipotez listesi değil, ölçülmüş bir durum
-tespitidir; sonraki oturum buradan devam etmelidir.
+| Kare sayısı | Betik boyutu | Sonuç |
+|---:|---:|---|
+| 17258 (tam) | 880 615 B | grafik hiç çizilmiyor |
+| 500 (kırpık) | 24 929 B | perde çizgileri, nota etiketleri, imleç, eğri — tamamı çiziliyor |
+
+Bu, `LiveGraphBridge`'in neden çalıştığını da açıklıyor: o kareleri küçük
+partiler hâlinde (medyan 294 B) yolluyor.
+
+**Düzeltme:** kareler artık sayfada bir ara diziye 1000'erlik parçalarla
+biriktiriliyor, sonra tek bir `receive` çağrısı o diziyi kullanıyor.
+Paylaşılan `StudyViewer.html` sözleşmesi DEĞİŞMEDİ (iPad kopyasıyla
+byte-eşit kalmalı) — sayfa yine tek bir `{type:'load', url, frames}` nesnesi
+görüyor. Cihazda tam 17258 kareyle doğrulandı: grafik çiziliyor, oynatma
+0:19 / 3:04 ilerliyor.
+
+**Yanlış iz — kayda geçsin:** ilk tanılamada sayfaya `frames` değişkenini
+sordum ve `frames=0` okudum. Bu ölçüm GEÇERSİZDİ: sayfanın kendi `frames`'i
+kapalı kapsamda, sorgu tarayıcının yerleşik `window.frames`'ini (iframe
+listesi) okuyordu ve onun uzunluğu her zaman 0'dır.
+
+### B-2b — Medya hazır olmadan Oynat'a basınca oynatıcı kalıcı takılıyor
+
+Ayrı ve HÂLÂ AÇIK bir kusur. Çalışma açıldıktan hemen sonra (medya
+`readyState=0`, `src` henüz atanmamışken) Oynat'a basılırsa süre `0:00`'a
+düşüyor ve bir daha kendine gelmiyor; konum hiç ilerlemiyor. Aynı çalışma,
+medya hazır olana kadar (~2 sn) beklenip oynatıldığında sorunsuz çalışıyor.
+
+İlk turda "oynatma tamamen bozuk" görünmesinin sebebi buydu — ölçüm hatası
+değil, gerçek bir yarış durumu, ama tarifi düzeltildi.
 
 ### B-3 — Alt kontrol paneli ekrandan taşıyor
 "Hızı artır" düğmesinin erişilebilirlik sınırları `(0,0,0,0)` — yerleşimde yer
@@ -95,6 +116,13 @@ ile değiştirildi.
 
 ## Çıkış kapısı
 
-**Geçmedi.** Dinleme Modu'nun tamamı (grafik + oynatma + A/B + hız) kullanılamaz
-durumda; canlı kayıtlar erişilemez. Otomatik kapıların hepsi yeşilken bu tablo
-görünmüyordu — yeşil kapı tablosu, koşulmamış bir turun yerini tutmaz.
+**Geçmedi**, ama en ağır engel kalktı: Dinleme Modu'nun boş ekranı (B-2)
+çözüldü ve grafik + oynatma cihazda çalışıyor.
+
+Kapıyı hâlâ kapalı tutanlar: canlı kayıtlar erişilemez (B-1), oynatıcı erken
+basınca takılıyor (B-2b), hız düğmesi ekran dışında (B-3). A/B döngüsü,
+video/grafik geçişi ve yön değişimi artık koşulabilir durumda ama
+koşulmadı; rota değişimi ve telefon kesintisi fiziksel donanım bekliyor.
+
+Otomatik kapıların hepsi yeşilken bu tablo görünmüyordu — yeşil kapı
+tablosu, koşulmamış bir turun yerini tutmaz.
