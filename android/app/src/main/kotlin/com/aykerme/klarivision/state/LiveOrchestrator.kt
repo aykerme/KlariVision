@@ -48,6 +48,18 @@ data class LiveUiState(
     val tunerCents: Double? = null,
     val permissionRequired: Boolean = false,
     val errorMessage: String? = null,
+    /**
+     * Tamamlanmış WAV kaydının yolu — kullanıcı "Çalışmalara Ekle"
+     * diyebilsin diye TUTULUR. Daha önce yalnız `isRecording` boolean'ı
+     * saklanıyor, `RecordingPhase.Completed(path)` yükü atılıyordu; sonuç,
+     * kayıtların uygulamaya özel depoya yazılıp orada erişilemez kalmasıydı
+     * (fiziksel kabul turu bulgusu B-1). Swift karşılığı
+     * `iPadLiveState.recording == .completed(url)`.
+     *
+     * Yeni bir kayıt başlayınca temizlenir: ekranda her zaman EN SON
+     * tamamlanan kayıt durur.
+     */
+    val completedRecordingPath: String? = null,
 )
 
 /** Ekranın uykuya geçmemesi gereken aşamalar (bkz. görev notu "Boşta kalma politikası"). */
@@ -217,7 +229,16 @@ class LiveOrchestrator(
     }
 
     private fun onRecording(phase: RecordingPhase) {
-        _uiState.update { it.copy(isRecording = phase is RecordingPhase.Active) }
+        _uiState.update {
+            it.copy(
+                isRecording = phase is RecordingPhase.Active,
+                completedRecordingPath = when (phase) {
+                    is RecordingPhase.Completed -> phase.path.ifBlank { null }
+                    is RecordingPhase.Active -> null
+                    else -> it.completedRecordingPath
+                },
+            )
+        }
     }
 
     private fun onFailure(message: String) {

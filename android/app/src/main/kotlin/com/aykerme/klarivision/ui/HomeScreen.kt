@@ -50,6 +50,10 @@ fun HomeScreen(
     onOpenLibraryImport: () -> Unit,
     onStartLive: () -> Unit,
     modifier: Modifier = Modifier,
+    /** Tamamlanmış kaydı Çalışmalara ekler (bkz. LiveWorkspace). */
+    onAddRecordingToStudies: ((String) -> Unit)? = null,
+    isRecordingImported: (String) -> Boolean = { false },
+    isImporting: Boolean = false,
 ) {
     val liveUiState by liveOrchestrator.uiState.collectAsState()
     val liveActive = liveUiState.phase == LivePhase2.RUNNING || liveUiState.phase == LivePhase2.STARTING
@@ -62,6 +66,9 @@ fun HomeScreen(
             graphContent = liveGraphContent,
             widthClass = widthClass,
             modifier = modifier,
+            onAddRecordingToStudies = onAddRecordingToStudies,
+            isRecordingImported = isRecordingImported,
+            isImporting = isImporting,
         )
         return
     }

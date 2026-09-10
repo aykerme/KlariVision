@@ -11,7 +11,7 @@ CODEX_HANDOFF'ta **NOT RUN** olarak duran liste ilk kez koşuldu.
 |---|---|---|---|
 | 1 | Mikrofon izni ve canlı grafik akışı | **geçti** | Çökme bulundu ve düzeltildi (b453fb2) |
 | 2 | WAV kaydı başlat/bitir | **geçti** | Dosyalar `files/Recordings/` altına yazılıyor |
-| 3 | WAV kaydı → Çalışmalara ekleme | **BAŞARISIZ** | Akış yok — aşağıda B-1 |
+| 3 | WAV kaydı → Çalışmalara ekleme | **geçti** (yazıldı) | Akış hiç yoktu; portlandı — B-1 |
 | 4 | SAF ile dosya alma | **geçti** | mp4 alındı, `files/Imports/` altına kopyalandı |
 | 5 | Çözümleme | **geçti** | 191 s video ≈ 3,5 dk; `Studies-v1.json` doğru (`duration: 191,226418`, kareler tam) |
 | 6 | Kütüphaneye kayıt | **geçti** | Çalışma listede görünüyor, yeniden açılıyor |
@@ -27,16 +27,40 @@ CODEX_HANDOFF'ta **NOT RUN** olarak duran liste ilk kez koşuldu.
 
 ## Bulgular
 
-### B-1 — Kayıtlar erişilemez durumda (akış hiç yok)
-`LiveOrchestrator.onRecording` yalnız `isRecording` boolean'ını set ediyor;
-`RecordingPhase.Completed(path)` yükü atılıyor. `AppDirectories.recordings()`
-dizinini yazandan başka OKUYAN yok. Sonuç: kayıtlar uygulamaya özel depoya
-yazılıp orada kalıyor — dinlenemiyor, çalışmaya eklenemiyor, dışa
-aktarılamıyor. Cihazda 20,9 MB'lık gerçek bir klarnet kaydı bu şekilde
-mahsur kaldı.
+### B-1 — ÇÖZÜLDÜ: kayıt → Çalışmalar akışı portlandı
 
-macOS kabul listesi bunu açıkça şart koşuyor: "kaydedilen WAV dosyası yeniden
-dinlenebilmelidir".
+Akış bir hata değil, hiç yazılmamıştı: `LiveOrchestrator.onRecording` yalnız
+`isRecording` boolean'ını set ediyor, `RecordingPhase.Completed(path)` yükünü
+atıyordu ve `Recordings/` dizinini yazandan başka okuyan yoktu. Kayıtlar
+uygulamaya özel depoya yazılıp orada kalıyordu — dinlenemiyor, çalışmaya
+eklenemiyor, dışa aktarılamıyordu.
+
+Swift tarafındaki kanonik davranış (`iPadCompactLiveWorkspace.recordingResult`
++ `addCompletedRecordingToStudies`) birebir portlandı:
+
+1. `LiveUiState` artık `completedRecordingPath` tutuyor; yeni kayıt başlayınca
+   temizleniyor, yani ekranda hep EN SON tamamlanan kayıt duruyor.
+2. `CompletedRecordingRow` dosya adını gösteriyor ve ya "Çalışmalara Ekle"
+   düğmesini ya da zaten eklendiyse "Bu kayıt Çalışmalar'a eklendi."
+   bilgisini veriyor; içe aktarma sürerken düğme devre dışı.
+3. `StudyOrchestrator.importRecordedAndAnalyze` kaydı `Imports/` altına
+   KOPYALIYOR (taşımıyor), analiz ediyor, kütüphaneye yazıyor. Kayıt
+   `Recordings/` altında olduğu gibi kalıyor: kalıcı çalışma her zaman kendi
+   kopyasını kullanır, böylece kullanıcı kaydı silse bile çalışma bozulmaz —
+   SAF yolundaki kuralın aynısı.
+4. Sıra Swift'le aynı: önce canlıyı durdur (mikrofon açıkken analiz başlatmak
+   CPU ve ses odağını çakıştırır), sonra kütüphaneye geç, sonra al ve analiz et.
+
+**Bir incelik kayda geçsin:** `DuplicateImportGuard` `IdentityHashMap`
+tabanlıdır, yani REFERANS eşitliğine bakar. `recording.absolutePath` her
+çağrıda EŞİT ama FARKLI bir `String` nesnesi üretir; anahtar intern
+edilmeseydi muhafız aynı kaydı iki ayrı kayıt sayar ve tek kayıt iki kez
+eklenirdi. Anahtar `absolutePath.intern()`'dir ve bunu koruyan bir JVM testi
+vardır.
+
+Cihazda uçtan uca doğrulandı: kayıt bitir → düğme → içe aktarma + analiz →
+çalışma açıldı (süre 0:10, kayıt süresiyle tutarlı) → kütüphanede göründü →
+Çalma Modu'na dönünce düğme yerine "Bu kayıt Çalışmalar'a eklendi." çıktı.
 
 ### B-2 — ÇÖZÜLDÜ: `load` yükü `evaluateJavascript`'in sınırını aşıyordu
 
@@ -160,10 +184,9 @@ ayrı kusurlar. Aynı dosyanın SES yolu sorunsuz (mp3 çalışmasında süre
 **Geçmedi**, ama en ağır engel kalktı: Dinleme Modu'nun boş ekranı (B-2)
 çözüldü ve grafik + oynatma cihazda çalışıyor.
 
-Kapıyı hâlâ kapalı tutanlar: canlı kayıtlar erişilemez (B-1), oynatıcı erken
-basınca takılıyor (B-2b), hız tek yönlü (B-3), A/B döngüsü oynatmayı
-kilitliyor (B-9), yatay yerleşim kullanılamaz (B-10), video görüntüsü
-gelmiyor (B-11).
+Kapıyı hâlâ kapalı tutanlar: oynatıcı erken basınca takılıyor (B-2b), hız
+tek yönlü (B-3), A/B döngüsü oynatmayı kilitliyor (B-9), yatay yerleşim
+kullanılamaz (B-10), video görüntüsü gelmiyor (B-11).
 
 Rota değişimi ve telefon kesintisi fiziksel donanım beklediği için hâlâ
 koşulmadı; listenin geri kalanı koşuldu.

@@ -69,6 +69,15 @@ fun LiveWorkspace(
     modifier: Modifier = Modifier,
     widthClass: KvWidthClass = KvWidthClass.DAR,
     onClose: (() -> Unit)? = null,
+    /**
+     * Tamamlanmış kaydı Çalışmalara ekler. `null` verilirse bölüm hiç
+     * gösterilmez — Swift `iPadLiveWorkspace(addToStudies:)` karşılığı.
+     */
+    onAddRecordingToStudies: ((String) -> Unit)? = null,
+    /** Bu kayıt zaten eklendi mi? Swift `study.hasImportedRecordedSource`. */
+    isRecordingImported: (String) -> Boolean = { false },
+    /** Bir içe aktarma sürüyor mu? Düğme o sırada devre dışı kalır. */
+    isImporting: Boolean = false,
 ) {
     val uiState by orchestrator.uiState.collectAsState()
     val scope = rememberCoroutineScope()
@@ -101,6 +110,20 @@ fun LiveWorkspace(
         }
         if (widthClass != KvWidthClass.DAR) {
             TunerBadge(note = uiState.tunerNote, cents = uiState.tunerCents)
+        }
+        // Tamamlanmış kayıt: dosya adı + "Çalışmalara Ekle". Bu bölüm olmadan
+        // kayıtlar uygulamaya özel depoya yazılıp erişilemez kalıyordu
+        // (kabul turu bulgusu B-1). Swift karşılığı
+        // `iPadCompactLiveWorkspace.recordingResult(url)`.
+        uiState.completedRecordingPath?.let { path ->
+            if (onAddRecordingToStudies != null) {
+                CompletedRecordingRow(
+                    path = path,
+                    isImported = isRecordingImported(path),
+                    isImporting = isImporting,
+                    onAdd = { onAddRecordingToStudies(path) },
+                )
+            }
         }
         FlowRowButtons(isWide) {
             WorkspaceSettingsButton(label = "Makam ve karar") { isPresentingSettings = true }

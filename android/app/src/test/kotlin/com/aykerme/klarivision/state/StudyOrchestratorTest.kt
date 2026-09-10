@@ -19,6 +19,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -51,6 +52,71 @@ class StudyOrchestratorTest {
      * biter — testler `runBlocking`/`advanceUntilIdle` olmadan doğrudan
      * son (veya ara) durumu okuyabilir.
      */
+    private fun recordingOrchestrator(
+        importRecording: suspend (File) -> ImportedFile = { fakeImportedFile("kopya.wav") },
+    ): StudyOrchestrator {
+        val orch = StudyOrchestrator(
+            libraryStore = libraryStore,
+            importFile = { _ -> fakeImportedFile() },
+            importRecording = importRecording,
+            analyze = ::successfulAnalyze,
+            ioDispatcher = Dispatchers.Unconfined,
+            scope = CoroutineScope(Dispatchers.Unconfined),
+        )
+        orch.viewerLoad = {}
+        return orch
+    }
+
+    // MARK: - Tamamlanmış kayıt (kabul turu bulgusu B-1)
+
+    @Test
+    fun `recorded import adds a study and marks the recording imported`() {
+        val orch = recordingOrchestrator()
+        val recording = File(tempDir, "KlariVision-abc.wav").apply { writeBytes(ByteArray(8)) }
+
+        assertFalse(orch.hasImportedRecording(recording))
+        orch.importRecordedAndAnalyze(recording)
+
+        assertEquals(StudyPhase.READY, orch.uiState.value.phase)
+        assertEquals(1, orch.uiState.value.studies.size)
+        assertEquals("KlariVision-abc", orch.uiState.value.studies.first().title)
+        assertTrue(orch.hasImportedRecording(recording))
+    }
+
+    /**
+     * Anahtar `absolutePath.intern()`'dir; muhafız `IdentityHashMap` tabanlı
+     * olduğu için AYNI kaydı temsil eden FARKLI [File] nesnelerinin de tek
+     * içe aktarma sayılması gerekir. Intern olmasaydı bu test iki çalışma
+     * görürdü.
+     */
+    @Test
+    fun `same recording reached through a different File object imports once`() {
+        val orch = recordingOrchestrator()
+        val path = File(tempDir, "KlariVision-xyz.wav").apply { writeBytes(ByteArray(8)) }.absolutePath
+
+        orch.importRecordedAndAnalyze(File(path))
+        orch.importRecordedAndAnalyze(File(path))
+
+        assertEquals(1, orch.uiState.value.studies.size)
+        assertTrue(orch.hasImportedRecording(File(path)))
+    }
+
+    /** Kayıt dosyasının KENDİSİ silinmemeli: kopya alınır, taşınmaz. */
+    @Test
+    fun `recorded import copies and leaves the original in place`() {
+        var seen: File? = null
+        val orch = recordingOrchestrator(importRecording = { file ->
+            seen = file
+            fakeImportedFile("kopya.wav")
+        })
+        val recording = File(tempDir, "KlariVision-keep.wav").apply { writeBytes(ByteArray(8)) }
+
+        orch.importRecordedAndAnalyze(recording)
+
+        assertEquals(recording.absolutePath, seen?.absolutePath)
+        assertTrue(recording.exists())
+    }
+
     private fun orchestrator(
         importer: suspend () -> ImportedFile = { fakeImportedFile() },
         analyze: suspend (String, suspend (AnalysisProgress) -> Unit) -> OfflineAnalysisResult = ::successfulAnalyze,

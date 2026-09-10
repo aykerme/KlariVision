@@ -22,6 +22,8 @@ package com.aykerme.klarivision.state
 import android.content.Context
 import android.net.Uri
 import android.provider.OpenableColumns
+import com.aykerme.klarivision.study.AppDirectories
+import com.aykerme.klarivision.study.MediaKind
 import com.aykerme.klarivision.study.AnalysisProgress
 import com.aykerme.klarivision.study.AnalysisStage
 import com.aykerme.klarivision.study.ImportedFile
@@ -162,6 +164,16 @@ class StudyOrchestrator(
     private val libraryStore: StudyLibraryStore,
     private val importFile: suspend (Uri) -> ImportedFile,
     private val resolveTitle: (Uri) -> String = { "Yeni Çalışma" },
+    /**
+     * Tamamlanmış bir canlı kaydı `Imports/` altına kopyalayan işlev.
+     * `importFile` gibi DIŞARIDAN verilir ki bu sınıf Android'e (Context,
+     * AppDirectories) bağımlı kalmasın ve JVM testiyle koşabilsin.
+     * Bağlanmazsa [importRecordedAndAnalyze] kullanılamaz — üretimde
+     * MainActivity bağlar.
+     */
+    private val importRecording: suspend (File) -> ImportedFile = {
+        throw IllegalStateException("importRecording bağlanmadı")
+    },
     private val analyze: suspend (String, suspend (AnalysisProgress) -> Unit) -> OfflineAnalysisResult =
         { path, onProgress -> OfflinePitchAnalyzer.analyze(sourcePath = path, onProgress = onProgress) },
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
@@ -184,6 +196,20 @@ class StudyOrchestrator(
         libraryStore = StudyLibraryStore(context.filesDir),
         importFile = { uri -> StudyImportService.importFile(context, uri) },
         resolveTitle = { uri -> studyTitleFromDisplayName(context, uri) },
+        importRecording = { recording ->
+            val destination = File(
+                AppDirectories.imports(context),
+                "${UUID.randomUUID()}.${recording.extension.ifBlank { "wav" }}",
+            )
+            recording.inputStream().use { input ->
+                StudyImportService.copyStreamAtomically(input, destination)
+            }
+            // Kayıt `Recordings/` altında OLDUĞU GİBİ KALIR: kopya alınır,
+            // taşınmaz. Gerekçe SAF yolundakiyle aynı — kalıcı çalışma her
+            // zaman `Imports/` altındaki kendi kopyasını kullanır, böylece
+            // kullanıcı kaydı silse bile çalışma bozulmaz.
+            ImportedFile(file = destination, mediaKind = MediaKind.AUDIO)
+        },
     )
 
     private val _uiState = MutableStateFlow(StudyUiState(studies = safeLoadLibrary()))
@@ -215,6 +241,34 @@ class StudyOrchestrator(
     fun importAndAnalyze(uri: Uri) {
         launchImport(key = uri, titleHint = resolveTitle(uri)) { importFile(uri) }
     }
+
+    /**
+     * Tamamlanmış bir canlı WAV kaydını Çalışmalara ekler: kaydı
+     * [importRecording] ile `Imports/` altına kopyalar, analiz eder ve
+     * kütüphaneye yazar. Swift karşılığı
+     * `addCompletedRecordingToStudies` → `importAndAnalyze(isCompletedRecording:)`.
+     *
+     * Yinelenme anahtarı yolun INTERN EDİLMİŞ hâlidir. Bu şart:
+     * [DuplicateImportGuard] `IdentityHashMap` tabanlıdır, yani REFERANS
+     * eşitliğine bakar; `recording.absolutePath` her çağrıda EŞİT ama FARKLI
+     * bir `String` nesnesi üretir ve muhafız aynı kaydı iki ayrı kayıt sanardı.
+     * `intern()` eşit içerikli dizeleri tek nesneye indirger, böylece muhafızın
+     * mevcut sözleşmesi değişmeden doğru çalışır.
+     */
+    fun importRecordedAndAnalyze(recording: File) {
+        launchImport(
+            key = recording.absolutePath.intern(),
+            titleHint = recording.nameWithoutExtension,
+        ) { importRecording(recording) }
+    }
+
+    /**
+     * Bu kayıt daha önce Çalışmalara eklendi mi? Swift
+     * `iPadStudyState.hasImportedRecordedSource` karşılığı — UI, düğme yerine
+     * "Bu kayıt Çalışmalar'a eklendi." bilgisini göstermek için sorar.
+     */
+    fun hasImportedRecording(recording: File): Boolean =
+        importGuard.contains(recording.absolutePath.intern())
 
     /** Son başarısız içe aktarmayı aynı kaynaktan yeniden dener. */
     fun retry() {

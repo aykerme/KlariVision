@@ -45,6 +45,7 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.runtime.LaunchedEffect
+import java.io.File
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -154,6 +155,18 @@ fun KlariVisionApp(
                 onOpenLibraryImport = { destination = Destination.LIBRARY; onRequestImport() },
                 onStartLive = { liveOrchestrator.start() },
                 modifier = contentModifier,
+                // Swift `addCompletedRecordingToStudies` ile aynı sıra:
+                // önce canlıyı durdur (mikrofon açıkken analiz başlatmak
+                // hem CPU'yu hem ses odağını çakıştırır), sonra kütüphaneye
+                // geç, sonra al ve analiz et.
+                onAddRecordingToStudies = { path ->
+                    liveOrchestrator.stop()
+                    destination = Destination.LIBRARY
+                    studyOrchestrator.importRecordedAndAnalyze(File(path))
+                },
+                isRecordingImported = { path -> studyOrchestrator.hasImportedRecording(File(path)) },
+                isImporting = studyUiState.phase == StudyPhase.IMPORTING ||
+                    studyUiState.phase == StudyPhase.ANALYZING,
             )
             Destination.LIBRARY -> LibraryScreen(
                 studies = studyUiState.studies,

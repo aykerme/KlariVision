@@ -23,6 +23,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Button
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Settings
@@ -399,4 +400,39 @@ fun StatusLine(message: String, isError: Boolean, modifier: Modifier = Modifier)
         color = if (isError) MaterialTheme.colorScheme.error else LocalContentColor.current,
         style = MaterialTheme.typography.bodySmall,
     )
+}
+
+/**
+ * Tamamlanmış WAV kaydının satırı: dosya adı, ardından ya "Çalışmalara Ekle"
+ * düğmesi ya da zaten eklendiyse bilgi metni.
+ *
+ * Swift kaynağı: `iPadCompactLiveWorkspace.recordingResult(_:)`. Aynı üç
+ * durum: (1) tamamlandı bilgisi her zaman, (2) eklendiyse metin,
+ * (3) eklenmediyse düğme — içe aktarma sürerken devre dışı.
+ */
+@Composable
+fun CompletedRecordingRow(
+    path: String,
+    isImported: Boolean,
+    isImporting: Boolean,
+    onAdd: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val name = path.substringAfterLast('/')
+    Column(modifier = modifier.fillMaxWidth()) {
+        StatusLine("WAV kaydı tamamlandı: $name", isError = false)
+        if (isImported) {
+            StatusLine("Bu kayıt Çalışmalar'a eklendi.", isError = false)
+        } else {
+            Button(
+                onClick = onAdd,
+                enabled = !isImporting,
+                modifier = Modifier.semantics {
+                    // Swift'teki accessibilityHint karşılığı: düğmenin ne
+                    // yapacağını söyler, etiketini tekrar etmez.
+                    contentDescription = "Çalışmalara Ekle, kaydı Dinleme motoruyla analiz eder"
+                },
+            ) { Text("Çalışmalara Ekle") }
+        }
+    }
 }
