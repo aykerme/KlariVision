@@ -18,12 +18,12 @@ CODEX_HANDOFF'ta **NOT RUN** olarak duran liste ilk kez koşuldu.
 | 7 | Çalışma görüntüleyici (grafik) | **geçti** (düzeltildi) | Boştu; kök sebep bulundu — B-2 |
 | 8 | Oynatma | **geçti** (şartlı) | Çalışıyor; erken basınca takılıyor — B-2b |
 | 9 | A/B döngüsü | **BAŞARISIZ** | Dönüyor, sonra oynatma kilitleniyor — B-9 |
-| 10 | Oynatma hızı | **BAŞARISIZ** | Yalnız yavaşlatılabiliyor, geri hızlandırılamıyor — B-3 |
+| 10 | Oynatma hızı | **düzeltme yazıldı, doğrulanmadı** | B-3 — cihazda görülmedi |
 | 11 | Video/grafik geçişi | **kısmen** | Geçiş çalışıyor, video görüntüsü gelmiyor — B-11 |
 | 12 | Kulaklık/Bluetooth rota değişimi | **koşulmadı** | Fiziksel donanım gerekir |
 | 13 | Telefon kesintisi | **koşulmadı** | Gerçek çağrı gerekir |
 | 14 | Arka plan dönüşü | **geçti** | Arka plana geçince mikrofon güvenle duruyor |
-| 15 | Yön değişimi | **BAŞARISIZ** | Yatay yerleşim kullanılamaz — B-10 |
+| 15 | Yön değişimi | **düzeltme yazıldı, doğrulanmadı** | B-10 — cihazda görülmedi |
 
 ## Bulgular
 
@@ -138,6 +138,27 @@ Parite kuruldu.
 sunulan baytlar kayar ve medya sessizce bozulur. Bu cihazda tam atlıyor (yani
 B-2'nin sebebi değil), ama sözleşme bunu vaat etmiyor. `channel.position()`
 ile değiştirildi.
+
+### B-3 / B-10 — düzeltme yazıldı, CİHAZDA DOĞRULANMADI
+
+İkisinin de tek ortak sebebi vardı: yerleşim kararları sığmayan durumu hiç
+ele almıyordu.
+
+**B-3**: `FlowRowButtons` adının vaat ettiğini yapmıyor, dar modda düz bir
+`Row` kuruyordu; yedi çocuk sığmayınca sondakiler sıfır genişlik alıyordu.
+Artık gerçek `FlowRow` — sığmayan alt satıra iner.
+
+**B-10**: Genişlik sınıfı yalnız genişliğe bakıyordu; yatay telefon
+(853×384 dp) ORTA seçiyor, o yerleşim ise dikey yığıldığı için 580 dp
+yükseklik istiyordu. `KvWidthClass.fromSize` artık yüksekliği de istiyor ve
+yetmezse DAR'a düşüyor. Tablet yatayda davranış değişmez; beş JVM testi
+sınırları tutuyor.
+
+**Bu iki kalem AÇIK sayılmalıdır.** Telefon o turda bağlı değildi; kanıt
+şimdilik yalnız birim testleri ve derlemedir. Sıradaki cihaz turunda
+bakılacaklar: dikeyde "Hızı artır" düğmesinin erişilebilirlik sınırları
+`(0,0,0,0)` OLMAMALI; yatayda kontrol paneli ekranı kaplamamalı ve grafik
+şeride sıkışmamalı.
 
 ### B-9 — A/B döngüsü birkaç turdan sonra oynatmayı kilitliyor
 
