@@ -17,6 +17,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -316,15 +318,30 @@ fun MakamIntervalEditor(
  * şeritte dizen ortak yardımcı. Çalma ve Dinleme çalışma alanlarının ikisi de
  * kullanır ki "ardışık/yan yana" karar tek yerde alınsın.
  */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 internal fun FlowRowButtons(isWide: Boolean, content: @Composable () -> Unit) {
     if (isWide) {
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) { content() }
     } else {
-        Row(
+        // GERÇEK sarmalama. Burası daha önce düz bir `Row`'du ve adının
+        // vaat ettiği şeyi yapmıyordu: yedi çocuk (oynat, A, B, döngü,
+        // Takip, hız, kapat) 1080 piksellik telefona sığmayınca son
+        // çocuklar SIFIR genişlik alıp erişilemez oluyordu. Cihazda ölçüldü:
+        // "Hızı artır" düğmesinin sınırları (0,0,0,0) idi, yani kullanıcı
+        // oynatma hızını düşürdükten sonra 1,00×'e geri dönemiyordu
+        // (fiziksel kabul turu bulgusu B-3). `FlowRow` sığmayanı alt satıra
+        // indirir; hiçbir kontrol kaybolmaz.
+        //
+        // Eski `Row`'daki `verticalAlignment = CenterVertically` karşılığı
+        // YOK: bu Compose sürümündeki `FlowRow` satır içi çapraz eksen
+        // hizasını parametre olarak almıyor (`itemVerticalAlignment` yok).
+        // Varsayılan üstten hizadır; satırdaki kontroller benzer yükseklikte
+        // olduğu için fark gözle görülür değil.
+        FlowRow(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
         ) { content() }
     }
 }

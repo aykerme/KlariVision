@@ -66,6 +66,26 @@ enum class KvWidthClass {
             widthDp < 1000.dp -> ORTA
             else -> GENIS
         }
+
+        /**
+         * Genişlik VE yüksekliğe bakan sınıf. Yalnız genişliğe bakmak yatay
+         * çevrilmiş bir telefonda yanlış cevap veriyordu: 2400×1080 piksel,
+         * yani 853×384 dp — genişlik ORTA eşiğini geçiyor ve ORTA/GENIS
+         * yerleşimi seçiliyordu, oysa o yerleşimler dikey yığılır ve
+         * [KvMediaHeightMediumMin] (220) + [KvGraphMinHeight] (360) = 580 dp
+         * ister. 384 dp'lik pencerede sonuç, kontrol panelinin tüm ekranı
+         * kaplaması ve grafiğin ~60 piksellik bir şeride sıkışmasıydı
+         * (fiziksel kabul turu bulgusu B-10).
+         *
+         * Pencere bu yüksekliği veremiyorsa DAR'a düşülür: tek sütun, grafik
+         * yüzeyi kaplar, düğmeler sarmalanan bir satırda durur. Tablet
+         * yatayda (≥580 dp yükseklik) davranış DEĞİŞMEZ.
+         */
+        fun fromSize(widthDp: Dp, heightDp: Dp): KvWidthClass =
+            if (heightDp < MinimumHeightForWideLayouts) DAR else fromWidth(widthDp)
+
+        /** ORTA/GENIS yerleşimlerinin dikey olarak isteyebileceği en az yükseklik. */
+        private val MinimumHeightForWideLayouts: Dp = 580.dp
     }
 }
 
@@ -95,3 +115,8 @@ val KvMediaHeightNarrow: Dp = 220.dp
  */
 @Composable
 fun rememberWidthClass(maxWidth: Dp): KvWidthClass = KvWidthClass.fromWidth(maxWidth)
+
+/** Genişlik ve yüksekliğe birlikte bakan sürüm — bkz. [KvWidthClass.fromSize]. */
+@Composable
+fun rememberWidthClass(maxWidth: Dp, maxHeight: Dp): KvWidthClass =
+    KvWidthClass.fromSize(maxWidth, maxHeight)

@@ -193,7 +193,7 @@ fun KlariVisionApp(
     KlariVisionTheme(themeName = themeName) {
         Surface(modifier = modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
             BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
-                val widthClass = rememberWidthClass(maxWidth)
+                val widthClass = rememberWidthClass(maxWidth, maxHeight)
                 when (widthClass) {
                     KvWidthClass.GENIS -> Row(modifier = Modifier.fillMaxSize()) {
                         PermanentSidebar(destination = destination, onSelect = { destination = it })
