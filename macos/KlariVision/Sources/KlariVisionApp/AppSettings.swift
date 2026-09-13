@@ -13,6 +13,17 @@ import UniformTypeIdentifiers
 import WebKit
 import os
 
+/// Sürüm başına açık/kapalı derleme bayrakları. Tek kaynak: bir moda giden
+/// hiçbir yol (kart, menü, kısayol, kayıtlı durum geri yükleme) burada
+/// `false` olan bir bayrağı dolaşarak çalışmamalı. Kod silinmez — yalnız bu
+/// sabitler üzerinden erişim kapatılır; Sürüm 2'de `true`'ya çevrilecek.
+enum FeatureFlags {
+    /// "Birlikte Çal" modu Sürüm 1'de gizli (bkz. docs/app-store/PLAN.md,
+    /// "Sürüm 2 — Pro kilidi"). `AppRoute.together`'a giden her yol bu
+    /// bayrağı kontrol etmelidir.
+    static let togetherModeEnabled = false
+}
+
 /// A single, persisted appearance choice shared by every native surface.  The
 /// viewer used to own this setting in its page-local storage, which meant a
 /// theme could change only the graph while the rest of the app stayed put.

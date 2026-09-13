@@ -678,6 +678,15 @@ enum AppRoute: Equatable {
     case listening
     case live
     case together
+
+    /// Bayrak kapalıyken `.together`'ı `.modeSelection`'a düşürür — kayıtlı
+    /// durum geri yüklemesi, programatik route değişimi ya da başka bir yol
+    /// `.together`'ı üretse bile tek normalizasyon kuralı burada yaşar.
+    /// Saf ve test edilebilir tutulur (bkz. `StudySelectionSync` üstündeki not).
+    func normalized(togetherModeEnabled: Bool = FeatureFlags.togetherModeEnabled) -> AppRoute {
+        if !togetherModeEnabled, self == .together { return .modeSelection }
+        return self
+    }
 }
 
 /// Kenar çubuğu seçimi iki ayrı yönden değişebilir: kullanıcı bir kayda tıklar,
@@ -774,7 +783,11 @@ struct WelcomeView: View {
                 }
             case .modeSelection, .listening, .together:
                 if let viewer = library.activeViewer {
-                    WorkspaceView(viewer: viewer, library: library, isTogetherMode: route == .together)
+                    WorkspaceView(
+                        viewer: viewer,
+                        library: library,
+                        isTogetherMode: FeatureFlags.togetherModeEnabled && route == .together
+                    )
                 } else {
                     ModeSelectionView(library: library, route: $route)
                 }
@@ -782,6 +795,15 @@ struct WelcomeView: View {
         }
         .sheet(item: $itemToEdit) { item in
             StudyEditor(item: item, library: library) { _, _ in }
+        }
+        .onAppear {
+            // Bayrak kapalıyken hiçbir yoldan (kayıtlı durum geri yükleme dahil)
+            // `.together`'a girilmemeli — tek normalizasyon noktası `AppRoute.normalized`.
+            route = route.normalized()
+        }
+        .onChange(of: route) { _, newValue in
+            let normalized = newValue.normalized()
+            if normalized != newValue { route = normalized }
         }
         .onChange(of: selectedStudyID) { _, identifier in
             // Kenar çubuğu seçimi `library.activeViewer` değiştiğinde aşağıdaki
@@ -874,12 +896,17 @@ private struct ModeSelectionView: View {
                         route = .live
                     }
 
-                    TogetherModeCard(selectedFile: library.selectedFile) {
-                        // Mikrofon henüz bağlanmadı; burada tek teardown noktası
-                        // bırakılıyor — mikrofon durdurma sonraki görevde eklenecek.
-                        library.closeWorkspace()
-                        route = .together
-                        library.chooseFile()
+                    // Sürüm 1: "Birlikte Çal" kartı FeatureFlags.togetherModeEnabled
+                    // açılana kadar hiç oluşturulmaz — kod silinmez, yalnız erişim
+                    // kapatılır (bkz. docs/app-store/PLAN.md, "Sürüm 2 — Pro kilidi").
+                    if FeatureFlags.togetherModeEnabled {
+                        TogetherModeCard(selectedFile: library.selectedFile) {
+                            // Mikrofon henüz bağlanmadı; burada tek teardown noktası
+                            // bırakılıyor — mikrofon durdurma sonraki görevde eklenecek.
+                            library.closeWorkspace()
+                            route = .together
+                            library.chooseFile()
+                        }
                     }
                 }
 

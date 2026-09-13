@@ -685,3 +685,48 @@ final class LiveNotationTests: XCTestCase {
         )
     }
 }
+
+/// Sürüm 1: "Birlikte Çal" `FeatureFlags.togetherModeEnabled` üzerinden
+/// gizlenir; bu bayrak kapalıyken `AppRoute.together`'a giden hiçbir yolun
+/// çalışmadığını doğrular (bkz. KlariVisionApp.swift → AppRoute.normalized,
+/// ModeSelectionView, WelcomeView.onAppear/.onChange(of: route)).
+final class TogetherModeFeatureFlagTests: XCTestCase {
+    func testTogetherModeIsDisabledForVersionOne() {
+        // Kanarya: biri bunu Sürüm 1 için yanlışlıkla `true` yaparsa bu test
+        // kırılır ve bu dosyanın başındaki notu hatırlatır.
+        XCTAssertFalse(FeatureFlags.togetherModeEnabled)
+    }
+
+    func testTogetherRouteNormalizesToModeSelectionWhenFlagIsDisabled() {
+        XCTAssertEqual(AppRoute.together.normalized(togetherModeEnabled: false), .modeSelection)
+    }
+
+    func testTogetherRouteIsKeptWhenFlagIsEnabled() {
+        // Bayrak Sürüm 2'de açıldığında normalizasyonun modu bozmadığını
+        // garanti eder — regresyonu yalnız kapalı durum için test etmek
+        // yeterli değildir.
+        XCTAssertEqual(AppRoute.together.normalized(togetherModeEnabled: true), .together)
+    }
+
+    func testNonTogetherRoutesAreNeverNormalized() {
+        for route: AppRoute in [.modeSelection, .listening, .live] {
+            XCTAssertEqual(route.normalized(togetherModeEnabled: false), route)
+            XCTAssertEqual(route.normalized(togetherModeEnabled: true), route)
+        }
+    }
+
+    @MainActor
+    func testWorkspaceNeverEntersTogetherModeWhileFlagIsDisabled() {
+        // WorkspaceView'e geçen `isTogetherMode` iki koşulun birleşimidir:
+        // route == .together VE bayrak açık. Bayrak kapalıyken route ne
+        // olursa olsun sonuç her zaman false olmalı.
+        for route: AppRoute in AppRoute.allTestCases {
+            let isTogetherMode = FeatureFlags.togetherModeEnabled && route == .together
+            XCTAssertFalse(isTogetherMode, "route=\(route) için isTogetherMode false olmalı")
+        }
+    }
+}
+
+extension AppRoute {
+    fileprivate static var allTestCases: [AppRoute] { [.modeSelection, .listening, .live, .together] }
+}
