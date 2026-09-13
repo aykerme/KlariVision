@@ -77,7 +77,12 @@ struct SignalLevelMeter: View {
         }
         .frame(height: 12)
         .accessibilityLabel("Güncel ses seviyesi")
-        .accessibilityValue(String(format: "%.1f dBFS, eşik %.1f dBFS", levelDBFS, thresholdDBFS))
+        .accessibilityValue(
+            String(
+                format: String(localized: "%1$.1f dBFS, eşik %2$.1f dBFS", bundle: .klariVisionModule),
+                levelDBFS, thresholdDBFS
+            )
+        )
     }
 }
 
@@ -114,9 +119,12 @@ struct SignalGateControls: View {
             HStack {
                 Text("−60 dBFS")
                 Spacer()
-                Text(signalLevel.rms > 0
-                    ? String(format: "Güncel: %.1f dBFS", SignalGateSettings.decibels(forRMS: signalLevel.rms))
-                    : "Çalma modu bekleniyor")
+                Text(verbatim: signalLevel.rms > 0
+                    ? String(
+                        format: String(localized: "Güncel: %.1f dBFS", bundle: .klariVisionModule),
+                        SignalGateSettings.decibels(forRMS: signalLevel.rms)
+                    )
+                    : String(localized: "Çalma modu bekleniyor", bundle: .klariVisionModule))
                 Spacer()
                 Text("−20 dBFS")
             }
@@ -356,10 +364,10 @@ enum LiveAnalysisResolution: String, CaseIterable, Identifiable {
     var id: String { rawValue }
     var title: String {
         switch self {
-        case .balanced: return "Akıcı"
-        case .detailed: return "Dengeli"
-        case .precision: return "Sabit nota"
-        case .vibrato: return "Hızlı vibrato"
+        case .balanced: return String(localized: "Akıcı", bundle: .klariVisionModule)
+        case .detailed: return String(localized: "Dengeli", bundle: .klariVisionModule)
+        case .precision: return String(localized: "Sabit nota", bundle: .klariVisionModule)
+        case .vibrato: return String(localized: "Hızlı vibrato", bundle: .klariVisionModule)
         }
     }
 
@@ -396,7 +404,7 @@ enum LivePitchEngine: String, CaseIterable, Identifiable {
     var id: String { rawValue }
     var title: String {
         switch self {
-        case .unified: return "Birleşik (Unified v1)"
+        case .unified: return String(localized: "Birleşik (Unified v1)", bundle: .klariVisionModule)
         }
     }
 
@@ -431,7 +439,7 @@ final class LivePitchAnalyzer: ObservableObject, @unchecked Sendable {
     @Published private(set) var isRunning = false
     @Published private(set) var isRecording = false
     @Published private(set) var isBenchmarkRunning = false
-    @Published private(set) var status = "Mikrofonu başlatmaya hazır."
+    @Published private(set) var status = String(localized: "Mikrofonu başlatmaya hazır.", bundle: .klariVisionModule)
     @Published private(set) var resolution: LiveAnalysisResolution = .vibrato
     @Published private(set) var pitchEngine: LivePitchEngine = .unified
     @Published private(set) var referenceTestSourceName: String?
@@ -662,7 +670,7 @@ final class LivePitchAnalyzer: ObservableObject, @unchecked Sendable {
         referenceValidationReportURL = nil
         referenceErrorRanges.removeAll(keepingCapacity: true)
         referenceErrorPoints.removeAll(keepingCapacity: true)
-        referenceAnalysisMessage = "Kaynak çalıyor; karşılaştırma eğrisini testten sonra hazırlayabilirsin."
+        referenceAnalysisMessage = String(localized: "Kaynak çalıyor; karşılaştırma eğrisini testten sonra hazırlayabilirsin.", bundle: .klariVisionModule)
         // Generated validation recordings can display their exact expected
         // curve immediately, including during speaker → microphone tests.
         // Generic recordings continue to prepare their pYIN overlay.
@@ -672,7 +680,7 @@ final class LivePitchAnalyzer: ObservableObject, @unchecked Sendable {
 
     func prepareReferenceOverlay() {
         guard let source = referenceTestSourceURL else {
-            referenceAnalysisMessage = "Önce Kaynakla Test ile bir ses veya video seç."
+            referenceAnalysisMessage = String(localized: "Önce Kaynakla Test ile bir ses veya video seç.", bundle: .klariVisionModule)
             return
         }
         let analysisID = UUID()
@@ -693,13 +701,13 @@ final class LivePitchAnalyzer: ObservableObject, @unchecked Sendable {
             referenceOfflineFrames = expected
             referenceIsAnalytic = true
             referenceTimeOffset = 0
-            referenceAnalysisMessage = "Matematiksel hedef eklendi · ölçüm: mavi · hedef: koyu"
-            referenceValidationSummary = "Canlı motor matematiksel hedef eğriyle karşılaştırılıyor."
+            referenceAnalysisMessage = String(localized: "Matematiksel hedef eklendi · ölçüm: mavi · hedef: koyu", bundle: .klariVisionModule)
+            referenceValidationSummary = String(localized: "Canlı motor matematiksel hedef eğriyle karşılaştırılıyor.", bundle: .klariVisionModule)
             referenceValidationDetails = nil
             referenceValidationReportURL = nil
             return
         }
-        referenceAnalysisMessage = "Kaynak pYIN eğrisi hazırlanıyor…"
+        referenceAnalysisMessage = String(localized: "Kaynak pYIN eğrisi hazırlanıyor…", bundle: .klariVisionModule)
         prepareOfflineReference(for: source, analysisID: analysisID)
     }
 
@@ -747,7 +755,7 @@ final class LivePitchAnalyzer: ObservableObject, @unchecked Sendable {
         let manifest = source.deletingLastPathComponent().appending(path: manifestName)
         guard let data = try? Data(contentsOf: manifest),
               let payload = try? JSONDecoder().decode(AnalyticReferencePayload.self, from: data) else {
-            referenceAnalysisMessage = "Beklenen eğri dosyası bulunamadı; pYIN kullanılacak."
+            referenceAnalysisMessage = String(localized: "Beklenen eğri dosyası bulunamadı; pYIN kullanılacak.", bundle: .klariVisionModule)
             return nil
         }
         analyticReferenceOriginalTruth = payload.ground_truth.map { ($0.time_seconds, $0.frequency_hz) }
@@ -833,9 +841,26 @@ final class LivePitchAnalyzer: ObservableObject, @unchecked Sendable {
             let root = URL(fileURLWithPath: NSHomeDirectory()).appending(path: "Documents/KlariVision")
 
             if let engine = Self.bundledEngineExecutable() {
+                // Paketlenmiş motor artık ffmpeg taşımıyor (bkz.
+                // docs/app-store/ffmpeg-replacement.md); kaynağı burada
+                // AVFoundation ile WAV'a çözüp `--wav` ile veriyoruz.
+                let wavPreparation = MediaToWAVConverter.prepareWAV(for: source)
+                guard case .success(let wavURL) = wavPreparation else {
+                    if case .failure(let error) = wavPreparation {
+                        DispatchQueue.main.async { [weak self] in
+                            guard let self, self.referenceAnalysisID == analysisID else { return }
+                            self.referenceAnalysisMessage = String(localized: "Kaynak ses çözülemedi: \(error.localizedDescription)", bundle: .klariVisionModule)
+                        }
+                    }
+                    return
+                }
+                defer { MediaToWAVConverter.cleanUpTemporaryWAV(wavURL) }
                 let process = Process()
                 process.executableURL = engine
-                process.arguments = [source.path, "--makam", "huzzam", "--karar", "dugah", "--engine", "vamp"]
+                process.arguments = [
+                    source.path, "--engine", "vamp", "--wav", wavURL.path,
+                    "--lang", AppLanguage.engineCode,
+                ]
                 let pipe = Pipe()
                 process.standardOutput = pipe
                 process.standardError = Pipe()
@@ -851,12 +876,12 @@ final class LivePitchAnalyzer: ObservableObject, @unchecked Sendable {
                 guard FileManager.default.isExecutableFile(atPath: python.path) else {
                     DispatchQueue.main.async { [weak self] in
                         guard let self, self.referenceAnalysisID == analysisID else { return }
-                        self.referenceAnalysisMessage = "Kaynak pYIN eğrisi bu çalışma ortamında hazırlanamadı."
+                        self.referenceAnalysisMessage = String(localized: "Kaynak pYIN eğrisi bu çalışma ortamında hazırlanamadı.", bundle: .klariVisionModule)
                     }
                     return
                 }
                 let escapedPath = source.path.replacingOccurrences(of: "\"", with: "\\\\\"")
-                let script = "from pathlib import Path; from klarivision.local_app import analyse_upload; print(analyse_upload(Path(\"\(escapedPath)\"), \"huzzam\", \"dugah\", \"vamp\"))"
+                let script = "from pathlib import Path; from klarivision.local_app import analyse_upload; print(analyse_upload(Path(\"\(escapedPath)\"), \"vamp\"))"
                 let process = Process()
                 process.executableURL = python
                 process.arguments = ["-c", script]
@@ -880,7 +905,7 @@ final class LivePitchAnalyzer: ObservableObject, @unchecked Sendable {
                   let relativeViewer = output.split(whereSeparator: \.isNewline).last else {
                 DispatchQueue.main.async { [weak self] in
                     guard let self, self.referenceAnalysisID == analysisID else { return }
-                    self.referenceAnalysisMessage = "Kaynak pYIN eğrisi hazırlanamadı."
+                    self.referenceAnalysisMessage = String(localized: "Kaynak pYIN eğrisi hazırlanamadı.", bundle: .klariVisionModule)
                 }
                 return
             }
@@ -893,7 +918,7 @@ final class LivePitchAnalyzer: ObservableObject, @unchecked Sendable {
                   let payload = try? JSONDecoder().decode(OfflinePitchPayload.self, from: data) else {
                 DispatchQueue.main.async { [weak self] in
                     guard let self, self.referenceAnalysisID == analysisID else { return }
-                    self.referenceAnalysisMessage = "Kaynak pYIN verisi okunamadı."
+                    self.referenceAnalysisMessage = String(localized: "Kaynak pYIN verisi okunamadı.", bundle: .klariVisionModule)
                 }
                 return
             }
@@ -904,16 +929,14 @@ final class LivePitchAnalyzer: ObservableObject, @unchecked Sendable {
                 guard let self, self.referenceAnalysisID == analysisID else { return }
                 self.referenceOfflineFrames = frames
                 self.calibrateReferenceTimeOffsetIfPossible()
-                self.referenceAnalysisMessage = "Kaynak pYIN eğrisi eklendi · canlı: mavi · kaynak: koyu"
+                self.referenceAnalysisMessage = String(localized: "Kaynak pYIN eğrisi eklendi · canlı: mavi · kaynak: koyu", bundle: .klariVisionModule)
                 self.updateReferenceValidationReport()
             }
         }
     }
 
     private static func bundledEngineExecutable() -> URL? {
-        guard let resources = Bundle.main.resourceURL else { return nil }
-        let executable = resources.appending(path: "Engine/KlariVisionEngine")
-        return FileManager.default.isExecutableFile(atPath: executable.path) ? executable : nil
+        BundledEngine.executable()
     }
 
     /// Exports only derived time/frequency/confidence points. The microphone
@@ -988,7 +1011,7 @@ final class LivePitchAnalyzer: ObservableObject, @unchecked Sendable {
     private func beginRecording(format: AVAudioFormat) {
         guard format.sampleRate > 0, format.channelCount > 0 else {
             recordingStartPending = false
-            status = "Kayıt başlatılamadı: Geçerli bir mikrofon biçimi bulunamadı."
+            status = String(localized: "Kayıt başlatılamadı: Geçerli bir mikrofon biçimi bulunamadı.", bundle: .klariVisionModule)
             return
         }
         let temporaryURL = FileManager.default.temporaryDirectory
@@ -1007,11 +1030,11 @@ final class LivePitchAnalyzer: ObservableObject, @unchecked Sendable {
             recordingLock.unlock()
             recordingStartPending = false
             isRecording = true
-            status = "Mikrofon dinleniyor. Kayıt yapılıyor."
+            status = String(localized: "Mikrofon dinleniyor. Kayıt yapılıyor.", bundle: .klariVisionModule)
         } catch {
             recordingStartPending = false
             try? FileManager.default.removeItem(at: temporaryURL)
-            status = "Kayıt başlatılamadı: \(error.localizedDescription)"
+            status = String(localized: "Kayıt başlatılamadı: \(error.localizedDescription)", bundle: .klariVisionModule)
         }
     }
 
@@ -1028,7 +1051,7 @@ final class LivePitchAnalyzer: ObservableObject, @unchecked Sendable {
             DispatchQueue.main.async { [weak self] in
                 guard let self else { return }
                 self.isRecording = false
-                self.status = "Kayıt sırasında hata oluştu: \(error.localizedDescription)"
+                self.status = String(localized: "Kayıt sırasında hata oluştu: \(error.localizedDescription)", bundle: .klariVisionModule)
                 if let temporaryURL {
                     try? FileManager.default.removeItem(at: temporaryURL)
                 }
@@ -1047,7 +1070,7 @@ final class LivePitchAnalyzer: ObservableObject, @unchecked Sendable {
         guard let temporaryURL else { return }
 
         if isRunning {
-            status = "Mikrofon dinleniyor. Ses kaydedilmiyor."
+            status = String(localized: "Mikrofon dinleniyor. Ses kaydedilmiyor.", bundle: .klariVisionModule)
         }
         Task { @MainActor in
             Self.presentRecordingSavePanel(for: temporaryURL)
@@ -1057,8 +1080,8 @@ final class LivePitchAnalyzer: ObservableObject, @unchecked Sendable {
     @MainActor
     private static func presentRecordingSavePanel(for temporaryURL: URL) {
         let panel = NSSavePanel()
-        panel.title = "Kaydı Sakla"
-        panel.prompt = "Kaydet"
+        panel.title = String(localized: "Kaydı Sakla", bundle: .klariVisionModule)
+        panel.prompt = String(localized: "Kaydet", bundle: .klariVisionModule)
         panel.nameFieldStringValue = defaultRecordingFilename()
         panel.allowedContentTypes = [.wav]
         panel.canCreateDirectories = true
@@ -1075,7 +1098,7 @@ final class LivePitchAnalyzer: ObservableObject, @unchecked Sendable {
                 }
             } catch {
                 let alert = NSAlert(error: error)
-                alert.messageText = "Kayıt kaydedilemedi"
+                alert.messageText = String(localized: "Kayıt kaydedilemedi", bundle: .klariVisionModule)
                 alert.runModal()
             }
         }
@@ -1096,7 +1119,12 @@ final class LivePitchAnalyzer: ObservableObject, @unchecked Sendable {
         let formatter = DateFormatter()
         formatter.locale = Locale(identifier: "tr_TR")
         formatter.dateFormat = "yyyy-MM-dd HH.mm.ss"
-        return "KlariVision Kayıt \(formatter.string(from: now)).wav"
+        // "Kayıt" (Record, verb) is already a catalog key for the toolbar
+        // button -- reusing it here would put the wrong part of speech in an
+        // English filename, so the noun is chosen directly instead of through
+        // the shared catalog entry.
+        let word = AppLanguage.engineCode == "en" ? "Recording" : "Kayıt"
+        return "KlariVision \(word) \(formatter.string(from: now)).wav"
     }
 
     func runBenchmark() {
@@ -1108,7 +1136,7 @@ final class LivePitchAnalyzer: ObservableObject, @unchecked Sendable {
     /// comparison against analytic truth when present, otherwise pYIN.
     func runSourceBenchmark() {
         guard let source = referenceTestSourceURL else {
-            status = "Önce Kaynakla Test ile karşılaştırılacak dosyayı seç."
+            status = String(localized: "Önce Kaynakla Test ile karşılaştırılacak dosyayı seç.", bundle: .klariVisionModule)
             return
         }
         startBenchmark(sourceURL: source)
@@ -1138,7 +1166,7 @@ final class LivePitchAnalyzer: ObservableObject, @unchecked Sendable {
         referenceValidationReportURL = nil
         referenceErrorRanges.removeAll(keepingCapacity: true)
         referenceErrorPoints.removeAll(keepingCapacity: true)
-        referenceAnalysisMessage = "Kaynak referansı ve \(engine.title) aynı dosyada hazırlanıyor…"
+        referenceAnalysisMessage = String(localized: "Kaynak referansı ve \(engine.title) aynı dosyada hazırlanıyor…", bundle: .klariVisionModule)
         prepareReferenceOverlay()
         runSourceBenchmark()
     }
@@ -1149,7 +1177,7 @@ final class LivePitchAnalyzer: ObservableObject, @unchecked Sendable {
     /// after a completed graph remained on screen.
     func rerunSourceValidation(with engine: LivePitchEngine) {
         guard let source = referenceTestSourceURL else {
-            status = "Önce dosyadan motor testi için bir kaynak seç."
+            status = String(localized: "Önce dosyadan motor testi için bir kaynak seç.", bundle: .klariVisionModule)
             return
         }
         validateSourceDirectly(with: source, engine: engine)
@@ -1160,7 +1188,7 @@ final class LivePitchAnalyzer: ObservableObject, @unchecked Sendable {
         stop()
 
         guard let url = sourceURL ?? Bundle.main.url(forResource: "canli_pitch_referans_v1", withExtension: "wav") else {
-            status = "Motor testi kaydı uygulama içinde bulunamadı."
+            status = String(localized: "Motor testi kaydı uygulama içinde bulunamadı.", bundle: .klariVisionModule)
             return
         }
 
@@ -1169,20 +1197,20 @@ final class LivePitchAnalyzer: ObservableObject, @unchecked Sendable {
             let frameCount = AVAudioFrameCount(file.length)
             guard frameCount > 0,
                   let buffer = AVAudioPCMBuffer(pcmFormat: file.processingFormat, frameCapacity: frameCount) else {
-                status = "Motor testi kaydı okunamadı."
+                status = String(localized: "Motor testi kaydı okunamadı.", bundle: .klariVisionModule)
                 return
             }
             try file.read(into: buffer)
             guard let channel = buffer.floatChannelData?.pointee,
                   buffer.frameLength > 0 else {
-                status = "Motor testi kaydında ses örneği bulunamadı."
+                status = String(localized: "Motor testi kaydında ses örneği bulunamadı.", bundle: .klariVisionModule)
                 return
             }
 
             let samples = Array(UnsafeBufferPointer(start: channel, count: Int(buffer.frameLength)))
             let sampleRate = file.processingFormat.sampleRate
             guard sampleRate > 0 else {
-                status = "Motor testi kaydının örnekleme hızı geçersiz."
+                status = String(localized: "Motor testi kaydının örnekleme hızı geçersiz.", bundle: .klariVisionModule)
                 return
             }
 
@@ -1196,8 +1224,8 @@ final class LivePitchAnalyzer: ObservableObject, @unchecked Sendable {
             isRunning = true
             isBenchmarkRunning = true
             status = sourceURL == nil
-                ? "Motor testi çalışıyor · Mikrofon kullanılmıyor."
-                : "Seçilen dosya canlı motorla işleniyor · Mikrofon kullanılmıyor."
+                ? String(localized: "Motor testi çalışıyor · Mikrofon kullanılmıyor.", bundle: .klariVisionModule)
+                : String(localized: "Seçilen dosya canlı motorla işleniyor · Mikrofon kullanılmıyor.", bundle: .klariVisionModule)
 
             processingQueue.async { [weak self] in
                 self?.resetProcessingState()
@@ -1243,7 +1271,7 @@ final class LivePitchAnalyzer: ObservableObject, @unchecked Sendable {
             }
             timer.resume()
         } catch {
-            status = "Motor testi başlatılamadı: \(error.localizedDescription)"
+            status = String(localized: "Motor testi başlatılamadı: \(error.localizedDescription)", bundle: .klariVisionModule)
         }
     }
 
@@ -1271,7 +1299,7 @@ final class LivePitchAnalyzer: ObservableObject, @unchecked Sendable {
         // and can leave a graph that appears not to reflect either choice.
         guard !isRunning else { return }
         pitchEngine = value
-        status = "(value.title) seçildi. Mikrofonu başlattığında bu motor kullanılacak."
+        status = String(localized: "(value.title) seçildi. Mikrofonu başlattığında bu motor kullanılacak.", bundle: .klariVisionModule)
         processingQueue.async { [weak self] in
             guard let self else { return }
             self.processingPitchEngine = value
@@ -1311,7 +1339,7 @@ final class LivePitchAnalyzer: ObservableObject, @unchecked Sendable {
 
     private func setPermissionDeniedStatus() {
         recordingStartPending = false
-        status = "Mikrofon izni verilmedi. Sistem Ayarları > Gizlilik ve Güvenlik > Mikrofon bölümünden KlariVision'a izin verebilirsin."
+        status = String(localized: "Mikrofon izni verilmedi. Sistem Ayarları > Gizlilik ve Güvenlik > Mikrofon bölümünden KlariVision'a izin verebilirsin.", bundle: .klariVisionModule)
     }
 
     private func resetProcessingState() {
@@ -1382,7 +1410,7 @@ final class LivePitchAnalyzer: ObservableObject, @unchecked Sendable {
                 } else {
                     self.calibrateReferenceTimeOffsetIfPossible()
                 }
-                self.status = "Motor testi tamamlandı."
+                self.status = String(localized: "Motor testi tamamlandı.", bundle: .klariVisionModule)
                 self.updateReferenceValidationReport()
             }
         }
@@ -1462,7 +1490,7 @@ final class LivePitchAnalyzer: ObservableObject, @unchecked Sendable {
         guard let best else { return }
         referenceTimeOffset = best.offset
         referenceAnalysisMessage = String(
-            format: "Referans eğrisi eklendi · otomatik zaman eşleme: %+.3f sn",
+            format: String(localized: "Referans eğrisi eklendi · otomatik zaman eşleme: %+.3f sn", bundle: .klariVisionModule),
             best.offset
         )
     }
@@ -1628,7 +1656,10 @@ final class LivePitchAnalyzer: ObservableObject, @unchecked Sendable {
             String(format: "%.2f–%.2f sn (%.0f cent)", $0.start, $0.end, $0.peak)
         }
         referenceValidationSummary = String(
-            format: "Doğrulama: %d/%d kapsama · ortanca %@ cent · %%95 %@ cent · %d hata adayı · sessizlikte %d yanlış nokta · sesli hedefte %d eksik nokta",
+            format: String(
+                localized: "Doğrulama: %d/%d kapsama · ortanca %@ cent · %%95 %@ cent · %d hata adayı · sessizlikte %d yanlış nokta · sesli hedefte %d eksik nokta",
+                bundle: .klariVisionModule
+            ),
             matchedExpected, voicedReference.count,
             median.map { String(format: "%.1f", $0) } ?? "—",
             p95.map { String(format: "%.1f", $0) } ?? "—",
@@ -1638,8 +1669,11 @@ final class LivePitchAnalyzer: ObservableObject, @unchecked Sendable {
             String(format: "%.2f–%.2f sn (eksik)", $0.start, $0.end)
         }
         referenceValidationDetails = (listed + missingListed).isEmpty
-            ? "Kalıcı büyük sapma veya eksik perde bulunmadı."
-            : "İncelenecek aralıklar: " + (listed + missingListed).joined(separator: " · ")
+            ? String(localized: "Kalıcı büyük sapma veya eksik perde bulunmadı.", bundle: .klariVisionModule)
+            : String(
+                format: String(localized: "İncelenecek aralıklar: %@", bundle: .klariVisionModule),
+                (listed + missingListed).joined(separator: " · ")
+            )
 
         // pYIN can finish before the direct-source YIN replay. Keep the live
         // on-screen estimate, but write the regression history only once the
@@ -1821,11 +1855,17 @@ final class LivePitchAnalyzer: ObservableObject, @unchecked Sendable {
         let seriousNonHarmonic = classifiedPoints.filter { $0.isSerious && $0.severity == .nonHarmonicError }.count
         let meanCorrect = correctPitch > 0 ? correctAbsoluteCents / Double(correctPitch) : nil
         referenceValidationSummary = String(
-            format: "Ciddi doğrulama: yanlış sesli %d · eksik sesli %d · harmonik %d · diğer %d · yakın %d",
+            format: String(
+                localized: "Ciddi doğrulama: yanlış sesli %d · eksik sesli %d · harmonik %d · diğer %d · yakın %d",
+                bundle: .klariVisionModule
+            ),
             seriousFalseVoiced, seriousMissingVoiced, seriousHarmonic, seriousNonHarmonic, nearPitch
         )
         referenceValidationDetails = String(
-            format: "Ham: yanlış %d · eksik %d · harmonik %d · diğer %d · geçiş toleransı %d · kısa tolerans %d · doğru ort. %@ cent",
+            format: String(
+                localized: "Ham: yanlış %d · eksik %d · harmonik %d · diğer %d · geçiş toleransı %d · kısa tolerans %d · doğru ort. %@ cent",
+                bundle: .klariVisionModule
+            ),
             falseVoiced, missingVoiced, harmonicError, nonHarmonicError, transitionTolerated, transientTolerated,
             meanCorrect.map { String(format: "%.2f", $0) } ?? "—"
         )
@@ -2039,7 +2079,7 @@ final class LivePitchAnalyzer: ObservableObject, @unchecked Sendable {
         let input = audioEngine.inputNode
         let format = input.outputFormat(forBus: 0)
         guard format.sampleRate > 0 else {
-            status = "Kullanılabilir bir mikrofon bulunamadı."
+            status = String(localized: "Kullanılabilir bir mikrofon bulunamadı.", bundle: .klariVisionModule)
             return
         }
 
@@ -2079,14 +2119,14 @@ final class LivePitchAnalyzer: ObservableObject, @unchecked Sendable {
                     input.removeTap(onBus: 0)
                     audioEngine.stop()
                     isRunning = false
-                    status = "Seçilen kaynak dosya bulunamadı. Lütfen dosyayı yeniden seç."
+                    status = String(localized: "Seçilen kaynak dosya bulunamadı. Lütfen dosyayı yeniden seç.", bundle: .klariVisionModule)
                     return
                 }
                 let item = AVPlayerItem(url: playbackURL)
                 let player = AVPlayer(playerItem: item)
                 player.volume = 1
                 referencePlayer = player
-                status = "Kaynak dosya hazırlanıyor…"
+                status = String(localized: "Kaynak dosya hazırlanıyor…", bundle: .klariVisionModule)
                 referenceItemStatusObservation = item.observe(\AVPlayerItem.status, options: [.initial, .new]) { [weak self, weak player] item, _ in
                     DispatchQueue.main.async {
                         guard let self, self.referencePlayer === player else { return }
@@ -2098,10 +2138,10 @@ final class LivePitchAnalyzer: ObservableObject, @unchecked Sendable {
                             guard self.referenceTestStartedAt == nil else { return }
                             self.referenceTestStartedAt = Date().timeIntervalSinceReferenceDate
                             player?.play()
-                            self.status = "Canlı referans testi oynuyor: \(playbackURL.lastPathComponent) · Ses kaydedilmiyor."
+                            self.status = String(localized: "Canlı referans testi oynuyor: \(playbackURL.lastPathComponent) · Ses kaydedilmiyor.", bundle: .klariVisionModule)
                         case .failed:
-                            let detail = item.error?.localizedDescription ?? "bilinmeyen hata"
-                            self.status = "Kaynak dosya oynatılamadı: \(detail)"
+                            let detail = item.error?.localizedDescription ?? String(localized: "bilinmeyen hata", bundle: .klariVisionModule)
+                            self.status = String(localized: "Kaynak dosya oynatılamadı: \(detail)", bundle: .klariVisionModule)
                         default:
                             break
                         }
@@ -2109,15 +2149,15 @@ final class LivePitchAnalyzer: ObservableObject, @unchecked Sendable {
                 }
             } else {
                 status = isRecording
-                    ? "Mikrofon dinleniyor. Kayıt yapılıyor."
-                    : "Mikrofon dinleniyor. Ses kaydedilmiyor."
+                    ? String(localized: "Mikrofon dinleniyor. Kayıt yapılıyor.", bundle: .klariVisionModule)
+                    : String(localized: "Mikrofon dinleniyor. Ses kaydedilmiyor.", bundle: .klariVisionModule)
             }
         } catch {
             input.removeTap(onBus: 0)
             discardRecording()
             recordingStartPending = false
             isRecording = false
-            status = "Mikrofon başlatılamadı: \(error.localizedDescription)"
+            status = String(localized: "Mikrofon başlatılamadı: \(error.localizedDescription)", bundle: .klariVisionModule)
         }
     }
 

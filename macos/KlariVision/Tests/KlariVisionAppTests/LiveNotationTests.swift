@@ -94,6 +94,24 @@ final class LiveNotationTests: XCTestCase {
         XCTAssertFalse(RecentLibrary.isSupportedMediaFile(text))
     }
 
+    @MainActor
+    func testDroppedMediaTypeRejectsAVFoundationIncompatibleContainers() throws {
+        // AVFoundation webm/avi/mkv çözemiyor; bu üç uzantı artık desteklenen
+        // listede olmamalı (bkz. KlariVisionApp.isSupportedMediaFile).
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("KlariVisionDropTypes-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        for suffix in ["webm", "avi", "mkv"] {
+            let file = directory.appendingPathComponent("sample.\(suffix)")
+            try Data().write(to: file)
+            XCTAssertFalse(
+                RecentLibrary.isSupportedMediaFile(file),
+                "\(suffix) artık desteklenmemeli"
+            )
+        }
+    }
+
     func testStudyPitchTrackMatchesViewerCandidateFiltering() throws {
         let data = try JSONSerialization.data(withJSONObject: [
             "frames": [
@@ -665,5 +683,84 @@ final class LiveNotationTests: XCTestCase {
             emptyMessage: "Boş",
             fixedContentRange: fixedContentRange
         )
+    }
+}
+
+/// Sürüm 1: "Birlikte Çal" `FeatureFlags.togetherModeEnabled` üzerinden
+/// gizlenir; bu bayrak kapalıyken `AppRoute.together`'a giden hiçbir yolun
+/// çalışmadığını doğrular (bkz. KlariVisionApp.swift → AppRoute.normalized,
+/// ModeSelectionView, WelcomeView.onAppear/.onChange(of: route)).
+final class TogetherModeFeatureFlagTests: XCTestCase {
+    func testTogetherModeIsDisabledForVersionOne() {
+        // Kanarya: biri bunu Sürüm 1 için yanlışlıkla `true` yaparsa bu test
+        // kırılır ve bu dosyanın başındaki notu hatırlatır.
+        XCTAssertFalse(FeatureFlags.togetherModeEnabled)
+    }
+
+    func testTogetherRouteNormalizesToModeSelectionWhenFlagIsDisabled() {
+        XCTAssertEqual(AppRoute.together.normalized(togetherModeEnabled: false), .modeSelection)
+    }
+
+    func testTogetherRouteIsKeptWhenFlagIsEnabled() {
+        // Bayrak Sürüm 2'de açıldığında normalizasyonun modu bozmadığını
+        // garanti eder — regresyonu yalnız kapalı durum için test etmek
+        // yeterli değildir.
+        XCTAssertEqual(AppRoute.together.normalized(togetherModeEnabled: true), .together)
+    }
+
+    func testNonTogetherRoutesAreNeverNormalized() {
+        for route: AppRoute in [.modeSelection, .listening, .live] {
+            XCTAssertEqual(route.normalized(togetherModeEnabled: false), route)
+            XCTAssertEqual(route.normalized(togetherModeEnabled: true), route)
+        }
+    }
+
+    @MainActor
+    func testWorkspaceNeverEntersTogetherModeWhileFlagIsDisabled() {
+        // WorkspaceView'e geçen `isTogetherMode` iki koşulun birleşimidir:
+        // route == .together VE bayrak açık. Bayrak kapalıyken route ne
+        // olursa olsun sonuç her zaman false olmalı.
+        for route: AppRoute in AppRoute.allTestCases {
+            let isTogetherMode = FeatureFlags.togetherModeEnabled && route == .together
+            XCTAssertFalse(isTogetherMode, "route=\(route) için isTogetherMode false olmalı")
+        }
+    }
+}
+
+extension AppRoute {
+    fileprivate static var allTestCases: [AppRoute] { [.modeSelection, .listening, .live, .together] }
+}
+
+final class NoteNamingStyleTests: XCTestCase {
+    func testLetterStyleRewritesOnlyWesternNoteNames() {
+        let cases: [(String, String)] = [
+            ("Do", "C"), ("Re", "D"), ("Mi", "E"), ("Fa", "F"), ("Sol", "G"), ("La", "A"), ("Si", "B"),
+            ("La4", "A4"), ("Sol4 ♭4", "G4 ♭4"), ("Si♭", "B♭"), ("Fa♯ / Sol♭4", "F♯ / G♭4"),
+            ("Do♯ / Re♭4", "C♯ / D♭4"), ("La4  (440.00 Hz)", "A4  (440.00 Hz)"),
+            ("Majör · Sol karar", "Majör · G karar"),
+            // Makam adları ve sıradan sözcükler dönüşmez.
+            ("Nihavend", "Nihavend"), ("Kürdilihicazkâr", "Kürdilihicazkâr"), ("Minör", "Minör"),
+            ("Dolap", "Dolap"), ("Lale", "Lale"), ("Sinyal", "Sinyal"), ("koma", "koma"),
+        ]
+        for (input, expected) in cases {
+            XCTAssertEqual(NoteNamingStyle.letter.display(input), expected, input)
+            XCTAssertEqual(NoteNamingStyle.solfege.display(input), input, input)
+        }
+    }
+
+    func testAutomaticFollowsInterfaceLanguage() {
+        XCTAssertEqual(NoteNamingStyle.automatic.resolved(languageCode: "tr"), .solfege)
+        XCTAssertEqual(NoteNamingStyle.automatic.resolved(languageCode: "en"), .letter)
+        XCTAssertEqual(NoteNamingStyle.solfege.resolved(languageCode: "en"), .solfege)
+        XCTAssertEqual(NoteNamingStyle.letter.resolved(languageCode: "tr"), .letter)
+    }
+
+    func testStoredStyleRoundTripsAndDefaultsToAutomatic() {
+        let defaults = UserDefaults(suiteName: "NoteNamingStyleTests-\(UUID().uuidString)")!
+        XCTAssertEqual(NoteNamingStyle.stored(defaults: defaults), .automatic)
+        NoteNamingStyle.letter.save(defaults: defaults)
+        XCTAssertEqual(NoteNamingStyle.stored(defaults: defaults), .letter)
+        defaults.set("bozuk", forKey: NoteNamingStyle.storageKey)
+        XCTAssertEqual(NoteNamingStyle.stored(defaults: defaults), .automatic)
     }
 }

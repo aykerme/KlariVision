@@ -101,20 +101,22 @@ private final class StderrProgressCapture: @unchecked Sendable {
     // src/klarivision/local_app.py): one line, "KV-PROGRESS <stage>
     // <processed>/<total>". <stage> is a stable lowercase token; this is the
     // one place that maps it to the Turkish text a user sees.
-    private static let stageLabels: [String: String] = [
-        "extract": "Ses çıkarılıyor",
-        "decode": "Ses okunuyor",
-        "causal": "Temel geçiş",
-        "pitch": "Perde analizi",
-        "write": "Sonuçlar yazılıyor",
-        "viewer": "Görünüm oluşturuluyor",
-    ]
+    private static var stageLabels: [String: String] {
+        [
+            "extract": String(localized: "Ses çıkarılıyor", bundle: .klariVisionModule),
+            "decode": String(localized: "Ses okunuyor", bundle: .klariVisionModule),
+            "causal": String(localized: "Temel geçiş", bundle: .klariVisionModule),
+            "pitch": String(localized: "Perde analizi", bundle: .klariVisionModule),
+            "write": String(localized: "Sonuçlar yazılıyor", bundle: .klariVisionModule),
+            "viewer": String(localized: "Görünüm oluşturuluyor", bundle: .klariVisionModule),
+        ]
+    }
 
     private static func progressMessage(from line: String) -> String? {
         guard line.hasPrefix("KV-PROGRESS ") else { return nil }
         let parts = line.dropFirst("KV-PROGRESS ".count).split(separator: " ")
         guard parts.count == 2 else { return nil }
-        let label = stageLabels[String(parts[0])] ?? "İşleniyor"
+        let label = stageLabels[String(parts[0])] ?? String(localized: "İşleniyor", bundle: .klariVisionModule)
         let fraction = parts[1].split(separator: "/")
         guard fraction.count == 2,
               let processed = Int(fraction[0]),
@@ -199,7 +201,7 @@ final class RecentLibrary {
 
     func studySummary(for item: Item) -> String {
         let study = study(for: item)
-        return "\(makamName(study.makam)) · \(kararName(study.karar)) karar"
+        return "\(makamName(study.makam)) · \(displayNoteName(kararName(study.karar))) karar"
     }
 
     func formattedAnalysisDate(for item: Item) -> String {
@@ -299,11 +301,19 @@ final class RecentLibrary {
         }
     }
 
+    /// Makam/dizi adları özel isimdir ve İngilizcede aynı kalır (Nihavend,
+    /// Kürdi, Uşşak, Hicaz, Kürdilihicazkâr, Hicazkâr) -- tek istisna "major"/
+    /// "minor": bunlar Türk makamı değil Batı dizisi adıdır, bu yüzden
+    /// İngilizcede "Major"/"Minor" olarak gösterilir. Sonuç düz bir `String`
+    /// olduğundan (ör. `studySummary` interpolasyonuna girer) katalog burada
+    /// işe yaramaz -- dil seçimi doğrudan `AppLanguage.engineCode`'a bakar.
     func makamName(_ value: String) -> String {
-        [
-            "major": "Majör", "minor": "Minör", "nihavent": "Nihavend", "kurdi": "Kürdi",
+        if value == "major" { return AppLanguage.engineCode == "en" ? "Major" : "Majör" }
+        if value == "minor" { return AppLanguage.engineCode == "en" ? "Minor" : "Minör" }
+        return [
+            "nihavent": "Nihavend", "kurdi": "Kürdi",
             "ussak": "Uşşak", "hicaz": "Hicaz", "kurdilihicazkar": "Kürdilihicazkâr", "hicazkar": "Hicazkâr",
-        ][value] ?? "Majör"
+        ][value] ?? (AppLanguage.engineCode == "en" ? "Major" : "Majör")
     }
 
     func kararName(_ value: Int) -> String {
@@ -323,7 +333,7 @@ final class RecentLibrary {
     func selectFile(_ url: URL) {
         guard Self.isSupportedMediaFile(url) else {
             selectedFile = nil
-            analysisMessage = "Bu dosya desteklenen bir ses veya video biçimi değil. WAV, MP3, M4A ya da desteklenen bir video seçin."
+            analysisMessage = String(localized: "Bu dosya desteklenen bir ses veya video biçimi değil. WAV, MP3, M4A ya da desteklenen bir video seçin.", bundle: .klariVisionModule)
             return
         }
         selectedFile = url
@@ -332,7 +342,7 @@ final class RecentLibrary {
 
     func acceptDroppedFile(_ url: URL) -> Bool {
         guard Self.isSupportedMediaFile(url) else {
-            analysisMessage = "Bırakılan dosya desteklenmiyor. WAV, MP3, M4A veya video dosyası bırakın."
+            analysisMessage = String(localized: "Bırakılan dosya desteklenmiyor. WAV, MP3, M4A veya video dosyası bırakın.", bundle: .klariVisionModule)
             return false
         }
         selectFile(url)
@@ -345,9 +355,14 @@ final class RecentLibrary {
 
     static func isSupportedMediaFile(_ url: URL) -> Bool {
         guard url.isFileURL else { return false }
+        // AVFoundation çözemediği için webm/avi/mkv açıkça reddedilir; bu
+        // kontrol aşağıdaki genel içerik-türü sezgisinden önce çalışmalı,
+        // yoksa örn. "avi" public.movie'ye uyduğu için sezgi onu kabul eder.
+        let rejectedExtensions: Set<String> = ["webm", "avi", "mkv"]
+        if rejectedExtensions.contains(url.pathExtension.lowercased()) { return false }
         let knownExtensions: Set<String> = [
             "wav", "wave", "mp3", "m4a", "aac", "aiff", "aif", "flac",
-            "mp4", "m4v", "mov", "avi", "mkv", "webm",
+            "mp4", "m4v", "mov",
         ]
         if knownExtensions.contains(url.pathExtension.lowercased()) { return true }
         guard let values = try? url.resourceValues(forKeys: [.contentTypeKey]),
@@ -361,23 +376,35 @@ final class RecentLibrary {
             analyseWithBundledEngine(selectedFile, executable: bundledEngine)
             return
         }
+        #if DEBUG
+        // Paketlenmiş motor yoksa (Xcode'dan doğrudan çalıştırma) yerel Python
+        // ortamına düş. Sandbox'lı Release derlemesinde bu yol hiç
+        // derlenmez -- motor daima pakete gömülü olmalıdır.
+        analyseSelectedFileWithLocalPython(selectedFile)
+        #else
+        analysisMessage = String(localized: "KlariVision analiz motoru bulunamadı. Uygulamayı yeniden kur.", bundle: .klariVisionModule)
+        #endif
+    }
+
+    #if DEBUG
+    private func analyseSelectedFileWithLocalPython(_ selectedFile: URL) {
         guard let root = projectRoot() else {
-            analysisMessage = "KlariVision analiz motoru bulunamadı. Projeyi Xcode içinden açtığından emin ol."
+            analysisMessage = String(localized: "KlariVision analiz motoru bulunamadı. Projeyi Xcode içinden açtığından emin ol.", bundle: .klariVisionModule)
             return
         }
         guard let python = pythonExecutable(in: root) else {
-            analysisMessage = "Python çalışma ortamı bulunamadı."
+            analysisMessage = String(localized: "Python çalışma ortamı bulunamadı.", bundle: .klariVisionModule)
             return
         }
 
         isAnalysing = true
-        analysisMessage = "Pitch analizi hazırlanıyor…"
+        analysisMessage = String(localized: "Pitch analizi hazırlanıyor…", bundle: .klariVisionModule)
         let sourcePath = selectedFile.path.replacingOccurrences(of: "\\\"", with: "\\\\\\\"")
         let selectedEngine = selectedStudyEngine
         let script = """
         from pathlib import Path
         from klarivision.local_app import analyse_upload
-        print(analyse_upload(Path(\"\(sourcePath)\"), \"huzzam\", \"dugah\", \"\(selectedEngine)\"))
+        print(analyse_upload(Path(\"\(sourcePath)\"), \"\(selectedEngine)\"))
         """
 
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
@@ -410,33 +437,54 @@ final class RecentLibrary {
                     self.isAnalysing = false
                     guard process.terminationStatus == 0,
                           let relativeViewer = standardOutput.split(whereSeparator: \.isNewline).last else {
-                        let detail = standardError.isEmpty ? "Lütfen tekrar dene." : standardError
-                        self.analysisMessage = "Analiz oluşturulamadı. \(detail)"
+                        let detail = standardError.isEmpty ? String(localized: "Lütfen tekrar dene.", bundle: .klariVisionModule) : standardError
+                        self.analysisMessage = String(localized: "Analiz oluşturulamadı. \(detail)", bundle: .klariVisionModule)
                         return
                     }
                     let viewer = root.appending(path: String(relativeViewer).trimmingCharacters(in: CharacterSet(charactersIn: "/")))
-                    self.analysisMessage = "Pitch eğrisi hazır."
+                    self.analysisMessage = String(localized: "Pitch eğrisi hazır.", bundle: .klariVisionModule)
                     self.activeViewer = viewer
                     self.reload()
                 }
             } catch {
                 DispatchQueue.main.async {
                     self?.isAnalysing = false
-                    self?.analysisMessage = "Analiz motoru başlatılamadı: \(error.localizedDescription)"
+                    self?.analysisMessage = String(localized: "Analiz motoru başlatılamadı: \(error.localizedDescription)", bundle: .klariVisionModule)
                 }
             }
         }
     }
+    #endif
 
     private func analyseWithBundledEngine(_ source: URL, executable: URL) {
         isAnalysing = true
-        analysisMessage = "Pitch analizi hazırlanıyor…"
+        analysisMessage = String(localized: "Pitch analizi hazırlanıyor…", bundle: .klariVisionModule)
         let selectedEngine = selectedStudyEngine
 
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            // Motor artık ffmpeg taşımıyor (bkz. docs/app-store/ffmpeg-replacement.md):
+            // kaynağı 48 kHz mono WAV'a burada, AVFoundation ile çözüp
+            // `--wav` bayrağıyla veriyoruz.
+            let wavPreparation = MediaToWAVConverter.prepareWAV(for: source)
+            let wavURL: URL
+            switch wavPreparation {
+            case .failure(let error):
+                DispatchQueue.main.async {
+                    self?.isAnalysing = false
+                    self?.analysisMessage = String(localized: "Ses çözülemedi: \(error.localizedDescription)", bundle: .klariVisionModule)
+                }
+                return
+            case .success(let url):
+                wavURL = url
+            }
+            defer { MediaToWAVConverter.cleanUpTemporaryWAV(wavURL) }
+
             let process = Process()
             process.executableURL = executable
-            process.arguments = [source.path, "--makam", "huzzam", "--karar", "dugah", "--engine", selectedEngine]
+            process.arguments = [
+                source.path, "--engine", selectedEngine, "--wav", wavURL.path,
+                "--lang", AppLanguage.engineCode,
+            ]
             let output = Pipe()
             let error = Pipe()
             process.standardOutput = output
@@ -459,18 +507,18 @@ final class RecentLibrary {
                     self.isAnalysing = false
                     guard process.terminationStatus == 0,
                           let viewerPath = standardOutput.split(whereSeparator: \.isNewline).last else {
-                        let detail = standardError.isEmpty ? "Lütfen tekrar dene." : standardError
-                        self.analysisMessage = "Analiz oluşturulamadı. \(detail)"
+                        let detail = standardError.isEmpty ? String(localized: "Lütfen tekrar dene.", bundle: .klariVisionModule) : standardError
+                        self.analysisMessage = String(localized: "Analiz oluşturulamadı. \(detail)", bundle: .klariVisionModule)
                         return
                     }
-                    self.analysisMessage = "Pitch eğrisi hazır."
+                    self.analysisMessage = String(localized: "Pitch eğrisi hazır.", bundle: .klariVisionModule)
                     self.activeViewer = URL(fileURLWithPath: String(viewerPath))
                     self.reload()
                 }
             } catch {
                 DispatchQueue.main.async {
                     self?.isAnalysing = false
-                    self?.analysisMessage = "Analiz motoru başlatılamadı: \(error.localizedDescription)"
+                    self?.analysisMessage = String(localized: "Analiz motoru başlatılamadı: \(error.localizedDescription)", bundle: .klariVisionModule)
                 }
             }
         }
@@ -501,12 +549,12 @@ final class RecentLibrary {
 
     private func refreshWithBundledEngine(_ viewer: URL, executable: URL) {
         isAnalysing = true
-        analysisMessage = "Çalışma güncel arayüzle hazırlanıyor…"
+        analysisMessage = String(localized: "Çalışma güncel arayüzle hazırlanıyor…", bundle: .klariVisionModule)
 
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             let process = Process()
             process.executableURL = executable
-            process.arguments = ["--refresh-viewer", viewer.path]
+            process.arguments = ["--refresh-viewer", viewer.path, "--lang", AppLanguage.engineCode]
             let output = Pipe()
             let error = Pipe()
             process.standardOutput = output
@@ -540,16 +588,16 @@ final class RecentLibrary {
     func reanalyse(_ viewer: URL) {
         guard !isAnalysing else { return }
         guard let executable = bundledEngineExecutable() else {
-            analysisMessage = "Seçili motorla yeniden analiz yalnız paketlenmiş C++ analiz motorunda kullanılabilir."
+            analysisMessage = String(localized: "Seçili motorla yeniden analiz yalnız paketlenmiş C++ analiz motorunda kullanılabilir.", bundle: .klariVisionModule)
             return
         }
         let selectedEngine = selectedStudyEngine
         isAnalysing = true
-        analysisMessage = "\(selectedEngine) ile pitch eğrisi hazırlanıyor…"
+        analysisMessage = String(localized: "\(selectedEngine) ile pitch eğrisi hazırlanıyor…", bundle: .klariVisionModule)
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             let process = Process()
             process.executableURL = executable
-            process.arguments = ["--reanalyze-viewer", viewer.path, "--engine", selectedEngine]
+            process.arguments = ["--reanalyze-viewer", viewer.path, "--engine", selectedEngine, "--lang", AppLanguage.engineCode]
             let output = Pipe()
             let error = Pipe()
             process.standardOutput = output
@@ -564,16 +612,16 @@ final class RecentLibrary {
                     self.isAnalysing = false
                     guard process.terminationStatus == 0,
                           let refreshedPath = standardOutput.split(whereSeparator: \.isNewline).last else {
-                        self.analysisMessage = "Seçili motorla analiz yapılamadı. \(standardError)"
+                        self.analysisMessage = String(localized: "Seçili motorla analiz yapılamadı. \(standardError)", bundle: .klariVisionModule)
                         return
                     }
                     self.activeViewer = URL(fileURLWithPath: String(refreshedPath))
-                    self.analysisMessage = "\(selectedEngine) pitch eğrisi hazır."
+                    self.analysisMessage = String(localized: "\(selectedEngine) pitch eğrisi hazır.", bundle: .klariVisionModule)
                 }
             } catch {
                 DispatchQueue.main.async {
                     self?.isAnalysing = false
-                    self?.analysisMessage = "Motor başlatılamadı: \(error.localizedDescription)"
+                    self?.analysisMessage = String(localized: "Motor başlatılamadı: \(error.localizedDescription)", bundle: .klariVisionModule)
                 }
             }
         }
@@ -594,14 +642,23 @@ final class RecentLibrary {
         let appSupport = manager.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
             .appending(path: "KlariVision")
         var roots = [appSupport]
+        #if DEBUG
+        // Geliştirme sırasında çalışma dizini depo kökünün altında olabilir
+        // (ör. Xcode'un kendi çalışma dizini); yukarı doğru tarayarak proje
+        // kökünü de aday olarak ekle. Sandbox'lı Release derlemesinde
+        // `currentDirectoryPath`'in konteyner dışına çıkması hem işe
+        // yaramaz hem de incelemede "harici yol arama" gibi görünür --
+        // Release'te yalnız Application Support kullanılır.
         var cursor = URL(fileURLWithPath: manager.currentDirectoryPath)
         for _ in 0..<5 {
             roots.append(cursor)
             cursor.deleteLastPathComponent()
         }
+        #endif
         return roots
     }
 
+    #if DEBUG
     private func projectRoot() -> URL? {
         for root in dataRoots() {
             if FileManager.default.fileExists(atPath: root.appending(path: "src/klarivision/local_app.py").path) {
@@ -616,11 +673,10 @@ final class RecentLibrary {
         let candidates = [root.appending(path: ".venv/bin/python"), URL(fileURLWithPath: "/usr/bin/python3")]
         return candidates.first(where: { FileManager.default.isExecutableFile(atPath: $0.path) })
     }
+    #endif
 
     private func bundledEngineExecutable() -> URL? {
-        guard let resources = Bundle.main.resourceURL else { return nil }
-        let executable = resources.appending(path: "Engine/KlariVisionEngine")
-        return FileManager.default.isExecutableFile(atPath: executable.path) ? executable : nil
+        BundledEngine.executable()
     }
 }
 
@@ -632,6 +688,15 @@ enum AppRoute: Equatable {
     case listening
     case live
     case together
+
+    /// Bayrak kapalıyken `.together`'ı `.modeSelection`'a düşürür — kayıtlı
+    /// durum geri yüklemesi, programatik route değişimi ya da başka bir yol
+    /// `.together`'ı üretse bile tek normalizasyon kuralı burada yaşar.
+    /// Saf ve test edilebilir tutulur (bkz. `StudySelectionSync` üstündeki not).
+    func normalized(togetherModeEnabled: Bool = FeatureFlags.togetherModeEnabled) -> AppRoute {
+        if !togetherModeEnabled, self == .together { return .modeSelection }
+        return self
+    }
 }
 
 /// Kenar çubuğu seçimi iki ayrı yönden değişebilir: kullanıcı bir kayda tıklar,
@@ -674,6 +739,8 @@ struct WelcomeView: View {
     /// kendi kenar çubuğu seçiminden ayırır; bkz. aşağıdaki iki `onChange`.
     @State private var selectionSync = StudySelectionSync()
     @State private var itemToRemove: RecentLibrary.Item?
+    /// Kenar çubuğu özeti karar adını kayıtlı nota stiliyle yazar; ayar değişince yenilensin.
+    @AppStorage(NoteNamingStyle.storageKey) private var noteNamingRaw = NoteNamingStyle.automatic.rawValue
     @State private var itemToEdit: RecentLibrary.Item?
     @State private var selectedStudyID: RecentLibrary.Item.ID?
 
@@ -728,7 +795,11 @@ struct WelcomeView: View {
                 }
             case .modeSelection, .listening, .together:
                 if let viewer = library.activeViewer {
-                    WorkspaceView(viewer: viewer, library: library, isTogetherMode: route == .together)
+                    WorkspaceView(
+                        viewer: viewer,
+                        library: library,
+                        isTogetherMode: FeatureFlags.togetherModeEnabled && route == .together
+                    )
                 } else {
                     ModeSelectionView(library: library, route: $route)
                 }
@@ -736,6 +807,15 @@ struct WelcomeView: View {
         }
         .sheet(item: $itemToEdit) { item in
             StudyEditor(item: item, library: library) { _, _ in }
+        }
+        .onAppear {
+            // Bayrak kapalıyken hiçbir yoldan (kayıtlı durum geri yükleme dahil)
+            // `.together`'a girilmemeli — tek normalizasyon noktası `AppRoute.normalized`.
+            route = route.normalized()
+        }
+        .onChange(of: route) { _, newValue in
+            let normalized = newValue.normalized()
+            if normalized != newValue { route = normalized }
         }
         .onChange(of: selectedStudyID) { _, identifier in
             // Kenar çubuğu seçimi `library.activeViewer` değiştiğinde aşağıdaki
@@ -828,12 +908,17 @@ private struct ModeSelectionView: View {
                         route = .live
                     }
 
-                    TogetherModeCard(selectedFile: library.selectedFile) {
-                        // Mikrofon henüz bağlanmadı; burada tek teardown noktası
-                        // bırakılıyor — mikrofon durdurma sonraki görevde eklenecek.
-                        library.closeWorkspace()
-                        route = .together
-                        library.chooseFile()
+                    // Sürüm 1: "Birlikte Çal" kartı FeatureFlags.togetherModeEnabled
+                    // açılana kadar hiç oluşturulmaz — kod silinmez, yalnız erişim
+                    // kapatılır (bkz. docs/app-store/PLAN.md, "Sürüm 2 — Pro kilidi").
+                    if FeatureFlags.togetherModeEnabled {
+                        TogetherModeCard(selectedFile: library.selectedFile) {
+                            // Mikrofon henüz bağlanmadı; burada tek teardown noktası
+                            // bırakılıyor — mikrofon durdurma sonraki görevde eklenecek.
+                            library.closeWorkspace()
+                            route = .together
+                            library.chooseFile()
+                        }
                     }
                 }
 
@@ -887,7 +972,14 @@ private struct ListeningModeCard: View {
                 Text("Dinleme Modu")
                     .font(.title3.weight(.bold))
 
-                Text(selectedFile?.lastPathComponent ?? "Ses veya video dosyanızı yükleyin, pitch analizini başlatın.")
+                Group {
+                    if let selectedFile {
+                        // Dosya adı kullanıcı verisidir, çevrilmez.
+                        Text(verbatim: selectedFile.lastPathComponent)
+                    } else {
+                        Text("Ses veya video dosyanızı yükleyin, pitch analizini başlatın.")
+                    }
+                }
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
@@ -993,7 +1085,14 @@ private struct TogetherModeCard: View {
                 Text("Birlikte Çal")
                     .font(.title3.weight(.bold))
 
-                Text(selectedFile?.lastPathComponent ?? "Dosya çalarken kendi çalışınızı aynı grafikte, ikinci renkle görün.")
+                Group {
+                    if let selectedFile {
+                        // Dosya adı kullanıcı verisidir, çevrilmez.
+                        Text(verbatim: selectedFile.lastPathComponent)
+                    } else {
+                        Text("Dosya çalarken kendi çalışınızı aynı grafikte, ikinci renkle görün.")
+                    }
+                }
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)

@@ -13,6 +13,17 @@ import UniformTypeIdentifiers
 import WebKit
 import os
 
+/// Sürüm başına açık/kapalı derleme bayrakları. Tek kaynak: bir moda giden
+/// hiçbir yol (kart, menü, kısayol, kayıtlı durum geri yükleme) burada
+/// `false` olan bir bayrağı dolaşarak çalışmamalı. Kod silinmez — yalnız bu
+/// sabitler üzerinden erişim kapatılır; Sürüm 2'de `true`'ya çevrilecek.
+enum FeatureFlags {
+    /// "Birlikte Çal" modu Sürüm 1'de gizli (bkz. docs/app-store/PLAN.md,
+    /// "Sürüm 2 — Pro kilidi"). `AppRoute.together`'a giden her yol bu
+    /// bayrağı kontrol etmelidir.
+    static let togetherModeEnabled = false
+}
+
 /// A single, persisted appearance choice shared by every native surface.  The
 /// viewer used to own this setting in its page-local storage, which meant a
 /// theme could change only the graph while the rest of the app stayed put.
@@ -26,9 +37,9 @@ enum AppTheme: String, CaseIterable, Identifiable {
     var id: String { rawValue }
     var title: String {
         switch self {
-        case .focus: "Çalışma odaklı"
-        case .studio: "Stüdyo"
-        case .classic: "Sıcak klasik"
+        case .focus: String(localized: "Çalışma odaklı", bundle: .klariVisionModule)
+        case .studio: String(localized: "Stüdyo", bundle: .klariVisionModule)
+        case .classic: String(localized: "Sıcak klasik", bundle: .klariVisionModule)
         }
     }
     var colorScheme: ColorScheme? { self == .studio ? .dark : .light }
@@ -89,7 +100,7 @@ enum PitchEngineSettings {
     /// all still carry an engine *id*, and a second engine would be added
     /// here again.
     static let userChoices = [
-        PitchEngineChoice(id: "unified_v1", title: "Birleşik (Unified v1)"),
+        PitchEngineChoice(id: "unified_v1", title: String(localized: "Birleşik (Unified v1)", bundle: .klariVisionModule)),
     ]
 
     /// Any stored value that is not a live engine id resolves to the engine
@@ -115,13 +126,112 @@ enum PitchEngineSettings {
 
 /// Short, stable VoiceOver copy shared by the two primary study flows.
 enum AccessibilityText {
-    static let listeningStatus = "Dinleme durumu"
-    static let practiceStatus = "Çalma durumu"
-    static let unsupportedDrop = "Dosya alınamadı. Desteklenen bir ses veya video dosyası bırakın."
+    static var listeningStatus: String { String(localized: "Dinleme durumu", bundle: .klariVisionModule) }
+    static var practiceStatus: String { String(localized: "Çalma durumu", bundle: .klariVisionModule) }
+    static var unsupportedDrop: String {
+        String(localized: "Dosya alınamadı. Desteklenen bir ses veya video dosyası bırakın.", bundle: .klariVisionModule)
+    }
     /// Read out on the settings row that names the analysis engine. There is
     /// nothing to choose any more, so this says what runs rather than offering
     /// a comparison.
-    static let engineDescription = "Ses çözümlemesi Birleşik (Unified v1) motoruyla yapılır. Seçilebilir başka motor yoktur."
+    static var engineDescription: String {
+        String(
+            localized: "Ses çözümlemesi Birleşik (Unified v1) motoruyla yapılır. Seçilebilir başka motor yoktur.",
+            bundle: .klariVisionModule
+        )
+    }
+}
+
+/// Motora geçirilen `--lang tr|en` argümanının tek kaynağı. `engine_cli.py` ve
+/// `local_app.py` yalnız bu iki kodu tanır (bkz. src/klarivision/i18n.py);
+/// başka bir BCP-47 etiketi motor tarafında sessizce `tr`'a düşer.
+enum AppLanguage {
+    static var engineCode: String {
+        let preferred = Bundle.klariVisionModule.preferredLocalizations.first
+            ?? Locale.preferredLanguages.first
+            ?? "tr"
+        return preferred.lowercased().hasPrefix("en") ? "en" : "tr"
+    }
+}
+
+/// Batı nota adlarının yazımı: Do-Re-Mi ya da C-D-E. Yalnız GÖRÜNTÜ katmanıdır.
+/// Nota adları kodda mantık anahtarı olarak da kullanılır (koma tabloları,
+/// `makamNoteLabel`'ın taban nota ayrıştırması); o tablolar solfejde kalır ve
+/// ad ekrana yazılacağı son noktada `display(_:)`'dan geçer. Makam, perde ve
+/// karar adları bu dönüşümün dışındadır.
+enum NoteNamingStyle: String, CaseIterable, Identifiable {
+    static let storageKey = "klarivision-note-naming-v1"
+
+    case automatic
+    case solfege
+    case letter
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .automatic: String(localized: "Otomatik", bundle: .klariVisionModule)
+        case .solfege: "Do Re Mi"
+        case .letter: "C D E"
+        }
+    }
+
+    /// Otomatik: Türkçe arayüzde solfej, İngilizce arayüzde harf.
+    func resolved(languageCode: String = AppLanguage.engineCode) -> NoteNamingStyle {
+        guard self == .automatic else { return self }
+        return languageCode == "en" ? .letter : .solfege
+    }
+
+    static func stored(defaults: UserDefaults = .standard) -> NoteNamingStyle {
+        NoteNamingStyle(rawValue: defaults.string(forKey: storageKey) ?? "") ?? .automatic
+    }
+
+    func save(defaults: UserDefaults = .standard) {
+        defaults.set(rawValue, forKey: Self.storageKey)
+    }
+
+    private static let letters = ["Do": "C", "Re": "D", "Mi": "E", "Fa": "F", "Sol": "G", "La": "A", "Si": "B"]
+    // Solfej hecesi yalnız bir sözcüğün başındaysa ve ardından küçük harf
+    // gelmiyorsa eşleşir: "Sol4 ♭4", "Fa♯ / Sol♭" dönüşür; "Minör", "Dolap"
+    // gibi sözcükler dönüşmez. Aynı kural frequency_viewer.py'de de vardır.
+    private static let pattern = try! NSRegularExpression(
+        pattern: "(?<![\\p{L}])(Sol|Do|Re|Mi|Fa|La|Si)(?![\\p{Ll}])"
+    )
+
+    /// Solfej yazılmış bir etiketi bu stile göre yazar.
+    func display(_ solfegeLabel: String) -> String {
+        guard resolved() == .letter else { return solfegeLabel }
+        let source = solfegeLabel as NSString
+        var result = ""
+        var cursor = 0
+        for match in Self.pattern.matches(in: solfegeLabel, range: NSRange(location: 0, length: source.length)) {
+            result += source.substring(with: NSRange(location: cursor, length: match.range.location - cursor))
+            result += Self.letters[source.substring(with: match.range)] ?? source.substring(with: match.range)
+            cursor = match.range.location + match.range.length
+        }
+        return result + source.substring(from: cursor)
+    }
+}
+
+/// Kayıtlı stile göre nota etiketi; AppKit/JS köprüleri gibi SwiftUI ortamı
+/// olmayan yerler için. SwiftUI görünümleri stili `@AppStorage` ile gözleyip
+/// `NoteNamingStyle.display(_:)`'ı doğrudan çağırmalı ki ayar değişince yeniden çizilsin.
+func displayNoteName(_ solfegeLabel: String) -> String {
+    NoteNamingStyle.stored().display(solfegeLabel)
+}
+
+extension Bundle {
+    /// SwiftPM derlemesinde `Bundle.module`, Xcode hedefinde `Bundle.main` --
+    /// `Localizable.xcstrings` her iki derleme yolunda da bu köprüyle bulunur.
+    /// `KLARIVISION_SWIFT_PACKAGE` yalnız SwiftPM derlemesinde tanımlıdır
+    /// (bkz. Package.swift); Xcode projesi tanımlamaz.
+    static var klariVisionModule: Bundle {
+        #if KLARIVISION_SWIFT_PACKAGE
+        .module
+        #else
+        .main
+        #endif
+    }
 }
 
 /// The two graph renderers use different technologies, but share these two

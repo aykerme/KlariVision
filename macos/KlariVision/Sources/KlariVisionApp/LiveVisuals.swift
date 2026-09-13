@@ -15,11 +15,19 @@ enum LiveScale: String, CaseIterable, Identifiable {
 
     var id: String { rawValue }
 
+    /// "major"/"minor" Batı dizisi adıdır, özel isim değil -- İngilizcede
+    /// "Major"/"Minor" olarak gösterilir. Diğerleri (Nihavend, Kürdi, Uşşak,
+    /// Hicaz, Kürdilihicazkâr, Hicazkâr) makam özel ismidir, aynı kalır.
     var title: String {
-        [
-            "major": "Majör", "minor": "Minör", "nihavent": "Nihavend", "kurdi": "Kürdi",
-            "ussak": "Uşşak", "hicaz": "Hicaz", "kurdilihicazkar": "Kürdilihicazkâr", "hicazkar": "Hicazkâr",
-        ][rawValue] ?? rawValue
+        switch self {
+        case .major: return AppLanguage.engineCode == "en" ? "Major" : "Majör"
+        case .minor: return AppLanguage.engineCode == "en" ? "Minor" : "Minör"
+        default:
+            return [
+                "nihavent": "Nihavend", "kurdi": "Kürdi",
+                "ussak": "Uşşak", "hicaz": "Hicaz", "kurdilihicazkar": "Kürdilihicazkâr", "hicazkar": "Hicazkâr",
+            ][rawValue] ?? rawValue
+        }
     }
 
     /// Major/minor use concert-pitch names. Turkish makam guides use the
@@ -212,6 +220,8 @@ struct TunerPanel: View {
     let tonic: Int
     let intervals: [Int]
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @AppStorage(NoteNamingStyle.storageKey) private var noteNamingRaw = NoteNamingStyle.automatic.rawValue
+    private var noteNaming: NoteNamingStyle { NoteNamingStyle(rawValue: noteNamingRaw) ?? .automatic }
     private var target: LiveTunerTarget? {
         guard let frequency else { return nil }
         return liveTunerTarget(for: frequency, scale: scale, tonic: tonic, intervals: intervals)
@@ -232,8 +242,8 @@ struct TunerPanel: View {
         .accessibilityLabel("Tüner")
         .accessibilityValue(target.map { item in
             item.usesKoma
-                ? "\(item.label), \(String(format: "%+.1f", item.komaOffset)) koma"
-                : "\(item.label), \(String(format: "%+.1f", item.centOffset)) cent"
+                ? "\(noteNaming.display(item.label)), \(String(format: "%+.1f", item.komaOffset)) koma"
+                : "\(noteNaming.display(item.label)), \(String(format: "%+.1f", item.centOffset)) cent"
         } ?? "Ses bekleniyor")
         .animation(reduceMotion ? nil : .easeOut(duration: 0.12), value: target?.centOffset ?? 0)
     }
@@ -246,9 +256,9 @@ struct TunerPanel: View {
         let offset = -target.centOffset * pointsPerCent
         let markerColor: Color = abs(target.centOffset) <= 8 ? .green : .orange
 
-        drawText("\(scale.title) · \(noteName(tonic)) karar", in: &context, at: CGPoint(x: 12, y: 10), font: .caption2.weight(.medium), color: .secondary, anchor: .topLeading)
+        drawText("\(scale.title) · \(noteNaming.display(noteName(tonic))) karar", in: &context, at: CGPoint(x: 12, y: 10), font: .caption2.weight(.medium), color: .secondary, anchor: .topLeading)
         drawText(String(format: "%.1f Hz", frequency ?? 0), in: &context, at: CGPoint(x: size.width - 12, y: 10), font: .caption2.monospacedDigit(), color: .secondary, anchor: .topTrailing)
-        drawText(target.label, in: &context, at: CGPoint(x: centreX, y: 28), font: .system(size: 24, weight: .medium, design: .rounded), color: .primary)
+        drawText(noteNaming.display(target.label), in: &context, at: CGPoint(x: centreX, y: 28), font: .system(size: 24, weight: .medium, design: .rounded), color: .primary)
         let offsetText = target.usesKoma
             ? String(format: "%+.1f koma", target.komaOffset)
             : String(format: "%+.1f cent", target.centOffset)
@@ -261,7 +271,7 @@ struct TunerPanel: View {
     }
 
     private func drawEmptyTuner(_ context: inout GraphicsContext, size: CGSize) {
-        drawText("\(scale.title) · \(noteName(tonic)) karar", in: &context, at: CGPoint(x: 12, y: 10), font: .caption2.weight(.medium), color: .secondary, anchor: .topLeading)
+        drawText("\(scale.title) · \(noteNaming.display(noteName(tonic))) karar", in: &context, at: CGPoint(x: 12, y: 10), font: .caption2.weight(.medium), color: .secondary, anchor: .topLeading)
         drawText("Ses yok", in: &context, at: CGPoint(x: size.width / 2, y: size.height / 2), font: .system(size: 22, weight: .medium, design: .rounded), color: .secondary)
     }
 
@@ -288,11 +298,12 @@ struct TunerPanel: View {
         var occupied: [ClosedRange<CGFloat>] = []
         for item in labels.sorted(by: { abs($0.centOffset - targetCentOffset) < abs($1.centOffset - targetCentOffset) }) {
             let x = centreX + CGFloat(item.centOffset) * pointsPerCent + offset
-            let estimatedWidth = max(28, CGFloat(item.label.count) * 5.8)
+            let label = noteNaming.display(item.label)
+            let estimatedWidth = max(28, CGFloat(label.count) * 5.8)
             let range = (x - estimatedWidth / 2)...(x + estimatedWidth / 2)
             guard range.lowerBound >= 8, range.upperBound <= width - 8,
                   !occupied.contains(where: { $0.overlaps(range) }) else { continue }
-            drawText(item.label, in: &context, at: CGPoint(x: x, y: y), font: font, color: color)
+            drawText(label, in: &context, at: CGPoint(x: x, y: y), font: font, color: color)
             occupied.append(range)
         }
     }
@@ -868,7 +879,7 @@ final class PitchGraphNSView: NSView {
             path.move(to: CGPoint(x: 0, y: y))
             path.addLine(to: CGPoint(x: chart.width, y: y))
             let text = textLayer(
-                pitchGraphNoteLabel(line.label, frequency: line.frequency),
+                displayNoteName(pitchGraphNoteLabel(line.label, frequency: line.frequency)),
                 color: NSColor(palette.label),
                 fontSize: 11,
                 scale: scale,
@@ -1174,6 +1185,9 @@ struct LiveWebPitchGraph: NSViewRepresentable {
     let verticalSpan: Double
     let onScroll: (LiveGraphScrollEvent) -> Void
     let onVerticalDrag: (LiveGraphVerticalDragEvent) -> Void
+    /// Etiketler `enqueue` içinde kayıtlı stile göre yazılır; bu gözlem ayar
+    /// değişince `updateNSView`'ın yeniden çalışmasını sağlar.
+    @AppStorage(NoteNamingStyle.storageKey) private var noteNamingRaw = NoteNamingStyle.automatic.rawValue
 
     func makeCoordinator() -> Coordinator {
         Coordinator(onScroll: onScroll, onVerticalDrag: onVerticalDrag)
@@ -1252,7 +1266,7 @@ struct LiveWebPitchGraph: NSViewRepresentable {
             let payload: [String: Any] = [
                 "reset": reset,
                 "points": additions.map { ["t": $0.time, "hz": $0.frequency] },
-                "guides": guides.map { ["label": pitchGraphNoteLabel($0.label, frequency: $0.frequency), "hz": $0.frequency, "karar": $0.isKarar] },
+                "guides": guides.map { ["label": displayNoteName(pitchGraphNoteLabel($0.label, frequency: $0.frequency)), "hz": $0.frequency, "karar": $0.isKarar] },
                 "pitch": appearance.pitchHex,
                 "guide": appearance.noteGuideHex,
                 "karar": appearance.kararHex,
@@ -1346,9 +1360,9 @@ struct LiveWebPitchGraph: NSViewRepresentable {
         x.fillStyle=bg;x.fillRect(0,0,w,h);x.font='600 11px -apple-system,system-ui';x.textAlign='right';
         const Y=hz=>T+(high-1200*Math.log2(hz/440))/s.verticalSpan*ch,X=t=>L+(t-start)/s.visibleDuration*cw;
         x.strokeStyle=s.guide+'70';x.lineWidth=1;for(const g of s.guides){if(g.karar)continue;const y=Y(g.hz);if(y<T-4||y>h-B+4)continue;x.beginPath();x.moveTo(L,y);x.lineTo(w-R,y);x.stroke();x.fillStyle=label;x.fillText(g.label,L-7,y+4)}x.strokeStyle=s.karar+'C0';x.lineWidth=2;for(const g of s.guides){if(!g.karar)continue;const y=Y(g.hz);if(y<T-4||y>h-B+4)continue;x.beginPath();x.moveTo(L,y);x.lineTo(w-R,y);x.stroke();x.fillStyle=label;x.fillText(g.label,L-7,y+4)}x.lineWidth=1;
-        const step=s.visibleDuration<=12?1:s.visibleDuration<=30?2:5;x.font='500 9px -apple-system,system-ui';x.textAlign='center';for(let t=Math.max(0,Math.ceil(start/step)*step);t<=now+.001;t+=step){const xx=X(t);x.strokeStyle=axis+'38';x.beginPath();x.moveTo(xx,T);x.lineTo(xx,h-B);x.stroke();x.fillStyle=label;x.fillText(Math.round(t)+' sn',xx,h-B+15)}
+        const step=s.visibleDuration<=12?1:s.visibleDuration<=30?2:5;x.font='500 9px -apple-system,system-ui';x.textAlign='center';for(let t=Math.max(0,Math.ceil(start/step)*step);t<=now+.001;t+=step){const xx=X(t);x.strokeStyle=axis+'38';x.beginPath();x.moveTo(xx,T);x.lineTo(xx,h-B);x.stroke();x.fillStyle=label;x.fillText(Math.round(t)+'\#(AppLanguage.engineCode == "en" ? " s" : " sn")',xx,h-B+15)}
         x.save();x.beginPath();x.rect(L,T,cw,ch);x.clip();x.strokeStyle=s.pitch;x.lineWidth=1.7;x.lineJoin='round';x.lineCap='round';x.beginPath();let p=null;for(const q of s.points){if(q.t<start-.05||q.t>now+.05)continue;const xx=X(q.t),yy=Y(q.hz),ok=p&&q.t-p.t>0&&q.t-p.t<.040&&Math.abs(1200*Math.log2(q.hz/p.hz))<520;ok?x.lineTo(xx,yy):x.moveTo(xx,yy);p=q}x.stroke();x.strokeStyle=dark?'#9a6ab0':'#7755b8';x.lineWidth=1.5;x.beginPath();x.moveTo(w-R,T);x.lineTo(w-R,h-B);x.stroke();x.restore();x.strokeStyle=axis+'66';x.strokeRect(L,T,cw,ch);
-        if(!s.points.length){x.fillStyle=label;x.font='13px -apple-system,system-ui';x.textAlign='center';x.fillText('Mikrofonu başlatıp klarnet çalmaya başla.',w/2,h/2)}
+        if(!s.points.length){x.fillStyle=label;x.font='13px -apple-system,system-ui';x.textAlign='center';x.fillText('\#(jsText("Mikrofonu başlatıp klarnet çalmaya başla."))',w/2,h/2)}
         requestAnimationFrame(draw);
       };
       window.KlariLiveGraph={update:v=>{if(v.reset)s.points=[];if(v.points?.length)s.points.push(...v.points);s.points=s.points.filter(p=>p.t>=v.now-65);const {points,reset,...config}=v;Object.assign(s,config);s.received=performance.now()}};

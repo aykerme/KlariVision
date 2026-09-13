@@ -1,0 +1,23 @@
+{
+  "sourceLanguage" : "tr",
+  "strings" : {
+    "NSMicrophoneUsageDescription" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "KlariVision uses your microphone to create live pitch graphs and to record your performance when you choose."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "KlariVision, canlı pitch grafiğini oluşturmak ve siz istediğinizde çalışmanızı kaydetmek için mikrofonu kullanır."
+          }
+        }
+      }
+    }
+  },
+  "version" : "1.0"
+}

@@ -91,11 +91,52 @@ def test_analyse_upload_reuses_cached_pitch_when_import_name_changes(tmp_path, m
     monkeypatch.setattr("klarivision.local_app.write_json", fake_write_json)
     monkeypatch.setattr("klarivision.local_app.build_frequency_viewer", fake_build_frequency_viewer)
 
-    first = analyse_upload(first_source, "huzzam", "dugah")
-    second = analyse_upload(second_source, "huzzam", "dugah")
+    first = analyse_upload(first_source)
+    second = analyse_upload(second_source)
 
     assert first == second
     assert calls == {"to_wav": 1, "extract": 1}
+
+
+def test_analyse_upload_uses_precomputed_wav_instead_of_calling_to_wav(tmp_path, monkeypatch) -> None:
+    """`precomputed_wav` (the WAV the Swift layer already resolved) must be
+    used as-is; `_to_wav`/ffmpeg is a developer/CLI-only fallback and must
+    never run when a precomputed WAV is supplied."""
+    source = tmp_path / "icra.mp4"
+    source.write_bytes(b"video-media")
+    precomputed_wav = tmp_path / "already-decoded.wav"
+    precomputed_wav.write_bytes(b"precomputed-wav-bytes")
+    monkeypatch.setattr("klarivision.local_app.PROJECT_ROOT", tmp_path)
+    monkeypatch.setattr("klarivision.local_app.IMPORTS_DIR", tmp_path / "data" / "imports")
+    monkeypatch.setattr("klarivision.local_app.AUDIO_DIR", tmp_path / "data" / "audio")
+    monkeypatch.setattr("klarivision.local_app.OUTPUTS_DIR", tmp_path / "outputs")
+    monkeypatch.setattr("klarivision.local_app.RECENTS_PATH", tmp_path / "data" / "recent_analyses.json")
+
+    def fail_if_called(*_args, **_kwargs):
+        raise AssertionError("_to_wav should not import/call ffmpeg when a precomputed WAV is given")
+
+    class FakeExtractor:
+        def extract(self, audio_source):
+            assert Path(audio_source.path).read_bytes() == precomputed_wav.read_bytes()
+            return object()
+
+    def fake_write_json(_track, destination):
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        destination.write_text('{"frames":[]}', encoding="utf-8")
+
+    def fake_build_frequency_viewer(_pitch_json, _audio_path, viewer, **_kwargs):
+        viewer.parent.mkdir(parents=True, exist_ok=True)
+        viewer.write_text("<html></html>", encoding="utf-8")
+
+    monkeypatch.setattr("klarivision.local_app._to_wav", fail_if_called)
+    monkeypatch.setattr("klarivision.local_app.VampPyinPitchExtractor", FakeExtractor)
+    monkeypatch.setattr("klarivision.local_app.write_json", fake_write_json)
+    monkeypatch.setattr("klarivision.local_app.build_frequency_viewer", fake_build_frequency_viewer)
+
+    analyse_upload(source, precomputed_wav=precomputed_wav)
+
+    wav = tmp_path / "data" / "audio" / f"{_analysis_stem(source)}-{_file_signature(source)}.wav"
+    assert wav.read_bytes() == precomputed_wav.read_bytes()
 
 
 def test_analyse_upload_keeps_selected_video_in_app_imports(tmp_path, monkeypatch) -> None:
@@ -131,7 +172,7 @@ def test_analyse_upload_keeps_selected_video_in_app_imports(tmp_path, monkeypatc
     monkeypatch.setattr("klarivision.local_app.write_json", fake_write_json)
     monkeypatch.setattr("klarivision.local_app.build_frequency_viewer", fake_build_frequency_viewer)
 
-    analyse_upload(source, "huzzam", "dugah")
+    analyse_upload(source)
 
     imported = tmp_path / "data" / "imports" / f"masaustu-videosu-{_file_signature(source)}.mp4"
     assert imported.is_file()
@@ -167,9 +208,9 @@ def test_cpp_study_cache_is_separate_for_each_user_pitch_engine(tmp_path, monkey
     monkeypatch.setattr("klarivision.local_app.build_frequency_viewer", fake_build_frequency_viewer)
 
     for engine in sorted(CPP_ENGINES):
-        analyse_upload(source, "huzzam", "dugah", engine)
+        analyse_upload(source, engine)
     for engine in sorted(CPP_ENGINES):
-        analyse_upload(source, "huzzam", "dugah", engine)
+        analyse_upload(source, engine)
 
     assert [engine for engine, _ in calls] == sorted(CPP_ENGINES)
     assert {
