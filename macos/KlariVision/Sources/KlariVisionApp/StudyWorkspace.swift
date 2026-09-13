@@ -546,10 +546,15 @@ private final class StudyPlaybackState: ObservableObject {
     @Published var loopEnabled = false
     @Published var loopA = 0.0
     @Published var loopB = 0.0
-    @Published var followsCurve = false
+    /// Sayfadaki `vertical-follow` kutusu varsayılan açık; ilk anlık görüntü
+    /// gelene kadar çubuk da açık görünsün diye aynı değerle başlar.
+    @Published var followsCurve = true
     /// Yalnız "Birlikte Çal" hoparlör düğmesi için: dosyanın ses ÇIKIŞININ
     /// kapalı olup olmadığı. Mikrofon çizimini etkilemez — bkz. `TogetherSession`.
     @Published var muted = false
+    /// Sayfadaki geri sayımın kalan saniyesi; 0 ise sayım yok.  Sayı sayfada
+    /// grafiğin üstünde gösterilir, burada yalnız Oynat düğmesini "İptal"e çevirir.
+    @Published var countdown = 0
     @Published var theme = "focus"
     var frequency: Double? { ticker.frequency }
     @Published var scale: LiveScale = .nihavent
@@ -621,6 +626,7 @@ private final class StudyPlaybackState: ObservableObject {
         publish((values["loopB"] as? NSNumber)?.doubleValue ?? loopB, to: \.loopB)
         publish((values["followsCurve"] as? Bool) ?? followsCurve, to: \.followsCurve)
         publish((values["muted"] as? Bool) ?? muted, to: \.muted)
+        publish(max(0, (values["countdown"] as? NSNumber)?.intValue ?? 0), to: \.countdown)
         if let proposedTheme = values["theme"] as? String,
            ["focus", "studio", "classic"].contains(proposedTheme) {
             publish(proposedTheme, to: \.theme)
@@ -667,9 +673,13 @@ private struct StudyPlaybackBar: View {
     private var controls: some View {
         HStack(spacing: 10) {
             ControlGroup {
-                HoverTooltip(playback.isPlaying ? "Medya oynatmayı duraklat" : "Medyayı oynat") {
+                HoverTooltip(playback.countdown > 0 ? "Geri sayımı iptal et" : playback.isPlaying ? "Medya oynatmayı duraklat" : "Medyayı oynat") {
                     Button { command("toggle") } label: {
-                        Label(playback.isPlaying ? "Duraklat" : "Oynat", systemImage: playback.isPlaying ? "pause.fill" : "play.fill")
+                        if playback.countdown > 0 {
+                            Label("İptal (\(playback.countdown))", systemImage: "xmark")
+                        } else {
+                            Label(playback.isPlaying ? "Duraklat" : "Oynat", systemImage: playback.isPlaying ? "pause.fill" : "play.fill")
+                        }
                     }
                     .disabled(!playback.isReady)
                 }

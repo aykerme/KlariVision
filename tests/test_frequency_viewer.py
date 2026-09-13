@@ -23,7 +23,7 @@ def test_frequency_viewer_uses_physical_hertz_grid(tmp_path) -> None:
     assert "followPlayback" in html
     assert 'id="vertical-in"' in html
     assert 'id="vertical-out"' in html
-    assert 'id="vertical-follow"' in html
+    assert '<input id="vertical-follow" type="checkbox" checked>' in html
     assert 'id="countdown"' in html
     assert 'id="play-toggle"' in html
     assert "function beginPlayback()" in html
