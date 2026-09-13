@@ -16,7 +16,7 @@ CODEX_HANDOFF'ta **NOT RUN** olarak duran liste ilk kez koşuldu.
 | 5 | Çözümleme | **geçti** | 191 s video ≈ 3,5 dk; `Studies-v1.json` doğru (`duration: 191,226418`, kareler tam) |
 | 6 | Kütüphaneye kayıt | **geçti** | Çalışma listede görünüyor, yeniden açılıyor |
 | 7 | Çalışma görüntüleyici (grafik) | **geçti** (düzeltildi) | Boştu; kök sebep bulundu — B-2 |
-| 8 | Oynatma | **geçti** (şartlı) | Çalışıyor; erken basınca takılıyor — B-2b |
+| 8 | Oynatma | **geçti** | B-2b çözüldü |
 | 9 | A/B döngüsü | **BAŞARISIZ** | Dönüyor, sonra oynatma kilitleniyor — B-9 |
 | 10 | Oynatma hızı | **geçti** (düzeltildi) | B-3 — cihazda doğrulandı |
 | 11 | Video/grafik geçişi | **kısmen** | Geçiş çalışıyor, video görüntüsü gelmiyor — B-11 |
@@ -92,52 +92,50 @@ sordum ve `frames=0` okudum. Bu ölçüm GEÇERSİZDİ: sayfanın kendi `frames`
 kapalı kapsamda, sorgu tarayıcının yerleşik `window.frames`'ini (iframe
 listesi) okuyordu ve onun uzunluğu her zaman 0'dır.
 
-### B-2b — Medya hazır olmadan Oynat'a basınca oynatıcı kalıcı takılıyor
+### B-2b — ÇÖZÜLDÜ: `load()` iki kez çağrılıyordu
 
-Ayrı ve HÂLÂ AÇIK bir kusur. Çalışma açıldıktan hemen sonra (medya
-`readyState=0`, `src` henüz atanmamışken) Oynat'a basılırsa süre `0:00`'a
-düşüyor ve bir daha kendine gelmiyor; konum hiç ilerlemiyor. Aynı çalışma,
-medya hazır olana kadar (~2 sn) beklenip oynatıldığında sorunsuz çalışıyor.
+**Teşhisim yanlıştı.** Kusuru "medya hazır olmadan Oynat'a basınca takılıyor"
+diye kaydetmiştim; gerçek sebep hazırlıkla ilgili değil, çift yükleme
+yarışıydı. Erken-Oynat yalnızca yarışın kaybedilen tarafını görünür kılıyordu.
 
-İlk turda "oynatma tamamen bozuk" görünmesinin sebebi buydu — ölçüm hatası
-değil, gerçek bir yarış durumu, ama tarifi düzeltildi.
+`StudyGraphBridge.load()` İKİ yerden çağrılıyordu:
 
-### B-3 — Hız tek yönlü: yavaşlatılabiliyor, geri hızlandırılamıyor
-"Hızı artır" düğmesinin erişilebilirlik sınırları `(0,0,0,0)` — yerleşimde yer
-almıyor, dokunulamıyor. "Hızı azalt" erişilebilir. Pratik sonuç: kullanıcı
-hızı düşürdükten sonra 1,00×'e geri dönemez. Panel ekranın altından kesiliyor.
+1. `StudyOrchestrator.openStudy` → `defaultViewerLoad`, hemen ardından
+   `load`/`context` komutlarını kuyruğa koyarak;
+2. `KlariVisionApp`'teki `AndroidView` fabrikası,
+   `factory = { studyGraphBridge.webView.also { studyGraphBridge.load() } }`.
 
-### B-4 — Çalışma silmede onay yok
-Çalışma kartındaki "kaldır" düğmesi tek dokunuşta, onay sormadan siliyor.
-Bu tur sırasında 3,5 dakikalık bir çözümleme kazara böyle silindi.
+İkinci çağrı ikinci bir `loadUrl` başlatıyordu. Birinci sayfa önce bitip
+kuyruğu boşaltırsa, ikinci `loadUrl` o sayfayı — yeni kurulmuş medya elemanı
+ve 17 bin karesiyle birlikte — yok ediyor, yeni sayfaya ise BOŞ kuyruk
+akıyordu. Sonuç hiçbir zaman kendine gelmeyen bir oynatıcı: süre 0:00, konum
+ilerlemiyor.
 
-### B-5 — Imports dizini tekilleştirme yapmıyor
-Aynı 17,7 MB'lık mp4'ün **7 kopyası** (≈124 MB) birikmiş. Her alma yeni bir
-UUID ile tam kopya yazıyor; eski kopyaları toplayan bir şey yok.
+Kanıt, cihazda komut akışı logu (kilitlenen tur):
 
-### B-6 — Ortam gürültüsü motorun EN KÖTÜ durumu
-Canlı yol ölçümü iki farklı malzemede:
+    close(): about:blank yükleniyor
+    load(): StudyViewer yükleniyor
+    load(): StudyViewer yükleniyor      ← İKİ KEZ
+    gönderiliyor: Load
+    gönderiliyor: Context
 
-| Malzeme | JNI+motor p50 | p95 | max |
-|---|---:|---:|---:|
-| Klarnet (kullanıcı çaldı) | 7,679 ms | 9,684 ms | 14,167 ms |
-| Ortam gürültüsü (sessiz oda) | 9,128 ms | **10,467 ms** | 16,885 ms |
+ve sayfaya sorulduğunda `querySelector('video,audio')` **null** dönüyordu —
+yani medya elemanı hiç kurulmamıştı.
 
-Hop bütçesi 10,667 ms. Ortam gürültüsünde p95 bütçenin **%98'i**. Sessizlik
-eşiğini geçen zayıf adaylar motoru klarnetten daha çok yoruyor — sentetik RTF
-testi (tek kararlı ton) bu durumu hiç görmüyor.
+Yarışın neden aralıklı olduğu da buradan çıkıyor: çalışma kapatılıp yeniden
+açıldığında WebView sıcak olduğu için birinci sayfa hızlı bitiyor ve yarış
+çoğunlukla kaybedilen tarafa düşüyor. Temiz açılışta beş agresif denemede bir
+kez bile tekrarlanmamıştı.
 
-### B-7 — StudyGraphBridge'de konsol köprüsü eksikti
-`LiveGraphBridge` sayfanın `console` çıktısını logcat'e bağlıyor,
-`StudyGraphBridge` bağlamıyordu. Görüntüleyici hatalarında tek belirti "boş
-grafik" olduğu için bu körlük, sessizliği sağlık sanmaya yol açıyor.
-Parite kuruldu.
+**Düzeltme:** fabrikadan `load()` kaldırıldı. Sayfanın yaşam döngüsü
+orkestratöre aittir. Canlı köprüde tek çağıran fabrikadır, orada `load()`
+yerinde kalır — bu yüzden Çalma Modu bu kusurdan hiç etkilenmemişti.
 
-### B-8 — Range işleyicisinde `skip()` sözleşmesi
-`InputStream.skip()` istenen kadar atlamayı garanti etmez; eksik atlarsa
-sunulan baytlar kayar ve medya sessizce bozulur. Bu cihazda tam atlıyor (yani
-B-2'nin sebebi değil), ama sözleşme bunu vaat etmiyor. `channel.position()`
-ile değiştirildi.
+Doğrulama (SM-A736B): kilidi tetikleyen tam dizi (çalışma aç → kapat → başka
+çalışma aç → hemen Oynat) düzeltme öncesi kilitleniyordu; sonrasında dört
+denemenin dördünde de `0:08–0:09 / 0:10`. Ayrıca üç gerileme senaryosu
+(temiz açılış + hemen oynat, aynı çalışmayı kapat-aç, üç çalışma arasında
+gezinme) temiz.
 
 ### B-3 / B-10 — ÇÖZÜLDÜ, cihazda doğrulandı
 
@@ -221,8 +219,8 @@ ayrı kusurlar. Aynı dosyanın SES yolu sorunsuz (mp3 çalışmasında süre
 **Geçmedi**, ama en ağır engel kalktı: Dinleme Modu'nun boş ekranı (B-2)
 çözüldü ve grafik + oynatma cihazda çalışıyor.
 
-Kapıyı hâlâ kapalı tutanlar: oynatıcı erken basınca takılıyor (B-2b),
-A/B döngüsü oynatmayı kilitliyor (B-9), video görüntüsü gelmiyor (B-11).
+Kapıyı hâlâ kapalı tutanlar: A/B döngüsü oynatmayı kilitliyor (B-9),
+video görüntüsü gelmiyor (B-11).
 
 Rota değişimi ve telefon kesintisi fiziksel donanım beklediği için hâlâ
 koşulmadı; listenin geri kalanı koşuldu.

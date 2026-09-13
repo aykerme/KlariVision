@@ -129,10 +129,26 @@ fun KlariVisionApp(
             )
         }
     }
+    // Dinleme köprüsünde fabrika `load()` ÇAĞIRMAZ — canlı köprüden farkı
+    // budur ve kasıtlıdır. Sayfanın yaşam döngüsü `StudyOrchestrator`'a
+    // aittir: `openStudy` → `defaultViewerLoad` önce `bridge.load()` çağırır,
+    // HEMEN ARDINDAN `load`/`context` komutlarını kuyruğa koyar.
+    //
+    // Fabrika da `load()` çağırınca ikinci bir `loadUrl` başlıyordu ve ortaya
+    // bir yarış çıkıyordu: birinci sayfa önce bitip kuyruğu boşaltırsa,
+    // ikinci `loadUrl` o sayfayı (medya elemanı ve kareleriyle birlikte) yok
+    // ediyor, yeni sayfaya ise boş kuyruk akıyordu. Sonuç, hiçbir zaman
+    // kendine gelmeyen bir oynatıcıydı: süre 0:00, konum ilerlemiyor, sayfada
+    // medya elemanı bile yok (kabul turu bulgusu B-2b). Çalışma kapatılıp
+    // yeniden açıldığında WebView sıcak olduğu için birinci sayfa hızlı
+    // bitiyor ve yarış çoğunlukla bu tarafa düşüyordu.
+    //
+    // Canlı köprüde (`liveGraphBridge`) tek çağıran fabrikadır, orada
+    // `load()` yerinde kalır.
     val studyGraphContent = remember {
         movableContentOf {
             AndroidView(
-                factory = { studyGraphBridge.webView.also { studyGraphBridge.load() } },
+                factory = { studyGraphBridge.webView },
                 modifier = Modifier.fillMaxSize(),
             )
         }
