@@ -858,8 +858,7 @@ final class LivePitchAnalyzer: ObservableObject, @unchecked Sendable {
                 let process = Process()
                 process.executableURL = engine
                 process.arguments = [
-                    source.path, "--makam", "huzzam", "--karar", "dugah",
-                    "--engine", "vamp", "--wav", wavURL.path,
+                    source.path, "--engine", "vamp", "--wav", wavURL.path,
                     "--lang", AppLanguage.engineCode,
                 ]
                 let pipe = Pipe()
@@ -882,7 +881,7 @@ final class LivePitchAnalyzer: ObservableObject, @unchecked Sendable {
                     return
                 }
                 let escapedPath = source.path.replacingOccurrences(of: "\"", with: "\\\\\"")
-                let script = "from pathlib import Path; from klarivision.local_app import analyse_upload; print(analyse_upload(Path(\"\(escapedPath)\"), \"huzzam\", \"dugah\", \"vamp\"))"
+                let script = "from pathlib import Path; from klarivision.local_app import analyse_upload; print(analyse_upload(Path(\"\(escapedPath)\"), \"vamp\"))"
                 let process = Process()
                 process.executableURL = python
                 process.arguments = ["-c", script]

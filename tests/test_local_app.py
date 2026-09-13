@@ -91,8 +91,8 @@ def test_analyse_upload_reuses_cached_pitch_when_import_name_changes(tmp_path, m
     monkeypatch.setattr("klarivision.local_app.write_json", fake_write_json)
     monkeypatch.setattr("klarivision.local_app.build_frequency_viewer", fake_build_frequency_viewer)
 
-    first = analyse_upload(first_source, "huzzam", "dugah")
-    second = analyse_upload(second_source, "huzzam", "dugah")
+    first = analyse_upload(first_source)
+    second = analyse_upload(second_source)
 
     assert first == second
     assert calls == {"to_wav": 1, "extract": 1}
@@ -133,7 +133,7 @@ def test_analyse_upload_uses_precomputed_wav_instead_of_calling_to_wav(tmp_path,
     monkeypatch.setattr("klarivision.local_app.write_json", fake_write_json)
     monkeypatch.setattr("klarivision.local_app.build_frequency_viewer", fake_build_frequency_viewer)
 
-    analyse_upload(source, "huzzam", "dugah", precomputed_wav=precomputed_wav)
+    analyse_upload(source, precomputed_wav=precomputed_wav)
 
     wav = tmp_path / "data" / "audio" / f"{_analysis_stem(source)}-{_file_signature(source)}.wav"
     assert wav.read_bytes() == precomputed_wav.read_bytes()
@@ -172,7 +172,7 @@ def test_analyse_upload_keeps_selected_video_in_app_imports(tmp_path, monkeypatc
     monkeypatch.setattr("klarivision.local_app.write_json", fake_write_json)
     monkeypatch.setattr("klarivision.local_app.build_frequency_viewer", fake_build_frequency_viewer)
 
-    analyse_upload(source, "huzzam", "dugah")
+    analyse_upload(source)
 
     imported = tmp_path / "data" / "imports" / f"masaustu-videosu-{_file_signature(source)}.mp4"
     assert imported.is_file()
@@ -208,9 +208,9 @@ def test_cpp_study_cache_is_separate_for_each_user_pitch_engine(tmp_path, monkey
     monkeypatch.setattr("klarivision.local_app.build_frequency_viewer", fake_build_frequency_viewer)
 
     for engine in sorted(CPP_ENGINES):
-        analyse_upload(source, "huzzam", "dugah", engine)
+        analyse_upload(source, engine)
     for engine in sorted(CPP_ENGINES):
-        analyse_upload(source, "huzzam", "dugah", engine)
+        analyse_upload(source, engine)
 
     assert [engine for engine, _ in calls] == sorted(CPP_ENGINES)
     assert {

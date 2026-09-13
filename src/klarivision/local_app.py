@@ -20,7 +20,6 @@ from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, quote, unquote, urlparse
 
-from .contour_viewer import KARAR_TONES, MAKAM_PROFILES
 from .frequency_viewer import build_frequency_viewer, prepare_display_frames
 from .i18n import SUPPORTED_LANGUAGES, get_language, set_language, translate
 from .pitch.cpp_engine import (
@@ -284,8 +283,6 @@ def _persist_video_source(source: Path, analysis_id: str) -> Path:
 
 def analyse_upload(
     source: Path,
-    makam: str,
-    karar: str,
     engine: str = "vamp",
     precomputed_wav: Path | None = None,
     lang: str = "tr",
@@ -302,9 +299,6 @@ def analyse_upload(
     (``tr``/``en``); it only selects which language error/status text and the
     viewer page use -- it never changes analysis behaviour.
     """
-    if makam not in MAKAM_PROFILES or karar not in KARAR_TONES:
-        raise ValueError(translate("invalid-makam-or-karar", lang))
-
     signature = _file_signature(source)
     analysis_id = f"{_analysis_stem(source)}-{signature}"
     media_source = _persist_video_source(source, analysis_id)
@@ -474,13 +468,6 @@ def reanalyse_existing_viewer(viewer: Path, engine: str, lang: str = "tr") -> Pa
 
 
 def _form_page(message: str = "") -> str:
-    makam_options = "".join(
-        f'<option value="{key}">{label}</option>' for key, label in MAKAM_PROFILES.items()
-    )
-    karar_options = "".join(
-        f'<option value="{key}">{value["name"]}</option>'
-        for key, value in KARAR_TONES.items()
-    )
     notice = f'<p class="notice">{html.escape(message)}</p>' if message else ""
     recent_items = "".join(
         "<a class=\"recent-item\" href=\"{url}\"><strong>{label}</strong>"
@@ -506,9 +493,9 @@ h1{{margin-bottom:6px}}p{{line-height:1.5}}form{{margin-top:24px;padding:24px;bo
 <h1>KlariVision</h1><p>Yeni bir çalışma için video veya ses dosyası seç. Analiz tamamlanana kadar burada grafik ya da video gösterilmez.</p>{notice}
 <form id="analysis-form" method="post" action="/analyse" enctype="multipart/form-data">
 <input id="recording" class="file-input" name="recording" type="file" accept="video/*,audio/*,.wav,.mp3,.m4a" required><label class="file-button" for="recording">Video veya ses seç</label><span id="file-name" class="file-name">Henüz dosya seçilmedi</span>
-<input type="hidden" name="makam" value="huzzam"><input type="hidden" name="karar" value="dugah"><input type="hidden" name="engine" value="vamp">
+<input type="hidden" name="engine" value="vamp">
 <div id="progress" class="progress" aria-live="polite"><div class="progress-track"><div id="progress-value" class="progress-value"></div></div><span id="progress-label" class="progress-label">Dosya hazırlanıyor…</span></div>
-</form><form id="link-form" method="post" action="/analyse-link" enctype="application/x-www-form-urlencoded"><div class="link-row"><input id="media-url" name="url" type="text" inputmode="url" placeholder="YouTube veya video bağlantısı" required><button id="link-button" type="submit">Linkten aç</button></div><input type="hidden" name="makam" value="huzzam"><input type="hidden" name="karar" value="dugah"><input type="hidden" name="engine" value="vamp"></form><script>
+</form><form id="link-form" method="post" action="/analyse-link" enctype="application/x-www-form-urlencoded"><div class="link-row"><input id="media-url" name="url" type="text" inputmode="url" placeholder="YouTube veya video bağlantısı" required><button id="link-button" type="submit">Linkten aç</button></div><input type="hidden" name="engine" value="vamp"></form><script>
 const form=document.getElementById('analysis-form'),linkForm=document.getElementById('link-form'),recording=document.getElementById('recording'),fileName=document.getElementById('file-name'),fileButton=document.querySelector('.file-button'),linkButton=document.getElementById('link-button'),mediaUrl=document.getElementById('media-url'),progress=document.getElementById('progress'),progressValue=document.getElementById('progress-value'),progressLabel=document.getElementById('progress-label');
 let analysisStarted=false,shownProgress=0,analysisTimer=null;
 function showProgress(value,label){{shownProgress=Math.max(shownProgress,Math.min(100,value));progressValue.style.width=`${{shownProgress}}%`;progressLabel.textContent=label}}
@@ -618,8 +605,6 @@ class KlariVisionHandler(SimpleHTTPRequestHandler):
                 shutil.copyfileobj(recording.file, target)
             result_url = analyse_upload(
                 saved,
-                form.getfirst("makam", "huzzam"),
-                form.getfirst("karar", "dugah"),
                 form.getfirst("engine", "vamp"),
             )
         except Exception as error:  # User-facing local app; preserve the server process after an error.
@@ -638,8 +623,6 @@ class KlariVisionHandler(SimpleHTTPRequestHandler):
             source = _import_from_url(fields.get("url", [""])[0])
             result_url = analyse_upload(
                 source,
-                fields.get("makam", ["huzzam"])[0],
-                fields.get("karar", ["dugah"])[0],
                 fields.get("engine", ["vamp"])[0],
             )
         except Exception as error:  # User-facing local app; preserve the server process after an error.

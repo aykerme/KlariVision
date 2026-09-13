@@ -14,8 +14,6 @@ def main() -> None:
     parser.add_argument("source", type=Path, nargs="?")
     parser.add_argument("--refresh-viewer", type=Path, metavar="HTML")
     parser.add_argument("--reanalyze-viewer", type=Path, metavar="HTML")
-    parser.add_argument("--makam", default="huzzam")
-    parser.add_argument("--karar", default="dugah")
     parser.add_argument(
         "--lang",
         choices=SUPPORTED_LANGUAGES,
@@ -52,8 +50,6 @@ def main() -> None:
         parser.error(translate("cli-source-required", arguments.lang))
     viewer_url = analyse_upload(
         arguments.source.expanduser().resolve(),
-        arguments.makam,
-        arguments.karar,
         arguments.engine,
         precomputed_wav=arguments.wav.expanduser().resolve() if arguments.wav else None,
         lang=arguments.lang,

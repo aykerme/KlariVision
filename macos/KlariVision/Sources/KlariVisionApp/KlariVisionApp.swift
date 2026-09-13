@@ -404,7 +404,7 @@ final class RecentLibrary {
         let script = """
         from pathlib import Path
         from klarivision.local_app import analyse_upload
-        print(analyse_upload(Path(\"\(sourcePath)\"), \"huzzam\", \"dugah\", \"\(selectedEngine)\"))
+        print(analyse_upload(Path(\"\(sourcePath)\"), \"\(selectedEngine)\"))
         """
 
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
@@ -482,8 +482,7 @@ final class RecentLibrary {
             let process = Process()
             process.executableURL = executable
             process.arguments = [
-                source.path, "--makam", "huzzam", "--karar", "dugah",
-                "--engine", selectedEngine, "--wav", wavURL.path,
+                source.path, "--engine", selectedEngine, "--wav", wavURL.path,
                 "--lang", AppLanguage.engineCode,
             ]
             let output = Pipe()

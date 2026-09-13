@@ -40,10 +40,6 @@ _MESSAGES: dict[str, dict[str, str]] = {
         "tr": "Bağlantıdan medya alınamadı.",
         "en": "Media could not be extracted from link.",
     },
-    "invalid-makam-or-karar": {
-        "tr": "Geçersiz makam veya karar sesi seçimi.",
-        "en": "Invalid makam or karar tone selection.",
-    },
     "invalid-pitch-engine": {
         "tr": "Geçersiz pitch motoru seçimi.",
         "en": "Invalid pitch engine selection.",
