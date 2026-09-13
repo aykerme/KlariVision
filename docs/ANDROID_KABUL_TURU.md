@@ -18,12 +18,12 @@ CODEX_HANDOFF'ta **NOT RUN** olarak duran liste ilk kez koşuldu.
 | 7 | Çalışma görüntüleyici (grafik) | **geçti** (düzeltildi) | Boştu; kök sebep bulundu — B-2 |
 | 8 | Oynatma | **geçti** (şartlı) | Çalışıyor; erken basınca takılıyor — B-2b |
 | 9 | A/B döngüsü | **BAŞARISIZ** | Dönüyor, sonra oynatma kilitleniyor — B-9 |
-| 10 | Oynatma hızı | **düzeltme yazıldı, doğrulanmadı** | B-3 — cihazda görülmedi |
+| 10 | Oynatma hızı | **geçti** (düzeltildi) | B-3 — cihazda doğrulandı |
 | 11 | Video/grafik geçişi | **kısmen** | Geçiş çalışıyor, video görüntüsü gelmiyor — B-11 |
 | 12 | Kulaklık/Bluetooth rota değişimi | **koşulmadı** | Fiziksel donanım gerekir |
 | 13 | Telefon kesintisi | **koşulmadı** | Gerçek çağrı gerekir |
 | 14 | Arka plan dönüşü | **geçti** | Arka plana geçince mikrofon güvenle duruyor |
-| 15 | Yön değişimi | **düzeltme yazıldı, doğrulanmadı** | B-10 — cihazda görülmedi |
+| 15 | Yön değişimi | **geçti** (düzeltildi) | B-10 — cihazda doğrulandı |
 
 ## Bulgular
 
@@ -139,26 +139,42 @@ sunulan baytlar kayar ve medya sessizce bozulur. Bu cihazda tam atlıyor (yani
 B-2'nin sebebi değil), ama sözleşme bunu vaat etmiyor. `channel.position()`
 ile değiştirildi.
 
-### B-3 / B-10 — düzeltme yazıldı, CİHAZDA DOĞRULANMADI
+### B-3 / B-10 — ÇÖZÜLDÜ, cihazda doğrulandı
 
 İkisinin de tek ortak sebebi vardı: yerleşim kararları sığmayan durumu hiç
 ele almıyordu.
 
-**B-3**: `FlowRowButtons` adının vaat ettiğini yapmıyor, dar modda düz bir
+**B-3** — `FlowRowButtons` adının vaat ettiğini yapmıyor, dar modda düz bir
 `Row` kuruyordu; yedi çocuk sığmayınca sondakiler sıfır genişlik alıyordu.
-Artık gerçek `FlowRow` — sığmayan alt satıra iner.
+Artık gerçek `FlowRow`.
 
-**B-10**: Genişlik sınıfı yalnız genişliğe bakıyordu; yatay telefon
+Doğrulama (SM-A736B, dikey): "Hızı artır" düğmesinin sınırları
+`(0,0,0,0)` → **`(653, 2047, 766, 2160)`**. Daha önce hiç görünmeyen hız
+metni de geldi. İşlevsel tur: 4× azalt 1,00 → **0,80**, ardından 6× artır
+0,80 → **1,10** — tam 0,05'lik adımlar, ve kullanıcı artık 1,00×'in içinden
+geçip yukarı çıkabiliyor. B-3'ün asıl kaybı buydu.
+
+**B-10** — Genişlik sınıfı yalnız genişliğe bakıyordu; yatay telefon
 (853×384 dp) ORTA seçiyor, o yerleşim ise dikey yığıldığı için 580 dp
 yükseklik istiyordu. `KvWidthClass.fromSize` artık yüksekliği de istiyor ve
 yetmezse DAR'a düşüyor. Tablet yatayda davranış değişmez; beş JVM testi
-sınırları tutuyor.
+sınırları (579/580 dp dahil) tutuyor.
 
-**Bu iki kalem AÇIK sayılmalıdır.** Telefon o turda bağlı değildi; kanıt
-şimdilik yalnız birim testleri ve derlemedir. Sıradaki cihaz turunda
-bakılacaklar: dikeyde "Hızı artır" düğmesinin erişilebilirlik sınırları
-`(0,0,0,0)` OLMAMALI; yatayda kontrol paneli ekranı kaplamamalı ve grafik
-şeride sıkışmamalı.
+Doğrulama (yatay): kontrollerin tamamı TEK yatay satırda
+(⏸ A B döngü Takip − 1,10× + ⚙), hiçbirinin sınırı sıfır değil; grafik
+ekranı kaplıyor (perde çizgileri, nota etiketleri, imleç, eğri görünür);
+panel alt sayfa olarak duruyor. Öncesinde panel tüm ekranı kaplıyor, A/B
+sola dikey diziliyor, "Kapat" durum çubuğunun altında kesiliyor ve grafik
+~60 piksellik bir şeride sıkışıyordu.
+
+Döndürme gidiş-dönüşünde durum korunuyor: hız 1,10× dikeye dönünce de
+duruyor.
+
+**Ölçüm sırasında bir kez B-2b'ye takıldım:** hız dokunuşlarının ilk turu hiç
+kayıt olmadı, çünkü çalışmayı açar açmaz Oynat'a basmıştım ve oynatıcı
+kilitlenmişti (süre 0:00'a düşmüştü). Hazır olana kadar (~18 sn) bekleyince
+aynı dokunuşlar sorunsuz işledi. B-2b'nin başka ölçümleri de sessizce
+bozabileceğinin somut örneği.
 
 ### B-9 — A/B döngüsü birkaç turdan sonra oynatmayı kilitliyor
 
@@ -205,9 +221,8 @@ ayrı kusurlar. Aynı dosyanın SES yolu sorunsuz (mp3 çalışmasında süre
 **Geçmedi**, ama en ağır engel kalktı: Dinleme Modu'nun boş ekranı (B-2)
 çözüldü ve grafik + oynatma cihazda çalışıyor.
 
-Kapıyı hâlâ kapalı tutanlar: oynatıcı erken basınca takılıyor (B-2b), hız
-tek yönlü (B-3), A/B döngüsü oynatmayı kilitliyor (B-9), yatay yerleşim
-kullanılamaz (B-10), video görüntüsü gelmiyor (B-11).
+Kapıyı hâlâ kapalı tutanlar: oynatıcı erken basınca takılıyor (B-2b),
+A/B döngüsü oynatmayı kilitliyor (B-9), video görüntüsü gelmiyor (B-11).
 
 Rota değişimi ve telefon kesintisi fiziksel donanım beklediği için hâlâ
 koşulmadı; listenin geri kalanı koşuldu.
