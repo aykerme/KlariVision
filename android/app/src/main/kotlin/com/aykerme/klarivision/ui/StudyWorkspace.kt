@@ -237,6 +237,7 @@ private fun ReadyStudyWorkspace(
             time = playback?.time ?: 0.0,
             duration = playback?.duration ?: (study?.duration ?: 0.0),
             modifier = Modifier.fillMaxWidth(),
+            onSeek = orchestrator::seek,
         )
 
         StudyTransportButtons(orchestrator = orchestrator, playback = playback, isWide = isWide) {

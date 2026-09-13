@@ -54,7 +54,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.aykerme.klarivision.music.Karar
@@ -77,12 +80,33 @@ fun WorkspaceSettingsButton(label: String, modifier: Modifier = Modifier, onClic
  * Oynatma konumu göstergesi — native transport, `t / süre` biçiminde.
  * Kaydırma grafiğin kendi tek-parmak yatay sürüklemesiyle yapılır; bu salt
  * okunabilir bir konum etiketidir (Swift `iPadStudyPositionReadout`).
+ *
+ * Jestsiz arama yolu da budur: Swift VoiceOver'da `accessibilityAdjustableAction`
+ * ile 5 saniyelik adımlar verir; TalkBack'te aynı adımlar özel eylem olarak
+ * sunulur. `onSeek` verilmezse gösterge salt okunur kalır.
  */
 @Composable
-fun PositionReadout(time: Double, duration: Double, modifier: Modifier = Modifier) {
+fun PositionReadout(
+    time: Double,
+    duration: Double,
+    modifier: Modifier = Modifier,
+    onSeek: ((Double) -> Unit)? = null,
+) {
     Row(
-        modifier = modifier.semantics {
+        modifier = modifier.clearAndSetSemantics {
             contentDescription = "Konum: ${formatTime(time)} / ${formatTime(duration)}"
+            if (onSeek != null) {
+                customActions = listOf(
+                    CustomAccessibilityAction("5 saniye ileri") {
+                        onSeek(if (duration > 0) minOf(duration, time + 5) else time + 5)
+                        true
+                    },
+                    CustomAccessibilityAction("5 saniye geri") {
+                        onSeek(maxOf(0.0, time - 5))
+                        true
+                    },
+                )
+            }
         },
         horizontalArrangement = Arrangement.Center,
     ) {

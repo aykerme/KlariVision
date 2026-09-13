@@ -30,9 +30,11 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationRailItem
@@ -55,6 +57,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.viewinterop.AndroidView
+import com.aykerme.klarivision.music.Makam
 import com.aykerme.klarivision.music.MakamIntervalsStore
 import com.aykerme.klarivision.settings.SettingsStore
 import com.aykerme.klarivision.state.LiveOrchestrator
@@ -79,7 +82,7 @@ enum class Destination(val title: String) {
  * gerçek genişlik `BoxWithConstraints` ile bu composable içinde ölçülür
  * (bkz. dosya başlığı).
  */
-@OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
+@OptIn(ExperimentalMaterial3WindowSizeClassApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun KlariVisionApp(
     widthSizeClass: WindowWidthSizeClass,
@@ -116,6 +119,7 @@ fun KlariVisionApp(
     // (P5a kapsamı — kalıcı gezinme durumu `state/` katmanının işi değil, salt
     // UI kabuğunun geçici seçimi).
     var destination by remember { mutableStateOf(Destination.HOME) }
+    var settingsEditingMakam by remember { mutableStateOf<Makam?>(null) }
 
     // WebView'lerin kalıcı sarmalayıcıları — bir kez oluşturulur, genişlik
     // sınıfı ya da rota değişse de (dar bottom-bar ↔ orta drawer ↔ geniş
@@ -200,13 +204,22 @@ fun KlariVisionApp(
                 settingsStore = settingsStore,
                 intervalsStore = intervalsStore,
                 togetherOrchestrator = togetherOrchestrator,
-                onOpenMakamIntervals = { /* Ayarlar sayfası kendi içinde makam satırlarını gösterir. */ },
+                onOpenMakamIntervals = { settingsEditingMakam = it },
                 modifier = contentModifier,
             )
         }
     }
 
     KlariVisionTheme(themeName = themeName) {
+        // Swift'te Ayarlar'daki makam satırı `NavigationLink` ile
+        // `iPadMakamIntervalsView`'a gider; burada çalışma alanlarındaki gibi
+        // aynı düzenleyici bir alt sayfada açılır.
+        settingsEditingMakam?.let { editingMakam ->
+            ModalBottomSheet(onDismissRequest = { settingsEditingMakam = null }) {
+                MakamIntervalsScreen(makam = editingMakam, store = intervalsStore)
+            }
+        }
+
         Surface(modifier = modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
             BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
                 val widthClass = rememberWidthClass(maxWidth, maxHeight)
