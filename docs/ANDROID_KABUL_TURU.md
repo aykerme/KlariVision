@@ -19,7 +19,7 @@ CODEX_HANDOFF'ta **NOT RUN** olarak duran liste ilk kez koşuldu.
 | 8 | Oynatma | **geçti** | B-2b çözüldü |
 | 9 | A/B döngüsü | **BAŞARISIZ** | Dönüyor, sonra oynatma kilitleniyor — B-9 |
 | 10 | Oynatma hızı | **geçti** (düzeltildi) | B-3 — cihazda doğrulandı |
-| 11 | Video/grafik geçişi | **kısmen** | Geçiş çalışıyor, video görüntüsü gelmiyor — B-11 |
+| 11 | Video/grafik geçişi | **geçti** | Video oynuyor ve görüntü geliyor — B-11 |
 | 12 | Kulaklık/Bluetooth rota değişimi | **koşulmadı** | Fiziksel donanım gerekir |
 | 13 | Telefon kesintisi | **koşulmadı** | Gerçek çağrı gerekir |
 | 14 | Arka plan dönüşü | **geçti** | Arka plana geçince mikrofon güvenle duruyor |
@@ -217,25 +217,61 @@ düğmeleri sol kenara dikey diziliyor, "Kapat" düğmesi durum çubuğunun alt�
 kesiliyor ve grafik en altta ~60 piksellik bir şeride sıkışıyor. Çökme yok,
 ama ekran çalışılamaz durumda.
 
-### B-11 — Video görüntüsü gelmiyor; süre yanlış kalıyor
+### B-11 — yeniden ölçüldü: video SORUNSUZ; kalan tek sorun SÜRE
 
-Video/grafik geçişinin kendisi çalışıyor (düğme "Grafiği tam ekran yap"a
-dönüyor, sahne değişiyor). Ama video alanında gerçek kare yerine tarayıcının
-yedek oynat simgesi duruyor.
+İlk gözlem B-2b düzeltilmeden önce yapılmıştı ve büyük kısmı o yarışın
+eseriymiş. Temiz derlemede yeniden ölçüldü.
 
-Video çalışmasında süre hâlâ **0:16** görünüyor; `Studies-v1.json` aynı
-çalışma için `duration: 191,226418` tutuyor. B-2'nin kare düzeltmesi bu
-çalışmada grafiği getirdi, ama video kod çözme yolunu düzeltmedi — bunlar
-ayrı kusurlar. Aynı dosyanın SES yolu sorunsuz (mp3 çalışmasında süre
-3:04 doğru ve oynatma ilerliyor), yani sorun video kod çözmeye özgü.
+**Video çalışıyor.** Beş ardışık turda da oynattı: konum 11 saniyede 0:10'a
+ilerledi, kod çözme hatası sıfır. Tam ekran video modunda gerçek kare
+geliyor (dosyanın başlık karesi okunuyor) ve ardışık ekran görüntüleri
+farklı — yani görüntü akıyor. "Tarayıcının yedek oynat simgesi" gözlemi,
+B-2b'nin sayfayı komutsuz bırakmasından kaynaklanıyormuş: sayfada medya
+elemanı hiç kurulmadığı için yer tutucu görünüyordu.
+
+**Kalan gerçek kusur: süre yanlış.** Çalışma 3:11 (191,226 sn) olmasına ve
+`Studies-v1.json` bunu doğru tutmasına rağmen arayüz 0:16 gösteriyor.
+
+Sebep ölçüldü ve dosyanın kendisinde: bu bir **parçalı MP4** (fMP4).
+Atom yapısı `ftyp` + `moov`/`mvex` + 49 adet `moof`/`mdat` şeklinde ve:
+
+- `mvhd.duration` = **0**,
+- `mvex` içinde yalnız iki `trex` var, **`mehd` yok**,
+- üst düzeyde **`sidx` yok**.
+
+Yani dosya toplam süresini HİÇBİR YERDE bildirmiyor; süre ancak 49 parçanın
+tamamı taranarak bulunur. Bizim çevrimdışı çözümleyicimiz (MediaExtractor)
+dosyanın tamamını okuduğu için 191,2 sn buluyor. Chromium ise akarken
+gördüğü kadarını bildiriyor: ölçümde süre oynatma ilerledikçe **büyüdü**
+(5,53 → 11 → 16,5).
+
+Bu, motorun ya da köprünün kusuru değil; medya elemanının bu dosya sınıfı
+için verebileceği en iyi cevap. Ama sonucu gerçek: konum çubuğu, A/B
+işaretleri ve grafiğin zaman ekseni yanlış bir toplam süreye göre çalışıyor.
+
+**Düzeltme yolu belli ama tek taraflı değil.** Doğru süre Kotlin tarafında
+ZATEN var (`study.duration`). Sayfaya bildirilebilmesi için `load` komutunun
+sözleşmesine bir `duration` alanı girmesi ve `StudyViewer.html`'in
+`media.duration` yerine onu kullanması gerekir. O dosya iPad kopyasıyla
+byte-eşit olmak zorunda olduğundan bu iki platformu birden ilgilendirir.
+
+**Bir yanlış iz kayda geçsin:** ölçüm sırasında bir kez
+`PIPELINE_ERROR_DECODE: Failed to send audio packet for decoding` hatası
+görüldü ve range sunucumuz suçlandı; range kapatılınca video oynadı, bu da
+teşhisi doğruluyor gibi göründü. Tekrarlı ölçüm bunu ÇÜRÜTTÜ: range açık
+beş turun beşinde de kod çözme hatası sıfır çıktı. Hata bir kerelikti,
+sebebi belirlenemedi. Tek A/B turuna dayanarak kök sebep ilan etmenin
+maliyeti burada görülüyor.
+
 
 ## Çıkış kapısı
 
 **Geçmedi**, ama en ağır engel kalktı: Dinleme Modu'nun boş ekranı (B-2)
 çözüldü ve grafik + oynatma cihazda çalışıyor.
 
-Kapıyı hâlâ kapalı tutanlar: A/B döngüsü oynatmayı kilitliyor (B-9),
-video görüntüsü gelmiyor (B-11).
+Kapıyı hâlâ kapalı tutan tek kalem: A/B döngüsünde grafik ve konum donuyor
+(B-9). B-11 küçüldü: video oynuyor, yalnız parçalı MP4'ün süresi yanlış
+okunuyor ve bunun düzeltmesi paylaşılan sözleşmeyi ilgilendiriyor.
 
 Rota değişimi ve telefon kesintisi fiziksel donanım beklediği için hâlâ
 koşulmadı; listenin geri kalanı koşuldu.
