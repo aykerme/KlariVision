@@ -54,9 +54,10 @@ enum MediaToWAVConversionError: Error, LocalizedError {
 }
 
 /// Motorun beklediği tek girdi biçimini (48 kHz, mono, 16-bit PCM WAV)
-/// `AVAssetReader` ile üretir. `AVAssetReaderTrackOutput`'un kendi
-/// `outputSettings`'i örnekleme hızını ve kanal sayısını zaten istenen
-/// hedefe düşürdüğü için ayrı bir yeniden örnekleme adımına gerek yok.
+/// `AVAssetReader` ile üretir. Okuyucu yeniden örneklemeyi yapar; mono'ya
+/// indirme ise burada kanalların ortalamasıyla yapılır. AVFoundation'ın kendi
+/// mono indirmesi kanalları 1/√2 ile toplar: ffmpeg `-ac 1`'e göre +3 dB
+/// yüksek seviye verir ve yüksek sesli stereo kayıtlarda kırpar.
 enum MediaToWAVConverter {
     static let targetSampleRate: Double = 48_000
 
@@ -69,15 +70,26 @@ enum MediaToWAVConverter {
             throw MediaToWAVConversionError.noAudioTrack
         }
 
-        let outputSettings: [String: Any] = [
+        // Çok kanallı kaynakları okuyucu önce stereoya indirir; ortalamayı
+        // en fazla iki kanal üzerinden alırız.
+        let sourceChannels = audioTrack.formatDescriptions
+            .compactMap { CMAudioFormatDescriptionGetStreamBasicDescription($0 as! CMAudioFormatDescription)?.pointee.mChannelsPerFrame }
+            .first ?? 1
+        let readChannels = AVAudioChannelCount(min(max(sourceChannels, 1), 2))
+        var readerSettings: [String: Any] = [
             AVFormatIDKey: kAudioFormatLinearPCM,
             AVSampleRateKey: targetSampleRate,
-            AVNumberOfChannelsKey: 1,
-            AVLinearPCMBitDepthKey: 16,
+            AVNumberOfChannelsKey: readChannels,
+            AVLinearPCMBitDepthKey: 32,
             AVLinearPCMIsBigEndianKey: false,
-            AVLinearPCMIsFloatKey: false,
-            AVLinearPCMIsNonInterleaved: false,
+            AVLinearPCMIsFloatKey: true,
+            AVLinearPCMIsNonInterleaved: true,
         ]
+        if sourceChannels > 2 {
+            var layout = AudioChannelLayout()
+            layout.mChannelLayoutTag = kAudioChannelLayoutTag_Stereo
+            readerSettings[AVChannelLayoutKey] = Data(bytes: &layout, count: MemoryLayout<AudioChannelLayout>.size)
+        }
 
         let reader: AVAssetReader
         do {
@@ -85,14 +97,18 @@ enum MediaToWAVConverter {
         } catch {
             throw MediaToWAVConversionError.setupFailed(error.localizedDescription)
         }
-        let output = AVAssetReaderTrackOutput(track: audioTrack, outputSettings: outputSettings)
+        let output = AVAssetReaderTrackOutput(track: audioTrack, outputSettings: readerSettings)
         output.alwaysCopiesSampleData = false
         guard reader.canAdd(output) else {
             throw MediaToWAVConversionError.setupFailed("Ses çıkışı okuyucuya eklenemedi.")
         }
         reader.add(output)
 
-        guard let pcmFormat = AVAudioFormat(settings: outputSettings) else {
+        guard let readFormat = AVAudioFormat(
+            commonFormat: .pcmFormatFloat32, sampleRate: targetSampleRate, channels: readChannels, interleaved: false
+        ), let monoFormat = AVAudioFormat(
+            commonFormat: .pcmFormatInt16, sampleRate: targetSampleRate, channels: 1, interleaved: true
+        ) else {
             throw MediaToWAVConversionError.setupFailed("PCM biçimi oluşturulamadı.")
         }
 
@@ -103,7 +119,7 @@ enum MediaToWAVConverter {
         )
         let file = try AVAudioFile(
             forWriting: destination,
-            settings: pcmFormat.settings,
+            settings: monoFormat.settings,
             commonFormat: .pcmFormatInt16,
             interleaved: true
         )
@@ -113,7 +129,10 @@ enum MediaToWAVConverter {
         }
 
         while let sampleBuffer = output.copyNextSampleBuffer() {
-            guard let buffer = pcmBuffer(from: sampleBuffer, format: pcmFormat) else { continue }
+            guard let buffer = monoPCMBuffer(from: sampleBuffer, readFormat: readFormat, monoFormat: monoFormat) else {
+                reader.cancelReading()
+                throw MediaToWAVConversionError.readFailed("Ses örnekleri kopyalanamadı.")
+            }
             do {
                 try file.write(from: buffer)
             } catch {
@@ -127,52 +146,57 @@ enum MediaToWAVConverter {
         }
     }
 
-    /// Kaynak zaten bir WAV dosyasıysa doğrudan onu döndürür (kopyalama/çözme
-    /// gerekmez -- `local_app.py` tarafındaki `_persist_video_source`/`_to_wav`
-    /// zaten aynı işi güvenli biçimde yapar); değilse `convert(source:destination:)`
-    /// ile geçici bir WAV üretir. Hem ilk analiz (`KlariVisionApp.swift`) hem
-    /// de kaynak-karşılaştırma yolu (`LivePitchAnalyzer.swift`) bunu paylaşır.
+    /// Kaynağı her zaman geçici bir WAV'a çözer -- kaynak WAV olsa bile:
+    /// 44.1 kHz, stereo veya 24-bit bir WAV motorun beklediği biçimde değildir.
+    /// Hem ilk analiz (`KlariVisionApp.swift`) hem de kaynak-karşılaştırma yolu
+    /// (`LivePitchAnalyzer.swift`) bunu paylaşır.
     static func prepareWAV(for source: URL) -> Result<URL, Error> {
-        if ["wav", "wave"].contains(source.pathExtension.lowercased()) {
-            return .success(source)
-        }
         let temporaryURL = FileManager.default.temporaryDirectory
             .appending(path: "KlariVision-\(UUID().uuidString).wav")
         do {
             try convert(source: source, destination: temporaryURL)
             return .success(temporaryURL)
         } catch {
+            try? FileManager.default.removeItem(at: temporaryURL)
             return .failure(error)
         }
     }
 
-    /// `prepareWAV(for:)`'ın ürettiği geçici dosyayı temizler; kaynağın
-    /// kendisi döndürülmüşse (zaten WAV'dı) hiçbir şeye dokunmaz.
-    static func cleanUpTemporaryWAV(_ url: URL, isOriginal: Bool) {
-        guard !isOriginal else { return }
+    /// `prepareWAV(for:)`'ın ürettiği geçici dosyayı temizler.
+    static func cleanUpTemporaryWAV(_ url: URL) {
         try? FileManager.default.removeItem(at: url)
     }
 
-    private static func pcmBuffer(from sampleBuffer: CMSampleBuffer, format: AVAudioFormat) -> AVAudioPCMBuffer? {
-        guard let blockBuffer = CMSampleBufferGetDataBuffer(sampleBuffer) else { return nil }
+    private static func monoPCMBuffer(
+        from sampleBuffer: CMSampleBuffer, readFormat: AVAudioFormat, monoFormat: AVAudioFormat
+    ) -> AVAudioPCMBuffer? {
         let frameCount = CMSampleBufferGetNumSamples(sampleBuffer)
         guard frameCount > 0,
-              let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: AVAudioFrameCount(frameCount)) else {
+              let decoded = AVAudioPCMBuffer(pcmFormat: readFormat, frameCapacity: AVAudioFrameCount(frameCount)),
+              let mono = AVAudioPCMBuffer(pcmFormat: monoFormat, frameCapacity: AVAudioFrameCount(frameCount)) else {
             return nil
         }
-        buffer.frameLength = AVAudioFrameCount(frameCount)
-        guard let channelData = buffer.int16ChannelData else { return nil }
+        // Blok tamponu birden çok parçadan oluşabilir; ham işaretçiyle tek
+        // parça varsaymak yerine kopyalamayı CoreMedia'ya bırakıyoruz.
+        // `frameLength` önce ayarlanmalı: tampon listesinin bayt boyutu ondan
+        // türetilir, sıfırken hiçbir şey kopyalanmaz.
+        decoded.frameLength = AVAudioFrameCount(frameCount)
+        let status = CMSampleBufferCopyPCMDataIntoAudioBufferList(
+            sampleBuffer, at: 0, frameCount: Int32(frameCount), into: decoded.mutableAudioBufferList
+        )
+        guard status == noErr,
+              let channels = decoded.floatChannelData,
+              let target = mono.int16ChannelData?[0] else { return nil }
 
-        var length = 0
-        var dataPointer: UnsafeMutablePointer<Int8>?
-        guard CMBlockBufferGetDataPointer(
-            blockBuffer, atOffset: 0, lengthAtOffsetOut: nil, totalLengthOut: &length, dataPointerOut: &dataPointer
-        ) == noErr, let dataPointer else {
-            return nil
+        let channelCount = Int(readFormat.channelCount)
+        let scale = 1 / Float(channelCount)
+        for frame in 0..<frameCount {
+            var sum: Float = 0
+            for channel in 0..<channelCount { sum += channels[channel][frame] }
+            let sample = max(-1, min(1, sum * scale))
+            target[frame] = Int16((sample * Float(Int16.max)).rounded())
         }
-        dataPointer.withMemoryRebound(to: Int16.self, capacity: frameCount) { source in
-            channelData[0].update(from: source, count: frameCount)
-        }
-        return buffer
+        mono.frameLength = AVAudioFrameCount(frameCount)
+        return mono
     }
 }

@@ -449,8 +449,7 @@ final class RecentLibrary {
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             // Motor artık ffmpeg taşımıyor (bkz. docs/app-store/ffmpeg-replacement.md):
             // kaynağı 48 kHz mono WAV'a burada, AVFoundation ile çözüp
-            // `--wav` bayrağıyla veriyoruz. Kaynak zaten WAV ise doğrudan
-            // onu kullanıyoruz, gereksiz bir kopya/çözme adımı eklemiyoruz.
+            // `--wav` bayrağıyla veriyoruz.
             let wavPreparation = MediaToWAVConverter.prepareWAV(for: source)
             let wavURL: URL
             switch wavPreparation {
@@ -463,7 +462,7 @@ final class RecentLibrary {
             case .success(let url):
                 wavURL = url
             }
-            defer { MediaToWAVConverter.cleanUpTemporaryWAV(wavURL, isOriginal: wavURL == source) }
+            defer { MediaToWAVConverter.cleanUpTemporaryWAV(wavURL) }
 
             let process = Process()
             process.executableURL = executable

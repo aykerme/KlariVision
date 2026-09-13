@@ -9,7 +9,6 @@ from klarivision.local_app import (
     _form_page,
     _load_recent_analyses,
     _parse_byte_range,
-    _to_wav,
     refresh_existing_viewer,
     _safe_stem,
     _store_recent_analysis,
@@ -99,20 +98,6 @@ def test_analyse_upload_reuses_cached_pitch_when_import_name_changes(tmp_path, m
     assert calls == {"to_wav": 1, "extract": 1}
 
 
-def test_to_wav_copies_a_wav_source_without_importing_ffmpeg(tmp_path) -> None:
-    """The packaged (App Store) app always calls `_to_wav` with a WAV that
-    the native Swift layer already produced via AVFoundation
-    (`MediaToWAVConverter`) -- it must never need `imageio_ffmpeg` (excluded
-    from that build, see scripts/build_app_store.sh) for this case."""
-    source = tmp_path / "precomputed.wav"
-    source.write_bytes(b"RIFF....WAVEfmt ")
-    destination = tmp_path / "audio" / "study.wav"
-
-    _to_wav(source, destination)
-
-    assert destination.read_bytes() == source.read_bytes()
-
-
 def test_analyse_upload_uses_precomputed_wav_instead_of_calling_to_wav(tmp_path, monkeypatch) -> None:
     """`precomputed_wav` (the WAV the Swift layer already resolved) must be
     used as-is; `_to_wav`/ffmpeg is a developer/CLI-only fallback and must
@@ -143,7 +128,7 @@ def test_analyse_upload_uses_precomputed_wav_instead_of_calling_to_wav(tmp_path,
         viewer.parent.mkdir(parents=True, exist_ok=True)
         viewer.write_text("<html></html>", encoding="utf-8")
 
-    monkeypatch.setattr("imageio_ffmpeg.get_ffmpeg_exe", fail_if_called, raising=False)
+    monkeypatch.setattr("klarivision.local_app._to_wav", fail_if_called)
     monkeypatch.setattr("klarivision.local_app.VampPyinPitchExtractor", FakeExtractor)
     monkeypatch.setattr("klarivision.local_app.write_json", fake_write_json)
     monkeypatch.setattr("klarivision.local_app.build_frequency_viewer", fake_build_frequency_viewer)

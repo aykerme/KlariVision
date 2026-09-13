@@ -178,7 +178,7 @@ def _to_wav(source: Path, destination: Path) -> None:
     that still needs decoding: the native Swift layer already resolves a
     48 kHz mono WAV with ``MediaToWAVConverter`` (AVFoundation) and hands it
     to ``analyse_upload``/``refresh_existing_viewer`` as ``precomputed_wav``,
-    which copies it in directly (see below). This function only exists for
+    which is copied in directly by ``analyse_upload``. This function only exists for
     the developer/CLI flow -- running ``analyse_upload`` straight from a
     Python shell or the ``.venv`` script without a precomputed WAV -- so
     ``imageio_ffmpeg`` is imported lazily here rather than at module load
@@ -188,11 +188,8 @@ def _to_wav(source: Path, destination: Path) -> None:
     ``klarivision.local_app`` fail even when this function is never called.
     """
     destination.parent.mkdir(parents=True, exist_ok=True)
-    if source.resolve() == destination.resolve():
-        return
-    if source.suffix.lower() in {".wav", ".wave"}:
-        shutil.copy2(source, destination)
-        return
+    # A WAV is decoded too: it may be 44.1 kHz, stereo or 24-bit, and the
+    # engines only accept mono 48 kHz PCM.
     import imageio_ffmpeg
 
     subprocess.run(
@@ -313,7 +310,11 @@ def analyse_upload(
     viewer = OUTPUTS_DIR / f"{analysis_id}.html"
     if not wav.is_file():
         _emit_progress("extract", 0, 1)
-        _to_wav(precomputed_wav if precomputed_wav is not None else media_source, wav)
+        if precomputed_wav is not None:
+            wav.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(precomputed_wav, wav)
+        else:
+            _to_wav(media_source, wav)
         _emit_progress("extract", 1, 1)
     cache_hit = pitch_json.is_file()
     if not cache_hit:

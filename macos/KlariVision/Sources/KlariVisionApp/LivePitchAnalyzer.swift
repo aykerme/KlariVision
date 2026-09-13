@@ -846,7 +846,7 @@ final class LivePitchAnalyzer: ObservableObject, @unchecked Sendable {
                     }
                     return
                 }
-                defer { MediaToWAVConverter.cleanUpTemporaryWAV(wavURL, isOriginal: wavURL == source) }
+                defer { MediaToWAVConverter.cleanUpTemporaryWAV(wavURL) }
                 let process = Process()
                 process.executableURL = engine
                 process.arguments = [
