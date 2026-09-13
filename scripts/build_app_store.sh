@@ -38,20 +38,11 @@
 #                         Pakete Contents/embedded.provisionprofile olarak
 #                         gömülür; App Store Connect profilsiz Mac uygulamasını
 #                         kabul etmez.
-#   KV_X86_PYTHON         x86_64 için PyInstaller + proje bağımlılıklarının
-#                         (numpy, openpyxl, ...) kurulu olduğu bir Python
-#                         yorumlayıcısının yolu (ör. Rosetta altında kurulmuş
-#                         ayrı bir venv'in "bin/python"ı). Bu betik böyle bir
-#                         ortam kurmaz; önceden hazırlanmış olmalı (sürümler
-#                         .venv ile birebir aynı):
-#                           uv python install cpython-3.12.13-macos-x86_64-none --install-dir .python
-#                           uv venv --python .python/cpython-3.12.13-macos-x86_64-none/bin/python3.12 .venv-x86_64
-#                           uv pip install --python .venv-x86_64/bin/python \
-#                             numpy==2.4.6 openpyxl==3.1.5 pyinstaller==6.21.0 \
-#                             pyinstaller-hooks-contrib==2026.6
-#                           export KV_X86_PYTHON="$PWD/.venv-x86_64/bin/python"
-#                         Doğrulama (2026-09-13): iki mimarinin motoru aynı kayıt
-#                         için bayt bayt aynı perde JSON'u üretti.
+#   KV_X86_PYTHON         (isteğe bağlı) x86_64 motoru için Python; varsayılan
+#                         .venv-x86_64/bin/python. Kurulum ve motor ayrıntıları:
+#                         scripts/lib/klarivision_engine.sh
+#
+# Motor derlemesi GitHub DMG betiğiyle ortaktır (scripts/lib/klarivision_engine.sh).
 
 set -euo pipefail
 
@@ -65,14 +56,11 @@ fail() {
 : "${KV_INSTALLER_IDENTITY:?KV_INSTALLER_IDENTITY ortam değişkeni gerekli (\"3rd Party Mac Developer Installer: ...\" kimliği).}"
 : "${KV_PROVISIONING_PROFILE:?KV_PROVISIONING_PROFILE ortam değişkeni gerekli (Mac App Store Connect dağıtım profili .provisionprofile yolu).}"
 [ -f "$KV_PROVISIONING_PROFILE" ] || fail "KV_PROVISIONING_PROFILE ($KV_PROVISIONING_PROFILE) bulunamadı."
-: "${KV_X86_PYTHON:?KV_X86_PYTHON ortam değişkeni gerekli: x86_64 motoru için PyInstaller + proje bağımlılıklarının kurulu olduğu bir Python yorumlayıcısının yolu (bkz. bu betiğin başındaki açıklama). Universal derleme bu ortam olmadan yapılamaz.}"
-
-[ -x "$KV_X86_PYTHON" ] || fail "KV_X86_PYTHON ($KV_X86_PYTHON) çalıştırılabilir bir dosya değil."
-if ! "$KV_X86_PYTHON" -c 'import platform, sys; sys.exit(0 if platform.machine() == "x86_64" else 1)'; then
-  fail "KV_X86_PYTHON ($KV_X86_PYTHON) x86_64 mimarisinde çalışmıyor (platform.machine() x86_64 döndürmedi)."
-fi
 
 PROJECT_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+source "$PROJECT_ROOT/scripts/lib/klarivision_engine.sh"
+kv_require_python "$PROJECT_ROOT/.venv/bin/python" arm64
+kv_require_python "$KV_X86_PYTHON" x86_64
 PROJECT_FILE="$PROJECT_ROOT/macos/KlariVision/KlariVision.xcodeproj"
 ENTITLEMENTS_APP="$PROJECT_ROOT/macos/KlariVision/KlariVision.entitlements"
 ENTITLEMENTS_ENGINE="$PROJECT_ROOT/macos/KlariVision/Engine.entitlements"
@@ -86,7 +74,8 @@ EXPORT_PATH="$PROJECT_ROOT/build/KlariVisionAppStoreExport"
 EXPORT_OPTIONS="$PROJECT_ROOT/build/ExportOptions.plist"
 ARCHIVE_APP="$ARCHIVE_PATH/Products/Applications/KlariVision.app"
 ICON_FILE="$PROJECT_ROOT/macos/KlariVision/Resources/KlariVision.icns"
-PITCH_TRACK_CLI="$PROJECT_ROOT/build/klarivision-pitch-track-cli-universal"
+# Dosya adı motorun aradığı adla aynı olmalı (pitch/cpp_engine.py: tools/klarivision-pitch-track-cli).
+PITCH_TRACK_CLI="$PROJECT_ROOT/build/universal/klarivision-pitch-track-cli"
 
 rm -rf "$ARCHIVE_PATH" "$EXPORT_PATH"
 
@@ -108,74 +97,16 @@ cp "$ENTITLEMENTS_APP" "$SIGNING_ENTITLEMENTS"
 plutil -insert "com\\.apple\\.application-identifier" -string "$KV_TEAM_ID.$BUNDLE_ID" "$SIGNING_ENTITLEMENTS"
 plutil -insert "com\\.apple\\.developer\\.team-identifier" -string "$KV_TEAM_ID" "$SIGNING_ENTITLEMENTS"
 
-CORE_SOURCES=(
-  "$PROJECT_ROOT/core/src/analysis_engine.cpp"
-  "$PROJECT_ROOT/core/src/analysis_engine_c.cpp"
-  "$PROJECT_ROOT/core/src/harmonic_arbitration.cpp"
-  "$PROJECT_ROOT/core/src/harmonic_probe.cpp"
-  "$PROJECT_ROOT/core/src/mpm.cpp"
-  "$PROJECT_ROOT/core/src/fixed_lag_tracker.cpp"
-  "$PROJECT_ROOT/core/src/swipe_prime.cpp"
-  "$PROJECT_ROOT/core/src/pyin_ladder.cpp"
-  "$PROJECT_ROOT/core/src/frame_spectrum.cpp"
-  "$PROJECT_ROOT/core/src/harmonic_evidence.cpp"
-  "$PROJECT_ROOT/core/src/unified_track_decoder.cpp"
-  "$PROJECT_ROOT/core/src/unified_pitch_session.cpp"
-  "$PROJECT_ROOT/core/tools/pitch_track_cli.cpp"
-)
+# --- 1. Universal C++ CLI (iki motora da aynı dosya) ---
 
-# --- 1. Native pitch-track CLI: tek bir universal (arm64 + x86_64) ikili ---
-# --- olarak derlenir, her iki motor klasörüne de aynı dosya eklenir.       ---
-
-clang++ -std=c++20 -O3 -arch arm64 -arch x86_64 -I "$PROJECT_ROOT/core/include" \
-  "${CORE_SOURCES[@]}" \
-  -framework Accelerate \
-  -o "$PITCH_TRACK_CLI"
-
-build_engine() {
-  local arch_name="$1"
-  local python_bin="$2"
-  local dist_dir="$PROJECT_ROOT/build/KlariVisionEngineDist-${arch_name}"
-  local work_dir="$PROJECT_ROOT/build/KlariVisionEngineWork-${arch_name}"
-  local spec_dir="$PROJECT_ROOT/build/KlariVisionEngineSpec-${arch_name}"
-
-  rm -rf "$dist_dir" "$work_dir" "$spec_dir"
-
-  "$python_bin" -m PyInstaller \
-    --noconfirm \
-    --clean \
-    --onedir \
-    --name KlariVisionEngine \
-    --distpath "$dist_dir" \
-    --workpath "$work_dir" \
-    --specpath "$spec_dir" \
-    --paths "$PROJECT_ROOT/src" \
-    --collect-all numpy \
-    --collect-all openpyxl \
-    --exclude-module yt_dlp \
-    --exclude-module imageio_ffmpeg \
-    --exclude-module curl_cffi \
-    --exclude-module librosa \
-    --exclude-module scipy \
-    --exclude-module soundfile \
-    --exclude-module numba \
-    --exclude-module sklearn \
-    --exclude-module charset_normalizer \
-    --exclude-module _cffi_backend \
-    --add-data "$PROJECT_ROOT/data/reference/perde-esleme.xlsx:data/reference" \
-    --add-data "$PROJECT_ROOT/data/reference/Turk_Muzigi_Perdeleri_ve_Mikrotonal_Notasyon.xlsx:data/reference" \
-    --add-binary="${PITCH_TRACK_CLI}:tools" \
-    "$PROJECT_ROOT/src/klarivision/engine_cli.py"
-
-  echo "$dist_dir/KlariVisionEngine"
-}
+kv_build_pitch_track_cli "$PITCH_TRACK_CLI"
 
 # --- 2. Motoru iki mimari için ayrı ayrı kur ---
 
 echo "KlariVision: arm64 motoru kuruluyor…"
-ENGINE_ARM64="$(build_engine arm64 "$PROJECT_ROOT/.venv/bin/python")"
+ENGINE_ARM64="$(kv_build_engine arm64 "$PROJECT_ROOT/.venv/bin/python" "$PITCH_TRACK_CLI")"
 echo "KlariVision: x86_64 motoru kuruluyor (KV_X86_PYTHON)…"
-ENGINE_X86_64="$(build_engine x86_64 "$KV_X86_PYTHON")"
+ENGINE_X86_64="$(kv_build_engine x86_64 "$KV_X86_PYTHON" "$PITCH_TRACK_CLI")"
 
 # --- 3. Release arşivi. Xcode'un kendi "Embed bundled analysis engine" ---
 # --- betiği archive sırasında da çalışıp tek mimarili (arm64) bir       ---
@@ -206,23 +137,17 @@ cp "$ICON_FILE" "$ARCHIVE_APP/Contents/Resources/KlariVision.icns"
 # --- 5. Motorları arşivdeki app'e koy: Xcode'un tek-mimarili "Engine"     ---
 # --- klasörünü kaldır, yerine "Engine-arm64" ve "Engine-x86_64" koy.      ---
 
-rm -rf "$ARCHIVE_APP/Contents/Resources/Engine"
-ditto "$ENGINE_ARM64" "$ARCHIVE_APP/Contents/Resources/Engine-arm64"
-ditto "$ENGINE_X86_64" "$ARCHIVE_APP/Contents/Resources/Engine-x86_64"
+kv_install_engines "$ARCHIVE_APP" "$ENGINE_ARM64" "$ENGINE_X86_64"
 
 # --- 6. Her iki motor klasöründeki her Mach-O'yu içten dışa imzala      ---
 # --- (dylib, .so, ikililer). Sıralama önemli: bir ikiliye bağımlı        ---
 # --- dylib'ler ondan önce imzalanmalı, bu yüzden en derinden en sığa     ---
 # --- doğru gidiyoruz (find -depth).                                     ---
 
-is_macho() {
-  file -b "$1" 2>/dev/null | grep -q "Mach-O"
-}
-
 for engine_dir in "$ARCHIVE_APP/Contents/Resources/Engine-arm64" "$ARCHIVE_APP/Contents/Resources/Engine-x86_64"; do
   find "$engine_dir" -depth -type f \( -name "*.dylib" -o -name "*.so" -o -perm -u+x \) -print0 |
     while IFS= read -r -d '' candidate; do
-      if is_macho "$candidate"; then
+      if kv_is_macho "$candidate"; then
         codesign --force --options runtime --timestamp \
           --entitlements "$ENTITLEMENTS_ENGINE" \
           --sign "$KV_APP_IDENTITY" \

@@ -19,6 +19,15 @@ Tarih: 2026-09-13 · Dal: `android-ios-ui-parity-4` · Sürüm: 0.6.0 (7)
 | Mimari | Motor yalnız `aarch64` | Ya `ARCHS=arm64` (Intel Mac'ler kuramaz) ya universal2 motor |
 | Lisans | Depo **AGPL-3.0** | Telif tamamen geliştiricide → engel yok |
 
+## Karar: önce GitHub dağıtımı (2026-09-13)
+
+Apple Developer Program yıllık ücreti (99 $, macOS + iOS tek üyelik) şimdilik ödenmeyecek.
+macOS sürümü GitHub Releases'tan geçici imzalı, universal DMG olarak dağıtılır:
+`zsh scripts/build_github_dmg.sh` → `dist/KlariVision-<sürüm>-macos-universal.dmg` (+ `.sha256`).
+Kurulum notu (Gatekeeper "Yine de Aç" adımları, TR/EN): `docs/install-macos.md`, DMG'nin içinde de var.
+Bu sürüm sandbox'sız (geçici imza her derlemede değiştiği için konteyner erişimi güncellemede
+kırılabilir). App Store yolu ve aşağıdaki belgeler üyelik alındığında kullanılmak üzere duruyor.
+
 ## Durum (2026-09-13 akşam)
 
 | Adım | Durum |
