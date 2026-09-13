@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!-- KlariVision hiçbir kullanıcı verisi toplamaz veya izlemez: analiz
+         tamamen cihazda çalışır, hiçbir ağ isteği atılmaz. -->
+    <key>NSPrivacyTracking</key>
+    <false/>
+    <key>NSPrivacyTrackingDomains</key>
+    <array/>
+    <key>NSPrivacyCollectedDataTypes</key>
+    <array/>
+    <key>NSPrivacyAccessedAPITypes</key>
+    <array>
+        <!-- AppSettings.swift / LiveVisuals.swift / StudyWorkspace.swift:
+             tema, motor seçimi ve mikrofon hizalaması gibi uygulama içi
+             tercihler UserDefaults ile saklanır; hiçbiri cihaz dışına
+             gönderilmez. -->
+        <dict>
+            <key>NSPrivacyAccessedAPIType</key>
+            <string>NSPrivacyAccessedAPICategoryUserDefaults</string>
+            <key>NSPrivacyAccessedAPITypeReasons</key>
+            <array>
+                <string>CA92.1</string>
+            </array>
+        </dict>
+        <!-- StudyModels.swift: kayıtlı çalışmalar `contentModificationDate`
+             ile en son değiştirilene göre sıralanır; yalnız uygulama içi
+             listeleme için kullanılır. -->
+        <dict>
+            <key>NSPrivacyAccessedAPIType</key>
+            <string>NSPrivacyAccessedAPICategoryFileTimestamp</string>
+            <key>NSPrivacyAccessedAPITypeReasons</key>
+            <array>
+                <string>C617.1</string>
+            </array>
+        </dict>
+        <!-- LivePitchAnalyzer.swift / StudyWorkspace.swift: canlı pitch
+             oturumunun zamanlama tabanı `ProcessInfo.systemUptime` ile
+             ölçülür; yalnız uygulama içi çizim/senkronizasyon için, cihaz
+             dışına gönderilmez. -->
+        <dict>
+            <key>NSPrivacyAccessedAPIType</key>
+            <string>NSPrivacyAccessedAPICategorySystemBootTime</string>
+            <key>NSPrivacyAccessedAPITypeReasons</key>
+            <array>
+                <string>35F9.1</string>
+            </array>
+        </dict>
+    </array>
+</dict>
+</plist>

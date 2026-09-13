@@ -361,6 +361,18 @@ final class RecentLibrary {
             analyseWithBundledEngine(selectedFile, executable: bundledEngine)
             return
         }
+        #if DEBUG
+        // Paketlenmiş motor yoksa (Xcode'dan doğrudan çalıştırma) yerel Python
+        // ortamına düş. Sandbox'lı Release derlemesinde bu yol hiç
+        // derlenmez -- motor daima pakete gömülü olmalıdır.
+        analyseSelectedFileWithLocalPython(selectedFile)
+        #else
+        analysisMessage = "KlariVision analiz motoru bulunamadı. Uygulamayı yeniden kur."
+        #endif
+    }
+
+    #if DEBUG
+    private func analyseSelectedFileWithLocalPython(_ selectedFile: URL) {
         guard let root = projectRoot() else {
             analysisMessage = "KlariVision analiz motoru bulunamadı. Projeyi Xcode içinden açtığından emin ol."
             return
@@ -427,6 +439,7 @@ final class RecentLibrary {
             }
         }
     }
+    #endif
 
     private func analyseWithBundledEngine(_ source: URL, executable: URL) {
         isAnalysing = true
@@ -594,14 +607,23 @@ final class RecentLibrary {
         let appSupport = manager.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
             .appending(path: "KlariVision")
         var roots = [appSupport]
+        #if DEBUG
+        // Geliştirme sırasında çalışma dizini depo kökünün altında olabilir
+        // (ör. Xcode'un kendi çalışma dizini); yukarı doğru tarayarak proje
+        // kökünü de aday olarak ekle. Sandbox'lı Release derlemesinde
+        // `currentDirectoryPath`'in konteyner dışına çıkması hem işe
+        // yaramaz hem de incelemede "harici yol arama" gibi görünür --
+        // Release'te yalnız Application Support kullanılır.
         var cursor = URL(fileURLWithPath: manager.currentDirectoryPath)
         for _ in 0..<5 {
             roots.append(cursor)
             cursor.deleteLastPathComponent()
         }
+        #endif
         return roots
     }
 
+    #if DEBUG
     private func projectRoot() -> URL? {
         for root in dataRoots() {
             if FileManager.default.fileExists(atPath: root.appending(path: "src/klarivision/local_app.py").path) {
@@ -616,6 +638,7 @@ final class RecentLibrary {
         let candidates = [root.appending(path: ".venv/bin/python"), URL(fileURLWithPath: "/usr/bin/python3")]
         return candidates.first(where: { FileManager.default.isExecutableFile(atPath: $0.path) })
     }
+    #endif
 
     private func bundledEngineExecutable() -> URL? {
         guard let resources = Bundle.main.resourceURL else { return nil }
