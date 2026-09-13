@@ -20,6 +20,14 @@
 package com.aykerme.klarivision.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.ui.graphics.Color
+import androidx.compose.material3.NavigationDrawerItemDefaults
+import androidx.compose.material3.NavigationDrawerItem
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.layout.only
+import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -31,13 +39,11 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.NavigationRailItem
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
@@ -100,17 +106,9 @@ fun KlariVisionApp(
     val themeName by settingsStore.theme().collectAsState(initial = KlariVisionThemeNames.FOCUS)
     val studyUiState by studyOrchestrator.uiState.collectAsState()
 
-    // Grafik sayfaları kenardan kenara çizilir; sistem çubuğu boşluklarını
-    // Compose ölçer ve köprüler üzerinden sayfaya bildirir. View seviyesindeki
-    // inset dinleyicisi Compose barındırıcısında güvenilir ateşlenmiyor,
-    // bu yüzden değer buradan AÇIKÇA veriliyor.
     val safeInsets = WindowInsets.safeDrawing.asPaddingValues()
     val safeTop = safeInsets.calculateTopPadding()
     val safeBottom = safeInsets.calculateBottomPadding()
-    LaunchedEffect(safeTop, safeBottom) {
-        liveGraphBridge.setSafeAreaInsets(safeTop.value, safeBottom.value)
-        studyGraphBridge.setSafeAreaInsets(safeTop.value, safeBottom.value)
-    }
 
     val liveUiState by liveOrchestrator.uiState.collectAsState()
 
@@ -223,10 +221,40 @@ fun KlariVisionApp(
         Surface(modifier = modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
             BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
                 val widthClass = rememberWidthClass(maxWidth, maxHeight)
+
+                // Dar düzende grafik sayfaları kenardan kenara çizilir; sistem
+                // çubuğu boşluklarını Compose ölçer ve köprüler üzerinden
+                // sayfaya bildirir. View seviyesindeki inset dinleyicisi Compose
+                // barındırıcısında güvenilir ateşlenmiyor, bu yüzden değer
+                // buradan AÇIKÇA veriliyor. Geniş düzende içerik zaten güvenli
+                // alanın içinde durduğu için sayfaya 0 gider; yoksa boşluk iki
+                // kez uygulanır.
+                val graphInsetTop = if (widthClass == KvWidthClass.GENIS) 0f else safeTop.value
+                val graphInsetBottom = if (widthClass == KvWidthClass.GENIS) 0f else safeBottom.value
+                LaunchedEffect(graphInsetTop, graphInsetBottom) {
+                    liveGraphBridge.setSafeAreaInsets(graphInsetTop, graphInsetBottom)
+                    studyGraphBridge.setSafeAreaInsets(graphInsetTop, graphInsetBottom)
+                }
+
                 when (widthClass) {
+                    // Swift regular düzeni gibi içerik sistem çubuklarının
+                    // İÇİNDE kalır. Kenar çubuğunun zemini çubukların altına
+                    // uzanır, satırları uzanmaz. Cihazda (yoğunluk 200,
+                    // 864×1920 dp) alt denetim çubuğu gezinme çubuğunun
+                    // altında kalıyordu.
                     KvWidthClass.GENIS -> Row(modifier = Modifier.fillMaxSize()) {
                         PermanentSidebar(destination = destination, onSelect = { destination = it })
-                        content(Modifier.weight(1f).fillMaxSize(), widthClass)
+                        content(
+                            Modifier
+                                .weight(1f)
+                                .fillMaxSize()
+                                .windowInsetsPadding(
+                                    WindowInsets.safeDrawing.only(
+                                        WindowInsetsSides.Top + WindowInsetsSides.Bottom + WindowInsetsSides.End,
+                                    ),
+                                ),
+                            widthClass,
+                        )
                     }
                     KvWidthClass.DAR -> if (workspaceActive) {
                         // Modal: gezinme çubuğu tamamen gizlenir, grafik tüm yüzeyi kaplar.
@@ -254,7 +282,9 @@ fun KlariVisionApp(
 
 /**
  * Geniş sınıf (≥700 pt): 280 pt kalıcı kenar çubuğu, çalışma alanı açıkken
- * de görünür — Swift regular düzenindeki NavigationSplitView kenar çubuğu.
+ * de görünür — Swift regular düzenindeki NavigationSplitView kenar çubuğu:
+ * büyük "KlariVision" başlığı, "GEZİNME" bölümü ve ikon + etiketi yan yana
+ * duran satırlar. Seçili satır vurgu renginde yazılır, zemini %12 vurgu tonudur.
  */
 @Composable
 private fun PermanentSidebar(destination: Destination, onSelect: (Destination) -> Unit) {
@@ -262,32 +292,42 @@ private fun PermanentSidebar(destination: Destination, onSelect: (Destination) -
         modifier = Modifier
             .width(KvSidebarWidthWide)
             .fillMaxHeight()
-            .background(MaterialTheme.colorScheme.surface),
+            .background(MaterialTheme.colorScheme.surface)
+            .windowInsetsPadding(
+                WindowInsets.safeDrawing.only(WindowInsetsSides.Top + WindowInsetsSides.Bottom + WindowInsetsSides.Start),
+            )
+            .padding(horizontal = KvSpacing.md),
+        verticalArrangement = Arrangement.spacedBy(KvSpacing.xs),
     ) {
-        SidebarHeader()
-        HorizontalDivider()
+        Text(
+            "KlariVision",
+            style = MaterialTheme.typography.headlineLarge,
+            modifier = Modifier.padding(start = KvSpacing.md, top = KvSpacing.lg, bottom = KvSpacing.lg),
+        )
+        Text(
+            "GEZİNME",
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(start = KvSpacing.md, bottom = KvSpacing.xs),
+        )
         Destination.values().forEach { dest ->
-            NavigationRailItem(
-                selected = destination == dest,
+            val selected = destination == dest
+            val accent = MaterialTheme.colorScheme.primary
+            NavigationDrawerItem(
+                selected = selected,
                 onClick = { onSelect(dest) },
-                icon = { NavGlyph(dest) },
+                icon = { Icon(navIcon(dest), contentDescription = null) },
                 label = { Text(dest.title) },
-                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(KvRadius.control),
+                colors = NavigationDrawerItemDefaults.colors(
+                    selectedContainerColor = accent.copy(alpha = 0.12f),
+                    unselectedContainerColor = Color.Transparent,
+                    selectedIconColor = accent,
+                    selectedTextColor = accent,
+                ),
             )
         }
     }
-}
-
-@Composable
-private fun SidebarHeader() {
-    Row(
-        modifier = Modifier.fillMaxWidth().padding(KvSpacing.lg),
-    ) {
-        Icon(KvIcons.AppMark, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-        Spacer(modifier = Modifier.width(KvSpacing.sm))
-        Text("KlariVision", style = MaterialTheme.typography.titleLarge)
-    }
-    Spacer(modifier = Modifier.height(KvSpacing.xs))
 }
 
 /**
@@ -296,10 +336,12 @@ private fun SidebarHeader() {
  */
 @Composable
 private fun NavGlyph(destination: Destination) {
-    val icon = when (destination) {
+    Icon(navIcon(destination), contentDescription = destination.title)
+}
+
+private fun navIcon(destination: Destination) =
+    when (destination) {
         Destination.HOME -> KvIcons.Home
         Destination.LIBRARY -> KvIcons.Studies
         Destination.SETTINGS -> KvIcons.Settings
     }
-    Icon(icon, contentDescription = destination.title)
-}
