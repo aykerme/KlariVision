@@ -8,11 +8,11 @@
     <!-- Çalma Modu ve Birlikte Çal, canlı pitch analizi için mikrofona ihtiyaç duyar. -->
     <key>com.apple.security.device.audio-input</key>
     <true/>
-    <!-- Dinleme Modu, kullanıcının NSOpenPanel ile seçtiği ses/video dosyasını
-         okur; uygulama kendi seçtiği hiçbir dosyaya yazmaz, yalnız kendi
-         konteynerine (Application Support) yazar. Sürükle-bırak da aynı
-         security-scoped erişimi kullanır. -->
-    <key>com.apple.security.files.user-selected.read-only</key>
+    <!-- Dinleme Modu, kullanıcının NSOpenPanel veya sürükle-bırak ile seçtiği
+         ses/video dosyasını okur. Çalma Modu'ndaki "Kaydı Sakla" ise
+         NSSavePanel ile kullanıcının seçtiği yere WAV yazar; bu yüzden
+         read-only yetmez. Uygulama kendi seçtiği hiçbir dış yola yazmaz. -->
+    <key>com.apple.security.files.user-selected.read-write</key>
     <true/>
 </dict>
 </plist>
