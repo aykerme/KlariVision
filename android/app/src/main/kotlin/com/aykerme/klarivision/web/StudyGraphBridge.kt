@@ -139,6 +139,7 @@ class StudyGraphBridge(
         evaluateRaw(
             "window.kvStudy && window.kvStudy.receive(" +
                 "{\"type\":\"load\",\"url\":${JsonPrimitive(command.url)}," +
+                "\"duration\":${JsonPrimitive(command.duration)}," +
                 "\"frames\":(window.__kvFrames||[])});" +
                 "window.__kvFrames=null;"
         )

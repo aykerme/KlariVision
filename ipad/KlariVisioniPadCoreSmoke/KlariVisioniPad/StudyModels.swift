@@ -269,7 +269,13 @@ enum iPadStudyPlaybackRate {
 }
 
 enum iPadStudyCommand: Equatable {
-    case load(URL, [iPadPitchFrame])
+    /// `duration`, kaynağın ÇEVRİMDIŞI ÇÖZÜMLEMEYLE ölçülmüş toplam
+    /// süresidir. Sayfaya açıkça bildirilir çünkü parçalı bir MP4 toplam
+    /// süresini hiç taşımayabilir (`mehd` yok, `sidx` yok, `mvhd.duration`
+    /// sıfır) ve akış demuxer'ı o zaman yalnız o ana kadar çözdüğü kadarını
+    /// bildirir — ölçüldü: 191 saniyelik bir çalışma sırayla 5,5 / 11 / 16,5
+    /// saniye raporladı.
+    case load(URL, [iPadPitchFrame], Double)
     case context(iPadMusicContext, pitchColor: String, guideColor: String, kararColor: String, komaOverride: [Int])
     case playPause, pause, seek(Double), rate(Double), markA, markB, loop, follow
     /// Which side (graph or video) fills the stage. Driven by the native

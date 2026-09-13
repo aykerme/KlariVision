@@ -74,8 +74,8 @@ final class iPadStudyWebViewStore: NSObject, ObservableObject, WKNavigationDeleg
     private func send(_ command: iPadStudyCommand) {
         let payload: [String: Any]
         switch command {
-        case let .load(url, frames):
-            payload = ["type": "load", "url": url.absoluteString, "frames": frames.map { ["t": $0.time, "f": $0.frequency, "c": $0.confidence, "v": $0.voiced] }]
+        case let .load(url, frames, duration):
+            payload = ["type": "load", "url": url.absoluteString, "duration": duration, "frames": frames.map { ["t": $0.time, "f": $0.frequency, "c": $0.confidence, "v": $0.voiced] }]
         case let .context(context, pitchColor, guideColor, kararColor, komaOverride):
             payload = ["type": "context", "makam": context.makam.rawValue, "karar": context.karar.rawValue, "guides": context.guideNotes(commas: komaOverride).map { ["name": $0.name, "hz": $0.hz, "karar": $0.isKarar] }, "pitchColor": pitchColor, "guideColor": guideColor, "kararColor": kararColor]
         case .playPause: payload = ["type": "playPause"]
@@ -167,7 +167,7 @@ enum iPadStudyViewerResource {
             try manager.copyItem(at: source, to: destination)
         }
         store.loadViewer(destination, allowingReadAccessTo: root)
-        store.enqueue(.load(study.sourceURL, study.frames))
+        store.enqueue(.load(study.sourceURL, study.frames, study.duration))
         // Default, un-overridden intervals — the caller (`iPadStudyState`)
         // immediately follows this with its own context command carrying the
         // real makam-interval overrides, so this one is just a same-frame

@@ -35,7 +35,17 @@ data class MicPoint(val time: Double, val frequency: Double)
  * alan adlarını üretir.
  */
 sealed class StudyCommand {
-    data class Load(val url: String, val frames: List<PitchFrame>) : StudyCommand()
+    /**
+     * `duration`, kaynağın ÇEVRİMDIŞI ÇÖZÜMLEMEYLE ölçülmüş toplam süresidir
+     * ([Study.duration]). Sayfaya açıkça bildirilir çünkü parçalı bir MP4
+     * toplam süresini hiç taşımayabilir (`mehd` yok, `sidx` yok,
+     * `mvhd.duration` sıfır) ve akış demuxer'ı o zaman yalnız o ana kadar
+     * çözdüğü kadarını bildirir — cihazda ölçüldü: 191 saniyelik bir çalışma
+     * sırayla 5,5 / 11 / 16,5 saniye raporladı, arayüz de 0:16 gösteriyordu.
+     * Sayfa bu alan yoksa `media.duration`'a düşer, yani eski göndericiler
+     * bozulmaz.
+     */
+    data class Load(val url: String, val frames: List<PitchFrame>, val duration: Double) : StudyCommand()
 
     data class Context(
         val makam: String,
@@ -100,6 +110,7 @@ sealed class StudyCommand {
         is Load -> buildJsonObject {
             put("type", "load")
             put("url", url)
+            put("duration", duration)
             putJsonArray("frames") {
                 frames.forEach { frame ->
                     addJsonObject {

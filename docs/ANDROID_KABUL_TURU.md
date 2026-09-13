@@ -249,11 +249,22 @@ Bu, motorun ya da köprünün kusuru değil; medya elemanının bu dosya sınıf
 için verebileceği en iyi cevap. Ama sonucu gerçek: konum çubuğu, A/B
 işaretleri ve grafiğin zaman ekseni yanlış bir toplam süreye göre çalışıyor.
 
-**Düzeltme yolu belli ama tek taraflı değil.** Doğru süre Kotlin tarafında
-ZATEN var (`study.duration`). Sayfaya bildirilebilmesi için `load` komutunun
-sözleşmesine bir `duration` alanı girmesi ve `StudyViewer.html`'in
-`media.duration` yerine onu kullanması gerekir. O dosya iPad kopyasıyla
-byte-eşit olmak zorunda olduğundan bu iki platformu birden ilgilendirir.
+**ÇÖZÜLDÜ — `load` sözleşmesine `duration` eklendi.** Doğru süre Kotlin ve
+Swift taraflarında zaten vardı (`study.duration`, çevrimdışı çözümlemeden);
+artık sayfaya açıkça bildiriliyor. `StudyViewer.html` yeni bir
+`mediaDuration()` yardımcısı kullanıyor: bildirilen süre geçerliyse onu,
+değilse `media.duration`'ı döndürür — yani alan gelmeyen eski göndericilerde
+davranış birebir aynı kalır.
+
+Değişiklik iki platformda birlikte gitti: kanonik `ipad/.../Resources/
+StudyViewer.html` düzenlendi ve Android kopyasına byte-eşit kopyalandı,
+`iPadStudyCommand.load` ve Kotlin `StudyCommand.Load` birer `duration`
+alanı kazandı. macOS etkilenmiyor — o ayrı bir görüntüleyici kullanıyor
+(`window.klariVisionStudyViewer`).
+
+Doğrulama (SM-A736B): video çalışması **0:16 → 3:11**; oynatma 0:10'a
+ilerliyor ve grafik eğriyi doğru zaman ekseninde çiziyor. Ses çalışması
+gerilemedi (3:04, oynatma 0:09). iPad hedefi Mac Catalyst ile derleniyor.
 
 **Bir yanlış iz kayda geçsin:** ölçüm sırasında bir kez
 `PIPELINE_ERROR_DECODE: Failed to send audio packet for decoding` hatası
@@ -270,8 +281,7 @@ maliyeti burada görülüyor.
 çözüldü ve grafik + oynatma cihazda çalışıyor.
 
 Kapıyı hâlâ kapalı tutan tek kalem: A/B döngüsünde grafik ve konum donuyor
-(B-9). B-11 küçüldü: video oynuyor, yalnız parçalı MP4'ün süresi yanlış
-okunuyor ve bunun düzeltmesi paylaşılan sözleşmeyi ilgilendiriyor.
+(B-9). B-11 kapandı.
 
 Rota değişimi ve telefon kesintisi fiziksel donanım beklediği için hâlâ
 koşulmadı; listenin geri kalanı koşuldu.

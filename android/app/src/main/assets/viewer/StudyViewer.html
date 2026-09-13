@@ -57,6 +57,20 @@
   const stage = document.getElementById('stage');
   const setMode = mode => { stage.classList.toggle('mode-video', mode === 'video'); stage.classList.toggle('mode-graph', mode !== 'video'); resize(); };
   var media = null, frames = [], a = null, b = null, looping = false, following = false, verticalCenter = null;
+  // Declared total duration, supplied by the `load` command. A fragmented MP4
+  // can carry no total duration at all (no `mehd`, no `sidx`, `mvhd.duration`
+  // 0), and a streaming demuxer then reports only what it has parsed so far --
+  // measured: a 191s study reported 5.5s, then 11s, then 16.5s as it buffered.
+  // The native side already knows the real duration from its own offline
+  // decode, so it declares it here. Falls back to `media.duration` when the
+  // field is absent, which keeps older senders working unchanged.
+  var declaredDuration = 0;
+  const mediaDuration = () => {
+    const declared = Number(declaredDuration);
+    if (Number.isFinite(declared) && declared > 0) return declared;
+    const intrinsic = Number(media?.duration);
+    return Number.isFinite(intrinsic) && intrinsic > 0 ? intrinsic : 0;
+  };
   let micFrames = [];
   let context = {guides:[], makam:'', karar:'', pitchColor:'#67d5ff', guideColor:'#b7d8ff', micColor:'#FF9F0A'};
   const verticalSpan = 2400;
@@ -122,7 +136,7 @@
     return low;
   };
   const micRangeFor = (start, end) => [micIndexAtOrAfter(start), micIndexAtOrAfter(end + 1e-9)];
-  const send = () => bridge?.postMessage({time:Number(media?.currentTime)||0,duration:Number(media?.duration)||0,isPlaying:media ? !media.paused : false,rate:Number(media?.playbackRate)||1,loopA:a,loopB:b,loopEnabled:looping,followsCurve:following});
+  const send = () => bridge?.postMessage({time:Number(media?.currentTime)||0,duration:mediaDuration(),isPlaying:media ? !media.paused : false,rate:Number(media?.playbackRate)||1,loopA:a,loopB:b,loopEnabled:looping,followsCurve:following});
   const resize = () => { const r=canvas.getBoundingClientRect(), scale=devicePixelRatio||1; canvas.width=r.width*scale; canvas.height=r.height*scale; ctx.setTransform(scale,0,0,scale,0,0); draw(); };
   // Visible time-window length (seconds) and vertical pitch-range multiplier.
   // Both are mutable so the pinch handler below (which classifies each pinch
@@ -169,7 +183,7 @@
     ctx.restore();
   };
   const draw = () => {
-    const r=canvas.getBoundingClientRect(), w=r.width, h=r.height, d=Math.max(0.001,Number(media?.duration)||1);
+    const r=canvas.getBoundingClientRect(), w=r.width, h=r.height, d=Math.max(0.001,mediaDuration()||1);
     // Time window always stays centered on playback, mirroring the macOS study
     // graph's default 12s window (clamped so both ends keep half-a-window of
     // padding). This is independent of the vertical "follow the curve" toggle.
@@ -314,8 +328,8 @@
       e.preventDefault(); drag.moved=true;
       if(viewport&&viewport.h>0) panVertically((t.clientY-drag.lastY)/viewport.h*(viewport.hi-viewport.lo));
       drag.lastY=t.clientY;
-      if(media&&Number.isFinite(media.duration)&&media.duration>0){
-        const w=canvas.getBoundingClientRect().width||1, d=media.duration;
+      if(media&&mediaDuration()>0){
+        const w=canvas.getBoundingClientRect().width||1, d=mediaDuration();
         media.currentTime=Math.max(0,Math.min(d,drag.time-(t.clientX-drag.x)/w*Math.min(windowSeconds,d)));
         snapClock();
       }
@@ -361,8 +375,9 @@
   const micClear = () => { micFrames = []; draw(); };
   const micTruncate = (time) => { const cutoff = micIndexAtOrAfter(Number(time) || 0); micFrames.length = cutoff; draw(); };
   const setMicColor = (hex) => { context.micColor = hex; draw(); };
-  const install = (url, data) => {
+  const install = (url, data, duration) => {
     if(media){media.pause();media.remove();}
+    declaredDuration=Number(duration)||0;
     frames=data||[];micFrames=[];extentCache=null;verticalCenter=null;verticalOffset=0;drag=null;pinch=null;shownTime=0;shownAt=performance.now();
     const isVideo=/\.(mp4|mov|m4v)$/i.test(url);
     media=document.createElement(isVideo?'video':'audio');
@@ -385,11 +400,11 @@
     setMicColor,
     receive(p){
       switch(p.type){
-        case'load':install(p.url,p.frames);break;
+        case'load':install(p.url,p.frames,p.duration);break;
         case'context':Object.assign(context,p);extentCache=null;break;
         case'playPause':media?.paused?media.play():media?.pause();break;
         case'pause':media?.pause();break;
-        case'seek':if(media){media.currentTime=Math.max(0,Math.min(p.time,media.duration||p.time));snapClock();}break;
+        case'seek':if(media){media.currentTime=Math.max(0,Math.min(p.time,mediaDuration()||p.time));snapClock();}break;
         case'rate':if(media)media.playbackRate=p.rate;break;
         case'markA':a=media?.currentTime||0;break;
         case'markB':b=media?.currentTime||0;break;

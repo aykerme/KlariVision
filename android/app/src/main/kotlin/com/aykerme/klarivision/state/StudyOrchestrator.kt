@@ -507,7 +507,13 @@ private fun contextCommand(context: StudyContext): StudyCommand.Context {
 private fun defaultViewerLoad(bridge: StudyGraphBridge, study: Study) {
     bridge.load()
     val relativeName = File(study.sourceURL).name
-    bridge.enqueue(StudyCommand.Load(url = ViewerAssets.importUrl(relativeName), frames = study.frames))
+    bridge.enqueue(
+        StudyCommand.Load(
+            url = ViewerAssets.importUrl(relativeName),
+            frames = study.frames,
+            duration = study.duration,
+        )
+    )
     bridge.enqueue(contextCommand(study.context))
 }
 

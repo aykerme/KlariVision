@@ -20,15 +20,24 @@ class StudyCommandTest {
     private fun parse(command: StudyCommand) = Json.parseToJsonElement(command.toJsonString()).jsonObject
 
     @Test
-    fun loadCommandCarriesUrlAndFrames() {
+    fun loadCommandCarriesUrlDurationAndFrames() {
         val frames = listOf(
             PitchFrame(time = 0.0, frequency = 440.0, confidence = 0.9, voiced = true),
             PitchFrame(time = 0.1, frequency = 0.0, confidence = 0.0, voiced = false)
         )
-        val json = parse(StudyCommand.Load(url = "https://appassets.androidplatform.net/imports/a.mp3", frames = frames))
+        val json = parse(
+            StudyCommand.Load(
+                url = "https://appassets.androidplatform.net/imports/a.mp3",
+                frames = frames,
+                duration = 191.226418,
+            )
+        )
 
         assertEquals("load", json["type"]?.jsonPrimitive?.content)
         assertEquals("https://appassets.androidplatform.net/imports/a.mp3", json["url"]?.jsonPrimitive?.content)
+        // Süre sözleşmenin parçasıdır: parçalı MP4 kendi toplam süresini
+        // taşımayabilir, sayfa bu alana güvenir (bkz. StudyCommand.Load).
+        assertEquals(191.226418, json["duration"]?.jsonPrimitive?.double)
 
         val frameArray = json["frames"]?.jsonArray!!
         assertEquals(2, frameArray.size)
