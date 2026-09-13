@@ -94,6 +94,24 @@ final class LiveNotationTests: XCTestCase {
         XCTAssertFalse(RecentLibrary.isSupportedMediaFile(text))
     }
 
+    @MainActor
+    func testDroppedMediaTypeRejectsAVFoundationIncompatibleContainers() throws {
+        // AVFoundation webm/avi/mkv çözemiyor; bu üç uzantı artık desteklenen
+        // listede olmamalı (bkz. KlariVisionApp.isSupportedMediaFile).
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("KlariVisionDropTypes-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        for suffix in ["webm", "avi", "mkv"] {
+            let file = directory.appendingPathComponent("sample.\(suffix)")
+            try Data().write(to: file)
+            XCTAssertFalse(
+                RecentLibrary.isSupportedMediaFile(file),
+                "\(suffix) artık desteklenmemeli"
+            )
+        }
+    }
+
     func testStudyPitchTrackMatchesViewerCandidateFiltering() throws {
         let data = try JSONSerialization.data(withJSONObject: [
             "frames": [

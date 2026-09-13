@@ -345,9 +345,14 @@ final class RecentLibrary {
 
     static func isSupportedMediaFile(_ url: URL) -> Bool {
         guard url.isFileURL else { return false }
+        // AVFoundation çözemediği için webm/avi/mkv açıkça reddedilir; bu
+        // kontrol aşağıdaki genel içerik-türü sezgisinden önce çalışmalı,
+        // yoksa örn. "avi" public.movie'ye uyduğu için sezgi onu kabul eder.
+        let rejectedExtensions: Set<String> = ["webm", "avi", "mkv"]
+        if rejectedExtensions.contains(url.pathExtension.lowercased()) { return false }
         let knownExtensions: Set<String> = [
             "wav", "wave", "mp3", "m4a", "aac", "aiff", "aif", "flac",
-            "mp4", "m4v", "mov", "avi", "mkv", "webm",
+            "mp4", "m4v", "mov",
         ]
         if knownExtensions.contains(url.pathExtension.lowercased()) { return true }
         guard let values = try? url.resourceValues(forKeys: [.contentTypeKey]),

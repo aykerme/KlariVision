@@ -40,7 +40,7 @@ IMPORTS_DIR = PROJECT_ROOT / "data" / "imports"
 AUDIO_DIR = PROJECT_ROOT / "data" / "audio"
 OUTPUTS_DIR = PROJECT_ROOT / "outputs"
 RECENTS_PATH = PROJECT_ROOT / "data" / "recent_analyses.json"
-VIDEO_SUFFIXES = {".mp4", ".mov", ".m4v", ".webm"}
+VIDEO_SUFFIXES = {".mp4", ".mov", ".m4v"}
 MEDIA_SUFFIXES = VIDEO_SUFFIXES | {".wav", ".mp3", ".m4a"}
 
 
