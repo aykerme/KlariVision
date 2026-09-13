@@ -9,6 +9,18 @@ import Foundation
 import SwiftUI
 import WebKit
 
+/// Localizes a text node injected into the WKWebView graph page (`.title`,
+/// `.textContent`, `innerHTML`, `aria-label`) and escapes it for safe
+/// embedding inside a single-quoted JS string literal. Deliberately used
+/// only on text *values* -- never on the CSS class/id selectors or JS
+/// variable/function names the three injected scripts (`hideStandaloneControls`,
+/// `playbackBridge`, `graphAppearanceBridge`) depend on; those stay untouched.
+func jsText(_ key: String) -> String {
+    String(localized: String.LocalizationValue(key), bundle: .klariVisionModule)
+        .replacingOccurrences(of: "\\", with: "\\\\")
+        .replacingOccurrences(of: "'", with: "\\'")
+}
+
 private struct ResponsiveWorkspaceLayout: Layout {
     var compact: Bool
     var spacing: CGFloat = 14
@@ -1026,7 +1038,7 @@ private struct StudyVerticalSlider: NSViewRepresentable {
         slider.action = #selector(Coordinator.changed(_:))
         slider.isContinuous = true
         slider.controlSize = .small
-        slider.setAccessibilityLabel("Grafiğin dikey merkezini değiştir")
+        slider.setAccessibilityLabel(String(localized: "Grafiğin dikey merkezini değiştir", bundle: .klariVisionModule))
         return slider
     }
 
@@ -1075,11 +1087,16 @@ private struct StudyTunerReadout: View {
 }
 
 private struct HoverTooltip<Content: View>: View {
-    let message: String
+    // `LocalizedStringKey`, NOT `String`: every call site passes a literal
+    // (or a ternary of literals), and a `String`-typed parameter here forced
+    // `Text(message)`/`.help(message)` onto the StringProtocol overload below,
+    // which never consults Localizable.xcstrings -- every tooltip in this
+    // file was silently un-translatable until this was a LocalizedStringKey.
+    let message: LocalizedStringKey
     let content: Content
     @State private var isHovering = false
 
-    init(_ message: String, @ViewBuilder content: () -> Content) {
+    init(_ message: LocalizedStringKey, @ViewBuilder content: () -> Content) {
         self.message = message
         self.content = content()
     }
@@ -1230,12 +1247,12 @@ private struct LocalViewer: NSViewRepresentable {
                 `;
                 document.head.append(transportStyle);
                 markA.textContent = 'A';
-                markA.title = 'İmleçte A işaretini oluştur';
+                markA.title = '\(jsText("İmleçte A işaretini oluştur"))';
                 markB.textContent = 'B';
-                markB.title = 'İmleçte B işaretini oluştur';
+                markB.title = '\(jsText("İmleçte B işaretini oluştur"))';
                 reset.textContent = '↺';
-                reset.title = 'Başa dön';
-                reset.setAttribute('aria-label', 'Başa dön');
+                reset.title = '\(jsText("Başa dön"))';
+                reset.setAttribute('aria-label', '\(jsText("Başa dön"))');
                 transport.insertBefore(reset, markA);
                 const loopLabel = transport.querySelector('.loop-label');
                 if (loopLabel) loopLabel.textContent = '↻ Loop';
@@ -1247,7 +1264,7 @@ private struct LocalViewer: NSViewRepresentable {
                 const settingsForm = settingsDialog.querySelector('.settings-form');
                 const practiceSection = settingsForm?.querySelector('.settings-section:not(.settings-appearance)');
                 const settingsDescription = settingsForm?.querySelector(':scope > p');
-                if (settingsDescription) settingsDescription.textContent = 'Görünüm, çalışma bağlamı ve makam aralıklarını buradan düzenleyebilirsin.';
+                if (settingsDescription) settingsDescription.textContent = '\(jsText("Görünüm, çalışma bağlamı ve makam aralıklarını buradan düzenleyebilirsin."))';
                 const layoutSetting = document.getElementById('layout-mode')?.closest('label');
                 if (layoutSetting) layoutSetting.hidden = true;
 
@@ -1255,7 +1272,7 @@ private struct LocalViewer: NSViewRepresentable {
                 if (speedRow && !speedRow.classList.contains('native-playback-section')) {
                     speedRow.classList.add('native-playback-section');
                     const title = document.createElement('h3');
-                    title.textContent = 'Oynatma';
+                    title.textContent = '\(jsText("Oynatma"))';
                     speedRow.prepend(title);
                 }
 
@@ -1267,7 +1284,7 @@ private struct LocalViewer: NSViewRepresentable {
                     const makamSection = document.createElement('section');
                     makamSection.id = 'native-makam-section';
                     makamSection.className = 'settings-section native-makam-section';
-                    makamSection.innerHTML = '<h3>Makam aralıkları</h3><p class="native-section-note">Yedi aralık toplamı bir oktavda 53 koma olmalıdır.</p>';
+                    makamSection.innerHTML = '<h3>\(jsText("Makam aralıkları"))</h3><p class="native-section-note">\(jsText("Yedi aralık toplamı bir oktavda 53 koma olmalıdır."))</p>';
                     makamSection.append(makamLabel, makamGrid, makamTotal);
                     finalActions.before(makamSection);
                 }
@@ -1279,7 +1296,7 @@ private struct LocalViewer: NSViewRepresentable {
                         const value = match ? Number(match[1]) : 0;
                         total.classList.toggle('is-valid', value === 53);
                         total.classList.toggle('is-invalid', value !== 53);
-                        total.setAttribute('aria-label', value === 53 ? '53 koma doğrulandı' : `Toplam ${value} koma; 53 olmalı`);
+                        total.setAttribute('aria-label', value === 53 ? '\(jsText("53 koma doğrulandı"))' : `\(jsText("Toplam %@ koma; 53 olmalı").replacingOccurrences(of: "%@", with: "${value}"))`);
                     };
                     new MutationObserver(updateTotalStatus).observe(total, { childList: true, subtree: true, characterData: true });
                     updateTotalStatus();
@@ -1380,11 +1397,11 @@ private struct LocalViewer: NSViewRepresentable {
             if (transport && verticalFollow && !document.getElementById('native-vertical-follow')) {
                 const followLabel = document.createElement('span');
                 followLabel.className = 'follow-label';
-                followLabel.textContent = 'Takip';
+                followLabel.textContent = '\(jsText("Takip"))';
                 const followButton = document.createElement('button');
                 followButton.id = 'native-vertical-follow';
                 followButton.type = 'button';
-                followButton.title = 'Pitch eğrisini dikeyde takip et';
+                followButton.title = '\(jsText("Pitch eğrisini dikeyde takip et"))';
                 const syncFollow = () => followButton.setAttribute('aria-pressed', String(verticalFollow.checked));
                 followButton.onclick = () => {
                     verticalFollow.checked = !verticalFollow.checked;
@@ -1396,7 +1413,7 @@ private struct LocalViewer: NSViewRepresentable {
                 syncFollow();
                 if (speedStepper) {
                     speedStepper.classList.add('native-transport-speed');
-                    speedStepper.title = 'Çalma hızı';
+                    speedStepper.title = '\(jsText("Çalma hızı"))';
                     transport.append(speedStepper);
                 }
                 transport.append(followLabel, followButton);

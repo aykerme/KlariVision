@@ -144,6 +144,115 @@ _MESSAGES: dict[str, dict[str, str]] = {
         "tr": "Pitch analizi yapılıyor veya cache kontrol ediliyor…",
         "en": "Running pitch analysis or checking cache…",
     },
+
+    # frequency_viewer.py -- the graph page's own HTML/JS control UI. "Karar"
+    # and "koma" stay unchanged in English by explicit product decision, as
+    # do makam/perde/interval-name terms (Koma, Eksik bakiye, Bakiye, Küçük
+    # mücennep, Büyük mücennep, Tanini, Artık ikili -- specialised Turkish
+    # music theory names, same treatment as makam names). CSS classes/ids and
+    # JS variable/function names are never touched -- only text nodes.
+    "viewer-description": {
+        "tr": "Pitch eğrisi pYIN'in ölçtüğü fiziksel frekanstır (Hz). Türk Müziği (Sol Klarnet) ekseni, koma miktarını taşınabilir biçimde gösterir: ör. Re ♭5, Fa ♯1. Ölçülen eğri değiştirilmez.",
+        "en": "The pitch curve is the physical frequency (Hz) pYIN measured. The Turkish Music (Sol Clarinet) axis shows the koma amount in a portable way: e.g. Re ♭5, Fa ♯1. The measured curve is never altered.",
+    },
+    "viewer-layout-label": {"tr": "Yerleşim", "en": "Layout"},
+    "viewer-layout-stacked": {"tr": "Üst üste", "en": "Stacked"},
+    "viewer-layout-side": {"tr": "Video solda · yan yana", "en": "Video left · side by side"},
+    "viewer-layout-side-right": {"tr": "Video sağda · yan yana", "en": "Video right · side by side"},
+    "viewer-zoom-time-word": {"tr": "Zaman", "en": "Time"},
+    "viewer-vertical-word": {"tr": "Dikey", "en": "Vertical"},
+    "viewer-visible-duration-label": {"tr": "Görünür süre", "en": "Visible duration"},
+    "viewer-seconds-unit": {"tr": "sn", "en": "sec"},
+    "viewer-axis-label": {"tr": "Eksen", "en": "Axis"},
+    "viewer-axis-turkish": {"tr": "Türk Müziği · Sol Klarnet", "en": "Turkish Music · Sol Clarinet"},
+    # "major"/"minor" is a Western scale name, not a Turkish makam name --
+    # translates, unlike the other axis options.
+    "viewer-scale-major": {"tr": "Majör", "en": "Major"},
+    "viewer-scale-minor": {"tr": "Minör", "en": "Minor"},
+    "viewer-settings-button": {"tr": "Ayarlar", "en": "Settings"},
+    "viewer-countdown-label": {"tr": "Geri sayım", "en": "Countdown"},
+    "viewer-play-button": {"tr": "Oynat", "en": "Play"},
+    "viewer-pause-button": {"tr": "Duraklat", "en": "Pause"},
+    "viewer-cancel-countdown": {"tr": "İptal", "en": "Cancel"},
+    "viewer-mark-b-end": {"tr": "Son", "en": "End"},
+    "viewer-back-to-start": {"tr": "Başa dön", "en": "Back to start"},
+    "viewer-scroll-legend": {
+        "tr": "Tekerlek: imleç çevresinde zaman yakınlaştır · Shift+tekerlek: dikey yakınlaştır · sürükle: kayıtta gezin",
+        "en": "Wheel: zoom time around cursor · Shift+wheel: zoom pitch · drag: navigate recording",
+    },
+    "viewer-vertical-scroll-aria": {"tr": "Dikey grafiği kaydır", "en": "Scroll the graph vertically"},
+    "viewer-time-scroll-aria": {"tr": "Kayıtta gezin", "en": "Navigate in recording"},
+    "viewer-scroll-note": {
+        "tr": "Yatay çubuk kayıtta gezinir; sağdaki çubuk dikey merkezi değiştirir.",
+        "en": "The horizontal bar navigates the recording; the bar on the right changes the vertical center.",
+    },
+    "viewer-koma-guide-summary": {"tr": "Koma rehberi", "en": "Koma guide"},
+    "viewer-koma-guide-abbr": {"tr": "Rumuz", "en": "Abbr."},
+    "viewer-koma-guide-interval": {"tr": "Aralık", "en": "Interval"},
+    "viewer-koma-guide-koma": {"tr": "Koma", "en": "Koma"},
+    "viewer-koma-guide-notation": {"tr": "Gösterim", "en": "Notation"},
+    "viewer-settings-title": {"tr": "Ayarlar", "en": "Settings"},
+    "viewer-settings-description": {
+        "tr": "Makam aralıklarını, dikey eğri takibini ve çalma hızını buradan düzenleyebilirsin.",
+        "en": "You can edit makam intervals, vertical curve following, and playback speed here.",
+    },
+    "viewer-vertical-follow-checkbox": {"tr": "Eğriyi dikey takip et", "en": "Follow curve vertically"},
+    "viewer-playback-speed-label": {"tr": "Çalma hızı", "en": "Playback speed"},
+    "viewer-makam-label": {"tr": "Makam", "en": "Makam"},
+    "viewer-reset-to-theory": {"tr": "Teoriye dön", "en": "Reset to Theory"},
+    "viewer-cancel-button": {"tr": "Vazgeç", "en": "Cancel"},
+    "viewer-apply-button": {"tr": "Uygula", "en": "Apply"},
+    "viewer-interval-word": {"tr": "Aralık", "en": "Interval"},
+    "viewer-total-koma-prefix": {"tr": "Toplam:", "en": "Total:"},
+    "viewer-appearance-heading": {"tr": "Görünüm", "en": "Appearance"},
+    "viewer-theme-label": {"tr": "Tema ", "en": "Theme "},
+    "viewer-theme-focus": {"tr": "Çalışma odaklı", "en": "Focus"},
+    "viewer-theme-studio": {"tr": "Stüdyo", "en": "Studio"},
+    "viewer-theme-classic": {"tr": "Sıcak klasik", "en": "Warm Classic"},
+    "viewer-transport-aria": {"tr": "Oynatma ve A B Loop kontrolleri", "en": "Playback and A/B loop controls"},
+    "viewer-mark-a-title": {"tr": "İmleçte A işaretini oluştur", "en": "Create mark A at cursor"},
+    "viewer-mark-b-title": {"tr": "İmleçte B işaretini oluştur", "en": "Create mark B at cursor"},
+    "viewer-loop-toggle-title": {"tr": "A ile B arasında döngü", "en": "Loop between A and B"},
+    "viewer-graph-colors-heading": {"tr": "Grafik renkleri", "en": "Graph colors"},
+    "viewer-pitch-curve-label": {"tr": "Pitch eğrisi", "en": "Pitch curve"},
+    "viewer-note-guides-label": {"tr": "Nota kılavuzları", "en": "Note guides"},
+    "viewer-mic-curve-label": {"tr": "Mikrofon eğrisi", "en": "Microphone curve"},
+    "viewer-karar-tone-label": {"tr": "Karar sesi", "en": "Karar tone"},
+    "viewer-reset-default-colors": {"tr": "Varsayılan renklere dön", "en": "Reset to default colors"},
+    "viewer-study-heading": {"tr": "Çalışma", "en": "Study"},
+    "viewer-frequency-description": {
+        "tr": "Pitch eğrisi duyulan fiziksel frekansı (Hz) gösterir.",
+        "en": "The pitch curve shows the sounding physical frequency (Hz).",
+    },
+    "viewer-starting-countdown-prefix": {"tr": "Başlıyor:", "en": "Starting:"},
+    "viewer-video-preparing": {"tr": "Video hazırlanıyor…", "en": "Video preparing…"},
+    "viewer-loop-min-duration": {
+        "tr": "Loop için A ile B arasında en az 0,02 sn olmalı.",
+        "en": "There must be at least 0.02 sec between A and B for a loop.",
+    },
+    # installTooltips() copy object
+    "viewer-tooltip-zoom-in": {"tr": "Görünür zaman aralığını büyüt", "en": "Increase the visible time range"},
+    "viewer-tooltip-zoom-out": {"tr": "Görünür zaman aralığını küçült", "en": "Decrease the visible time range"},
+    "viewer-tooltip-window-seconds": {"tr": "Grafikte gösterilecek saniye sayısı", "en": "Number of seconds shown on the graph"},
+    "viewer-tooltip-vertical-expand": {"tr": "Dikey görünümü genişlet", "en": "Expand the vertical view"},
+    "viewer-tooltip-vertical-shrink": {"tr": "Dikey görünümü daralt", "en": "Shrink the vertical view"},
+    "viewer-tooltip-scale-mode": {"tr": "Grafikteki makam veya dizi ekseni", "en": "The makam or scale axis on the graph"},
+    "viewer-tooltip-tonic": {"tr": "Seçili karar sesi", "en": "Selected karar tone"},
+    "viewer-tooltip-countdown": {"tr": "Oynatma öncesi geri sayım", "en": "Countdown before playback"},
+    "viewer-tooltip-play-toggle": {"tr": "Medyayı oynat veya duraklat", "en": "Play or pause the media"},
+    "viewer-tooltip-reset": {"tr": "Oynatmayı başa al", "en": "Rewind playback to start"},
+    "viewer-tooltip-time-scroll": {"tr": "Kayıtta zamanda gezin", "en": "Navigate the recording timeline"},
+    "viewer-tooltip-vertical-scroll": {"tr": "Grafiğin dikey merkezini değiştir", "en": "Change the graph vertical center"},
+    "viewer-tooltip-makam-settings": {"tr": "Makam aralıklarını ve görünümü düzenle", "en": "Edit makam intervals and appearance"},
+    # koma interval names (specialised Turkish music theory terminology, kept
+    # unchanged in English -- same rule as makam/perde names)
+    "koma-interval-1": {"tr": "F · Koma", "en": "F · Koma"},
+    "koma-interval-3": {"tr": "E · Eksik bakiye", "en": "E · Eksik bakiye"},
+    "koma-interval-4": {"tr": "B · Bakiye", "en": "B · Bakiye"},
+    "koma-interval-5": {"tr": "S · Küçük mücennep", "en": "S · Küçük mücennep"},
+    "koma-interval-8": {"tr": "K · Büyük mücennep", "en": "K · Büyük mücennep"},
+    "koma-interval-9": {"tr": "T · Tanini", "en": "T · Tanini"},
+    "koma-interval-12": {"tr": "A · Artık ikili", "en": "A · Artık ikili"},
 }
 
 # Motor kimliği -> arayüz etiketi. D-039 ile kaldırılan dört motorun etiketi,
@@ -188,6 +297,17 @@ def translate(key: str, lang: str | None = None, **kwargs: object) -> str:
         except (KeyError, IndexError):
             return template
     return template
+
+
+def translate_js(key: str, lang: str | None = None, **kwargs: object) -> str:
+    """Like `translate`, but escaped for embedding inside a single-quoted JS
+    string literal in `frequency_viewer.py`'s generated page. A translation
+    with an apostrophe (e.g. "the recording's timeline") would otherwise
+    terminate the JS string early and throw a real, WKWebView-visible syntax
+    error -- confirmed by the WKWebView harness in
+    docs/app-store/... (see l10n verification notes) before this existed.
+    """
+    return translate(key, lang, **kwargs).replace("\\", "\\\\").replace("'", "\\'")
 
 
 def engine_label(engine_id: str, lang: str | None = None) -> str:
