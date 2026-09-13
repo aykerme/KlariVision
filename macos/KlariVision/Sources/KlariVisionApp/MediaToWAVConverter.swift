@@ -9,6 +9,34 @@ import AVFoundation
 import CoreMedia
 import Foundation
 
+/// Paketlenmiş motorun konumu: universal olmayan (numpy gibi derlenmiş
+/// bağımlılıklar yüzünden universal2 PyInstaller güvenilmediğinden) motor,
+/// App Store paketinde `Contents/Resources/Engine-arm64` ve
+/// `Engine-x86_64` olarak ayrı ayrı bulunur (bkz. scripts/build_app_store.sh).
+/// Çalışma zamanı mimarisine göre doğru klasör seçilir; yalnız tek mimarili
+/// bir motor taşıyan eski paketler (`scripts/build_beta_app.sh`'ın ürettiği
+/// "Engine/" klasörü) için düz isme düşülür.
+enum BundledEngine {
+    static func executable() -> URL? {
+        guard let resources = Bundle.main.resourceURL else { return nil }
+        #if arch(arm64)
+        let archName: String? = "arm64"
+        #elseif arch(x86_64)
+        let archName: String? = "x86_64"
+        #else
+        let archName: String? = nil
+        #endif
+        if let archName {
+            let archSpecific = resources.appending(path: "Engine-\(archName)/KlariVisionEngine")
+            if FileManager.default.isExecutableFile(atPath: archSpecific.path) {
+                return archSpecific
+            }
+        }
+        let generic = resources.appending(path: "Engine/KlariVisionEngine")
+        return FileManager.default.isExecutableFile(atPath: generic.path) ? generic : nil
+    }
+}
+
 enum MediaToWAVConversionError: Error, LocalizedError {
     case noAudioTrack
     case setupFailed(String)

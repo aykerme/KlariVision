@@ -662,9 +662,7 @@ final class RecentLibrary {
     #endif
 
     private func bundledEngineExecutable() -> URL? {
-        guard let resources = Bundle.main.resourceURL else { return nil }
-        let executable = resources.appending(path: "Engine/KlariVisionEngine")
-        return FileManager.default.isExecutableFile(atPath: executable.path) ? executable : nil
+        BundledEngine.executable()
     }
 }
 
