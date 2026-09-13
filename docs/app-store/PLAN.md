@@ -28,8 +28,8 @@ Tarih: 2026-09-13 · Dal: `android-ios-ui-parity-4` · Sürüm: 0.6.0 (7)
 | Aşama 2 — mağaza metinleri | ✅ `metadata.md` (doğrulanmış özellikler, sınırlar betikle), `privacy.md` yeniden yazıldı |
 | Ekran görüntüleri | ⏳ TestFlight derlemesinden; betik: `scripts/capture_app_store_screenshot.sh` |
 | Yerel sandbox testi | ✅ `scripts/build_sandbox_test_app.sh`; açılışta ihlal yok. Dosya açma + kayıt saklama elle denenecek |
-| App Store motoru (arm64) | ✅ ffmpeg'siz derlendi (52 MB), 57 sn kayıt 18 sn'de analiz edildi |
-| Aşama 3 — imza, TestFlight | ⏳ Takım 9J2BC3Q77C. Eksik: Apple Distribution + Mac Installer Distribution sertifikası, Mac App Store Connect profili (`KV_PROVISIONING_PROFILE`), x86_64 Python (`KV_X86_PYTHON`), App Store Connect kaydı |
+| App Store motoru (arm64 + x86_64) | ✅ ffmpeg'siz, 52 MB. 57 sn kayıt: arm64 18 sn, x86_64 (Rosetta) 29 sn; iki mimarinin perde JSON'u bayt bayt aynı. x86_64 ortamı `.venv-x86_64` (git dışı) |
+| Aşama 3 — imza, TestFlight | ⏳ Takım 9J2BC3Q77C. Eksik: Apple Distribution + Mac Installer Distribution sertifikası, Mac App Store Connect profili (`KV_PROVISIONING_PROFILE`), App Store Connect kaydı |
 | Risk: motor `Contents/Resources` altında Mach-O | ⚠️ ilk `altool --validate-app`/Transporter doğrulamasında görülecek; reddedilirse motor `Contents/Helpers`/`Frameworks` düzenine taşınır |
 | Açık kaynak lisans bildirimi | ⏳ uygulamaya eklenecek (`third-party-licenses.md`) |
 

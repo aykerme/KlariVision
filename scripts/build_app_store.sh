@@ -42,12 +42,16 @@
 #                         (numpy, openpyxl, ...) kurulu olduğu bir Python
 #                         yorumlayıcısının yolu (ör. Rosetta altında kurulmuş
 #                         ayrı bir venv'in "bin/python"ı). Bu betik böyle bir
-#                         ortam kurmaz; önceden hazırlanmış olmalı:
-#                           arch -x86_64 /usr/bin/python3 -m venv .venv-x86_64
-#                           arch -x86_64 .venv-x86_64/bin/pip install \
-#                             -r requirements.txt pyinstaller
-#                         (tam bağımlılık listesi için mevcut .venv'in nasıl
-#                         kurulduğuna bak; iki venv'in sürümleri eşleşmeli.)
+#                         ortam kurmaz; önceden hazırlanmış olmalı (sürümler
+#                         .venv ile birebir aynı):
+#                           uv python install cpython-3.12.13-macos-x86_64-none --install-dir .python
+#                           uv venv --python .python/cpython-3.12.13-macos-x86_64-none/bin/python3.12 .venv-x86_64
+#                           uv pip install --python .venv-x86_64/bin/python \
+#                             numpy==2.4.6 openpyxl==3.1.5 pyinstaller==6.21.0 \
+#                             pyinstaller-hooks-contrib==2026.6
+#                           export KV_X86_PYTHON="$PWD/.venv-x86_64/bin/python"
+#                         Doğrulama (2026-09-13): iki mimarinin motoru aynı kayıt
+#                         için bayt bayt aynı perde JSON'u üretti.
 
 set -euo pipefail
 
@@ -156,6 +160,8 @@ build_engine() {
     --exclude-module soundfile \
     --exclude-module numba \
     --exclude-module sklearn \
+    --exclude-module charset_normalizer \
+    --exclude-module _cffi_backend \
     --add-data "$PROJECT_ROOT/data/reference/perde-esleme.xlsx:data/reference" \
     --add-data "$PROJECT_ROOT/data/reference/Turk_Muzigi_Perdeleri_ve_Mikrotonal_Notasyon.xlsx:data/reference" \
     --add-binary="${PITCH_TRACK_CLI}:tools" \

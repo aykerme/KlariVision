@@ -2,6 +2,7 @@
 __pycache__/
 *.py[cod]
 .venv/
+.venv-x86_64/
 .python/
 .tools/
 tools/sonic-annotator/sonic-annotator

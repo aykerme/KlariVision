@@ -8,8 +8,9 @@
 > - **Açık iş:** BSD/MIT/PSF lisansları bildirimin dağıtılan kopyayla birlikte verilmesini
 >   ister. Uygulamaya bir "Açık kaynak lisansları" metni (ör. Hakkında penceresi ya da
 >   paket içinde `Acknowledgements.txt`) eklenmeli.
-> - **Doğrulanmadı:** `charset_normalizer` ve `cffi` App Store motor paketinde hâlâ var mı —
->   `build_app_store.sh` ilk kez çalıştığında `_internal/` listesiyle kontrol edilecek.
+> - **`charset_normalizer` ve `cffi` paketten çıktı:** ikisi geliştirme ortamındaki fazladan
+>   paketlerden sızıyordu, motor kullanmıyor. `build_app_store.sh` dışlıyor; App Store motor
+>   paketinde yalnız Python runtime, numpy, openpyxl (+ et-xmlfile), setuptools ve C++ CLI var.
 
 **Hukuki Uyarı:** Bu belge bilgilendirme amaçlıdır ve hukuki tavsiye değildir. App Store uyumluluğu ve lisans riskleri hakkında nihai karar Sahibi ve hukuki danışman tarafından alınmalıdır.
 
