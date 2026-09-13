@@ -126,13 +126,46 @@ enum PitchEngineSettings {
 
 /// Short, stable VoiceOver copy shared by the two primary study flows.
 enum AccessibilityText {
-    static let listeningStatus = "Dinleme durumu"
-    static let practiceStatus = "Çalma durumu"
-    static let unsupportedDrop = "Dosya alınamadı. Desteklenen bir ses veya video dosyası bırakın."
+    static var listeningStatus: String { String(localized: "Dinleme durumu", bundle: .klariVisionModule) }
+    static var practiceStatus: String { String(localized: "Çalma durumu", bundle: .klariVisionModule) }
+    static var unsupportedDrop: String {
+        String(localized: "Dosya alınamadı. Desteklenen bir ses veya video dosyası bırakın.", bundle: .klariVisionModule)
+    }
     /// Read out on the settings row that names the analysis engine. There is
     /// nothing to choose any more, so this says what runs rather than offering
     /// a comparison.
-    static let engineDescription = "Ses çözümlemesi Birleşik (Unified v1) motoruyla yapılır. Seçilebilir başka motor yoktur."
+    static var engineDescription: String {
+        String(
+            localized: "Ses çözümlemesi Birleşik (Unified v1) motoruyla yapılır. Seçilebilir başka motor yoktur.",
+            bundle: .klariVisionModule
+        )
+    }
+}
+
+/// Motora geçirilen `--lang tr|en` argümanının tek kaynağı. `engine_cli.py` ve
+/// `local_app.py` yalnız bu iki kodu tanır (bkz. src/klarivision/i18n.py);
+/// başka bir BCP-47 etiketi motor tarafında sessizce `tr`'a düşer.
+enum AppLanguage {
+    static var engineCode: String {
+        let preferred = Bundle.klariVisionModule.preferredLocalizations.first
+            ?? Locale.preferredLanguages.first
+            ?? "tr"
+        return preferred.lowercased().hasPrefix("en") ? "en" : "tr"
+    }
+}
+
+extension Bundle {
+    /// SwiftPM derlemesinde `Bundle.module`, Xcode hedefinde `Bundle.main` --
+    /// `Localizable.xcstrings` her iki derleme yolunda da bu köprüyle bulunur.
+    /// `KLARIVISION_SWIFT_PACKAGE` yalnız SwiftPM derlemesinde tanımlıdır
+    /// (bkz. Package.swift); Xcode projesi tanımlamaz.
+    static var klariVisionModule: Bundle {
+        #if KLARIVISION_SWIFT_PACKAGE
+        .module
+        #else
+        .main
+        #endif
+    }
 }
 
 /// The two graph renderers use different technologies, but share these two

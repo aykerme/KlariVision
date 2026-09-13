@@ -27,7 +27,7 @@
     <key>ITSAppUsesNonExemptEncryption</key>
     <false/>
     <key>NSMicrophoneUsageDescription</key>
-    <string>KlariVision, canlı pitch grafiğini oluşturmak ve siz istediğinizde çalışmanızı kaydetmek için mikrofonu kullanır.</string>
+    <string>NSMicrophoneUsageDescription</string>
     <key>NSPrincipalClass</key>
     <string>NSApplication</string>
 </dict>

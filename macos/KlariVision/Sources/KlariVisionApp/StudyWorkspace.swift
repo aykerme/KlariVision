@@ -325,7 +325,7 @@ struct WorkspaceView: View {
         } catch {
             pitchTrack = nil
             playback.pitchPoints = []
-            pitchTrackError = "Pitch eğrisi okunamadı: \(error.localizedDescription)"
+            pitchTrackError = String(localized: "Pitch eğrisi okunamadı: \(error.localizedDescription)", bundle: .klariVisionModule)
         }
         // Yeni dosya seçilince/viewer yeniden yüklenince mikrofon eğrisi
         // sıfırlanmalı; eski çalışmanın mikrofon çizgisi yeni kayıtla karışmasın.

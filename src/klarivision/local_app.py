@@ -22,6 +22,7 @@ from urllib.parse import parse_qs, quote, unquote, urlparse
 
 from .contour_viewer import KARAR_TONES, MAKAM_PROFILES
 from .frequency_viewer import build_frequency_viewer, prepare_display_frames
+from .i18n import SUPPORTED_LANGUAGES, get_language, set_language, translate
 from .pitch.cpp_engine import (
     ENGINES as CPP_ENGINES,
     OFFLINE_TRACK_ENGINES as CPP_TRACK_ENGINES,
@@ -82,19 +83,19 @@ def _parse_byte_range(value: str | None, size: int) -> tuple[int, int] | None:
         return None
     match = re.fullmatch(r"bytes=(\d*)-(\d*)", value.strip())
     if match is None or size <= 0:
-        raise ValueError("Geçersiz byte aralığı.")
+        raise ValueError(translate("invalid-byte-range"))
     first, last = match.groups()
     if not first and not last:
-        raise ValueError("Geçersiz byte aralığı.")
+        raise ValueError(translate("invalid-byte-range"))
     if not first:
         length = int(last)
         if length <= 0:
-            raise ValueError("Geçersiz byte aralığı.")
+            raise ValueError(translate("invalid-byte-range"))
         return max(0, size - length), size - 1
     start = int(first)
     end = int(last) if last else size - 1
     if start >= size or end < start:
-        raise ValueError("Karşılanamayan byte aralığı.")
+        raise ValueError(translate("unsatisfiable-byte-range"))
     return start, min(end, size - 1)
 
 
@@ -215,7 +216,7 @@ def _import_from_url(url: str) -> Path:
     """Download one user-supplied web video into the local imports folder."""
     parsed = urlparse(url.strip())
     if parsed.scheme not in {"http", "https"} or not parsed.netloc:
-        raise ValueError("Geçerli bir internet bağlantısı gir.")
+        raise ValueError(translate("invalid-internet-connection"))
     try:
         from yt_dlp import YoutubeDL
     except ImportError as error:  # pragma: no cover - depends on the packaged app environment.
@@ -252,15 +253,15 @@ def _import_from_url(url: str) -> Path:
         except Exception as error:  # YouTube occasionally rejects a first extraction attempt.
             last_error = error
             if attempt:
-                raise RuntimeError(f"Bağlantıdan medya alınamadı: {error}") from error
+                raise RuntimeError(translate("media-from-link-failed", error=error)) from error
     if downloaded is None:
-        raise RuntimeError(f"Bağlantıdan medya alınamadı: {last_error}")
+        raise RuntimeError(translate("media-from-link-failed", error=last_error))
     merged = downloaded.with_suffix(".mp4")
     if merged.is_file():
         return merged
     if downloaded.is_file():
         return downloaded
-    raise RuntimeError("Bağlantıdan medya alınamadı.")
+    raise RuntimeError(translate("media-from-link-failed-generic"))
 
 
 def _persist_video_source(source: Path, analysis_id: str) -> Path:
@@ -287,6 +288,7 @@ def analyse_upload(
     karar: str,
     engine: str = "vamp",
     precomputed_wav: Path | None = None,
+    lang: str = "tr",
 ) -> str:
     """Analyse one local media file and return its project-relative viewer URL.
 
@@ -295,16 +297,20 @@ def analyse_upload(
     -- when given, it is copied into place directly and ``_to_wav`` (and
     therefore ffmpeg) is never invoked. Only the developer/CLI flow, which
     calls this without a precomputed WAV, still falls back to ffmpeg.
+
+    ``lang`` is the interface language Swift resolved for the user
+    (``tr``/``en``); it only selects which language error/status text and the
+    viewer page use -- it never changes analysis behaviour.
     """
     if makam not in MAKAM_PROFILES or karar not in KARAR_TONES:
-        raise ValueError("Geçersiz makam veya karar sesi seçimi.")
+        raise ValueError(translate("invalid-makam-or-karar", lang))
 
     signature = _file_signature(source)
     analysis_id = f"{_analysis_stem(source)}-{signature}"
     media_source = _persist_video_source(source, analysis_id)
     wav = AUDIO_DIR / f"{analysis_id}.wav"
     if engine not in {"vamp", "python", *CPP_ENGINES}:
-        raise ValueError("Geçersiz pitch motoru seçimi.")
+        raise ValueError(translate("invalid-pitch-engine", lang))
     profile = f".offline_track_v1.{OFFLINE_TRACK_REVISION}" if engine in CPP_ENGINES else ""
     pitch_json = OUTPUTS_DIR / f"{analysis_id}.{engine}{profile}.json"
     viewer = OUTPUTS_DIR / f"{analysis_id}.html"
@@ -341,11 +347,10 @@ def analyse_upload(
             if media_source.suffix.lower() in VIDEO_SUFFIXES
             else None
         ),
-        analysis_status=(
-            "Önceki pitch analizi kullanıldı." if cache_hit else "Yeni pitch analizi oluşturuldu."
-        ),
+        analysis_status=translate("cached-analysis-used" if cache_hit else "new-analysis-created", lang),
         validation=validation_for_study(source.name, wav, pitch_json, engine, prepare_display_frames),
         engine=engine,
+        lang=lang,
     )
     _emit_progress("viewer", 1, 1)
     viewer_url = "/" + quote(viewer.relative_to(PROJECT_ROOT).as_posix())
@@ -353,17 +358,17 @@ def analyse_upload(
     return viewer_url
 
 
-def refresh_existing_viewer(viewer: Path, engine: str | None = None) -> Path:
+def refresh_existing_viewer(viewer: Path, engine: str | None = None, lang: str = "tr") -> Path:
     """Refresh a saved HTML viewer without running pitch analysis again."""
     viewer = viewer.expanduser().resolve()
     if viewer.parent != OUTPUTS_DIR.resolve() or viewer.suffix.lower() != ".html":
-        raise ValueError("Geçersiz kayıt görünümü.")
+        raise ValueError(translate("invalid-recording-viewer", lang))
     if not viewer.is_file():
-        raise FileNotFoundError("Kaydedilmiş çalışma bulunamadı.")
+        raise FileNotFoundError(translate("saved-study-not-found", lang))
 
     wav = AUDIO_DIR / f"{viewer.stem}.wav"
     if not wav.is_file():
-        raise FileNotFoundError("Bu çalışma için ses önbelleği bulunamadı.")
+        raise FileNotFoundError(translate("audio-cache-not-found", lang))
 
     previous_html = viewer.read_text(encoding="utf-8")
 
@@ -383,7 +388,7 @@ def refresh_existing_viewer(viewer: Path, engine: str | None = None) -> Path:
 
         if not pitch_json.is_file():
             raise FileNotFoundError(
-                f"Seçilen {selected_engine} motoru için pitch verisi bulunamadı: {pitch_json.name}"
+                translate("pitch-data-not-found-for-engine", lang, engine=selected_engine, file=pitch_json.name)
             )
     else:
         # Engine not provided: try to read from HTML meta tag
@@ -408,7 +413,7 @@ def refresh_existing_viewer(viewer: Path, engine: str | None = None) -> Path:
                 reverse=True,
             )
             if not pitch_candidates:
-                raise FileNotFoundError("Bu çalışma için pitch verisi bulunamadı.")
+                raise FileNotFoundError(translate("pitch-data-not-found", lang))
             pitch_json = pitch_candidates[0]
 
             # Extract engine identifier from the filename
@@ -422,9 +427,9 @@ def refresh_existing_viewer(viewer: Path, engine: str | None = None) -> Path:
     video_relative_path = html.unescape(video_match.group(1)) if video_match else None
 
     # Build status message with engine information
-    status_msg = "Önceki pitch analizi kullanıldı. Arayüz güncellendi."
+    status_msg = translate("cached-analysis-used-and-refreshed", lang)
     if engine and selected_engine and selected_engine != engine:
-        status_msg = f"Varsayılan {selected_engine} motoru kullanıldı. Arayüz güncellendi."
+        status_msg = translate("default-engine-used-and-refreshed", lang, engine=selected_engine)
 
     build_frequency_viewer(
         pitch_json,
@@ -434,20 +439,21 @@ def refresh_existing_viewer(viewer: Path, engine: str | None = None) -> Path:
         analysis_status=status_msg,
         validation=validation_for_study(viewer.stem, wav, pitch_json, selected_engine or "cached", prepare_display_frames),
         engine=selected_engine,
+        lang=lang,
     )
     return viewer
 
 
-def reanalyse_existing_viewer(viewer: Path, engine: str) -> Path:
+def reanalyse_existing_viewer(viewer: Path, engine: str, lang: str = "tr") -> Path:
     """Create or reuse the selected portable C++ track for one saved study."""
     viewer = viewer.expanduser().resolve()
     if viewer.parent != OUTPUTS_DIR.resolve() or viewer.suffix.lower() != ".html":
-        raise ValueError("Geçersiz kayıt görünümü.")
+        raise ValueError(translate("invalid-recording-viewer", lang))
     if engine not in CPP_ENGINES:
-        raise ValueError("Çalışma için taşınabilir bir C++ motor seç.")
+        raise ValueError(translate("choose-portable-engine", lang))
     wav = AUDIO_DIR / f"{viewer.stem}.wav"
     if not wav.is_file():
-        raise FileNotFoundError("Bu çalışma için ses önbelleği bulunamadı.")
+        raise FileNotFoundError(translate("audio-cache-not-found", lang))
     pitch_json = OUTPUTS_DIR / f"{viewer.stem}.{engine}.offline_track_v1.{OFFLINE_TRACK_REVISION}.json"
     if not pitch_json.is_file():
         extract_cpp_pitch(wav, engine, pitch_json)
@@ -459,9 +465,10 @@ def reanalyse_existing_viewer(viewer: Path, engine: str) -> Path:
         os.path.relpath(wav, start=viewer.parent).replace(os.sep, "/"),
         viewer,
         video_relative_path=video_relative_path,
-        analysis_status=f"{engine} C++ çalışma eğrisi kullanılıyor.",
+        analysis_status=translate("cpp-track-in-use", lang, engine=engine),
         validation=validation_for_study(viewer.stem, wav, pitch_json, engine, prepare_display_frames),
         engine=engine,
+        lang=lang,
     )
     return viewer
 
@@ -601,10 +608,10 @@ class KlariVisionHandler(SimpleHTTPRequestHandler):
             )
             recording = form["recording"]
             if not getattr(recording, "filename", None):
-                raise ValueError("Lütfen bir video veya ses dosyası seç.")
+                raise ValueError(translate("choose-video-or-audio"))
             suffix = Path(recording.filename).suffix.lower()
             if not suffix:
-                raise ValueError("Dosyanın uzantısı tanınamadı.")
+                raise ValueError(translate("extension-not-recognized"))
             IMPORTS_DIR.mkdir(parents=True, exist_ok=True)
             saved = IMPORTS_DIR / f"{_safe_stem(recording.filename)}-{uuid.uuid4().hex[:8]}{suffix}"
             with saved.open("wb") as target:
@@ -616,7 +623,7 @@ class KlariVisionHandler(SimpleHTTPRequestHandler):
                 form.getfirst("engine", "vamp"),
             )
         except Exception as error:  # User-facing local app; preserve the server process after an error.
-            self._send_text(f"Analiz oluşturulamadı: {error}", status=400)
+            self._send_text(translate("analysis-failed", error=error), status=400)
             return
         self.send_response(303)
         self.send_header("Location", result_url)
@@ -636,7 +643,7 @@ class KlariVisionHandler(SimpleHTTPRequestHandler):
                 fields.get("engine", ["vamp"])[0],
             )
         except Exception as error:  # User-facing local app; preserve the server process after an error.
-            self._send_text(f"Linkten analiz oluşturulamadı: {error}", status=400)
+            self._send_text(translate("analysis-from-link-failed", error=error), status=400)
             return
         self.send_response(303)
         self.send_header("Location", result_url)
@@ -667,9 +674,11 @@ def create_server(port: int = 8765) -> ThreadingHTTPServer:
 def main() -> None:
     parser = argparse.ArgumentParser(description="Run the local KlariVision recording picker.")
     parser.add_argument("--port", type=int, default=8765)
+    parser.add_argument("--lang", choices=SUPPORTED_LANGUAGES, default="tr")
     arguments = parser.parse_args()
+    set_language(arguments.lang)
     server = create_server(arguments.port)
-    print(f"KlariVision hazır: http://127.0.0.1:{arguments.port}")
+    print(translate("server-ready", url=f"http://127.0.0.1:{arguments.port}"))
     server.serve_forever()
 
 

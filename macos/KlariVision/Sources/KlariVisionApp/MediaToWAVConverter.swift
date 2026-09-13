@@ -45,10 +45,10 @@ enum MediaToWAVConversionError: Error, LocalizedError {
 
     var errorDescription: String? {
         switch self {
-        case .noAudioTrack: "Kaynakta ses parçası bulunamadı."
-        case .setupFailed(let detail): "Ses okuyucu kurulamadı: \(detail)"
-        case .readFailed(let detail): "Ses çözülemedi: \(detail)"
-        case .writeFailed(let detail): "WAV yazılamadı: \(detail)"
+        case .noAudioTrack: String(localized: "Kaynakta ses parçası bulunamadı.", bundle: .klariVisionModule)
+        case .setupFailed(let detail): String(localized: "Ses okuyucu kurulamadı: \(detail)", bundle: .klariVisionModule)
+        case .readFailed(let detail): String(localized: "Ses çözülemedi: \(detail)", bundle: .klariVisionModule)
+        case .writeFailed(let detail): String(localized: "WAV yazılamadı: \(detail)", bundle: .klariVisionModule)
         }
     }
 }
@@ -100,7 +100,7 @@ enum MediaToWAVConverter {
         let output = AVAssetReaderTrackOutput(track: audioTrack, outputSettings: readerSettings)
         output.alwaysCopiesSampleData = false
         guard reader.canAdd(output) else {
-            throw MediaToWAVConversionError.setupFailed("Ses çıkışı okuyucuya eklenemedi.")
+            throw MediaToWAVConversionError.setupFailed(String(localized: "Ses çıkışı okuyucuya eklenemedi.", bundle: .klariVisionModule))
         }
         reader.add(output)
 
@@ -109,7 +109,7 @@ enum MediaToWAVConverter {
         ), let monoFormat = AVAudioFormat(
             commonFormat: .pcmFormatInt16, sampleRate: targetSampleRate, channels: 1, interleaved: true
         ) else {
-            throw MediaToWAVConversionError.setupFailed("PCM biçimi oluşturulamadı.")
+            throw MediaToWAVConversionError.setupFailed(String(localized: "PCM biçimi oluşturulamadı.", bundle: .klariVisionModule))
         }
 
         try? FileManager.default.removeItem(at: destination)
@@ -125,13 +125,13 @@ enum MediaToWAVConverter {
         )
 
         guard reader.startReading() else {
-            throw MediaToWAVConversionError.readFailed(reader.error?.localizedDescription ?? "Bilinmeyen hata.")
+            throw MediaToWAVConversionError.readFailed(reader.error?.localizedDescription ?? String(localized: "Bilinmeyen hata.", bundle: .klariVisionModule))
         }
 
         while let sampleBuffer = output.copyNextSampleBuffer() {
             guard let buffer = monoPCMBuffer(from: sampleBuffer, readFormat: readFormat, monoFormat: monoFormat) else {
                 reader.cancelReading()
-                throw MediaToWAVConversionError.readFailed("Ses örnekleri kopyalanamadı.")
+                throw MediaToWAVConversionError.readFailed(String(localized: "Ses örnekleri kopyalanamadı.", bundle: .klariVisionModule))
             }
             do {
                 try file.write(from: buffer)
@@ -142,7 +142,7 @@ enum MediaToWAVConverter {
         }
 
         if reader.status == .failed {
-            throw MediaToWAVConversionError.readFailed(reader.error?.localizedDescription ?? "Bilinmeyen hata.")
+            throw MediaToWAVConversionError.readFailed(reader.error?.localizedDescription ?? String(localized: "Bilinmeyen hata.", bundle: .klariVisionModule))
         }
     }
 

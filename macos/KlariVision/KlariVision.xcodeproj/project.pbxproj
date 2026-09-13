@@ -29,6 +29,8 @@
 		A100000000000000000000C1 /* MediaToWAVConverter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000C0 /* MediaToWAVConverter.swift */; };
 		A10000000000000000000031 /* canli_pitch_referans_v1.wav in Resources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000030 /* canli_pitch_referans_v1.wav */; };
 		A100000000000000000000B1 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000B0 /* PrivacyInfo.xcprivacy */; };
+		A100000000000000000000D1 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000D0 /* Localizable.xcstrings */; };
+		A100000000000000000000D3 /* InfoPlist.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000D2 /* InfoPlist.xcstrings */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -58,6 +60,8 @@
 		A100000000000000000000B0 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Sources/KlariVisionApp/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		A100000000000000000000B2 /* KlariVision.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = KlariVision.entitlements; sourceTree = "<group>"; };
 		A100000000000000000000B3 /* Engine.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Engine.entitlements; sourceTree = "<group>"; };
+		A100000000000000000000D0 /* Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Sources/KlariVisionApp/Localizable.xcstrings; sourceTree = "<group>"; };
+		A100000000000000000000D2 /* InfoPlist.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = InfoPlist.xcstrings; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -99,6 +103,8 @@
 				A100000000000000000000B0 /* PrivacyInfo.xcprivacy */,
 				A100000000000000000000B2 /* KlariVision.entitlements */,
 				A100000000000000000000B3 /* Engine.entitlements */,
+				A100000000000000000000D0 /* Localizable.xcstrings */,
+				A100000000000000000000D2 /* InfoPlist.xcstrings */,
 				A10000000000000000000015 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -149,9 +155,10 @@
 			};
 			buildConfigurationList = A10000000000000000000020 /* Build configuration list for PBXProject "KlariVision" */;
 			compatibilityVersion = "Xcode 14.0";
-			developmentRegion = en;
+			developmentRegion = tr;
 			hasScannedForEncodings = 0;
 			knownRegions = (
+				tr,
 				en,
 				Base,
 			);
@@ -172,6 +179,8 @@
 			files = (
 				A10000000000000000000031 /* canli_pitch_referans_v1.wav in Resources */,
 				A100000000000000000000B1 /* PrivacyInfo.xcprivacy in Resources */,
+				A100000000000000000000D1 /* Localizable.xcstrings in Resources */,
+				A100000000000000000000D3 /* InfoPlist.xcstrings in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

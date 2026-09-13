@@ -11,7 +11,13 @@ import math
 from pathlib import Path
 from statistics import median
 
+from klarivision.i18n import ENGINE_LABELS as _ENGINE_LABELS, engine_label as _engine_label, translate as _translate
 from klarivision.pitch_reference import extend_reference_octaves, load_turkish_pitch_reference
+
+# The first four ids were removed in D-039; their labels stay valid so a
+# viewer regenerated for a study analysed before the removal still says
+# truthfully which engine produced those frames (see i18n.ENGINE_LABELS).
+_KNOWN_ENGINE_IDS = frozenset(_ENGINE_LABELS)
 
 
 SCALE_LABELS = {
@@ -144,36 +150,30 @@ def build_frequency_viewer(
     analysis_status: str | None = None,
     validation: dict[str, object] | None = None,
     engine: str | None = None,
+    lang: str = "tr",
 ) -> None:
-    """Write a self-contained viewer of the measured, sounding frequency."""
+    """Write a self-contained viewer of the measured, sounding frequency.
+
+    ``lang`` (``tr``/``en``) selects the page's `<html lang>`, title, and the
+    handful of static labels below (engine name, "Audio recording", "Engine:
+    ..."). The much larger embedded JS/CSS control UI further down this file
+    is not yet bilingual -- see docs/app-store/localization-inventory.md and
+    the WKWebView caution in StudyWorkspace.swift before touching it.
+    """
     payload = json.loads(pitch_json_path.read_text(encoding="utf-8"))
     frames = prepare_display_frames(payload)
     turkish_reference = extend_reference_octaves(load_turkish_pitch_reference())
     is_audio_only = video_relative_path is None
 
-    # Engine identifier mapping for user-facing labels. The first four engines
-    # were removed in D-039, but their labels stay: a study analysed before the
-    # removal keeps its own engine id, and a viewer regenerated for it must
-    # still say truthfully which engine produced those frames.
-    ENGINE_LABELS = {
-        "unified_v1": "Birleşik (Unified v1)",
-        "yin_v1": "YIN v1 (kaldırıldı)",
-        "pitch_engine_v2": "Pitch Engine v2 (kaldırıldı)",
-        "vpm_like": "VPM-benzeri (kaldırıldı)",
-        "hapt_v1": "Harmonik-Faz (HAPT) (kaldırıldı)",
-        "vamp": "Vamp pYIN (referans)",
-        "python": "librosa pYIN (geliştirme)",
-    }
-
     # Prepare title and metadata
-    title = f"KlariVision {VIEWER_VERSION} — Duyulan frekans"
+    title = f"KlariVision {VIEWER_VERSION} — {_translate('viewer-title-frequency', lang)}"
     engine_label = ""
     meta_engine = ""
     meta_revision = ""
 
-    if engine and engine in ENGINE_LABELS:
-        engine_label = ENGINE_LABELS[engine]
-        title = f"KlariVision {VIEWER_VERSION} — {engine_label} · Pitch konturu"
+    if engine and engine in _KNOWN_ENGINE_IDS:
+        engine_label = _engine_label(engine, lang)
+        title = f"KlariVision {VIEWER_VERSION} — {engine_label} · {_translate('viewer-title-contour', lang)}"
         meta_engine = engine
         # Every C++ engine's cached result carries the offline_track filename
         # and revision, including the four removed in D-039 -- a study analysed
@@ -191,7 +191,7 @@ def build_frequency_viewer(
     media = (
         f'<video id="media" controls src="{video_relative_path}"></video>'
         if video_relative_path
-        else f'<div class="audio-content"><strong>Ses kaydı</strong><audio id="media" controls src="{audio_relative_path}"></audio></div>'
+        else f'<div class="audio-content"><strong>{_translate("viewer-audio-recording", lang)}</strong><audio id="media" controls src="{audio_relative_path}"></audio></div>'
     )
     media_handles = (
         '<span class="resize-handle resize-right" data-resize="right"></span>'
@@ -203,13 +203,13 @@ def build_frequency_viewer(
     output_path.parent.mkdir(parents=True, exist_ok=True)
     status_parts = []
     if engine_label:
-        status_parts.append(f"Motor: {engine_label}")
+        status_parts.append(_translate("viewer-engine-prefix", lang, engine=engine_label))
     if analysis_status:
         status_parts.append(analysis_status)
     status = f'<span class="analysis-status">{" · ".join(status_parts)}</span>' if status_parts else ""
     validation_json = json.dumps(validation, ensure_ascii=False, separators=(",", ":")) if validation else "null"
     output_path.write_text(
-        f"""<!doctype html><html lang="tr"><meta charset="utf-8">
+        f"""<!doctype html><html lang="{lang}"><meta charset="utf-8">
 <title>{title}</title>
 {meta_tags}
 <style>
@@ -217,7 +217,7 @@ def build_frequency_viewer(
 </style><style>
 .app-context{{display:inline-block;margin:0 0 14px;color:#405465;font-size:13px;font-weight:650}}.analysis-status{{display:inline-block;margin:0 0 12px;padding:5px 9px;border-radius:999px;background:#e8f4ea;color:#23633a;font-size:12px;font-weight:700}}.settings-section{{display:grid;gap:10px;padding:13px 0;border-top:1px solid #e2e7ec}}.settings-section h3{{margin:0;font-size:14px}}.settings-row{{display:flex;align-items:center;gap:10px;flex-wrap:wrap}}.settings-actions input[type=checkbox]{{width:auto;margin:0 5px 0 0;vertical-align:middle}}.graph-color-row label{{display:grid;gap:5px;min-width:150px}}.graph-color-row input[type=color]{{width:100%;height:32px;padding:2px;cursor:pointer}}.speed-stepper{{display:flex;align-items:center;gap:8px;margin:auto}}.speed-stepper span{{min-width:52px;text-align:center;font-weight:700}}#time-scroll{{display:block!important;visibility:visible!important;opacity:1!important}}.tools #makam-settings-open{{margin-left:auto}}@media(max-width:650px){{.tools #makam-settings-open{{margin-left:0}}}}
 </style><body class="{'audio-only' if is_audio_only else ''}"><main>
-<h1>KlariVision {VIEWER_VERSION} · Pitch konturu</h1><a id="new-recording" class="new-recording" href="/">Yeni video / ses seç</a>
+<h1>KlariVision {VIEWER_VERSION} · {_translate("viewer-title-contour", lang)}</h1><a id="new-recording" class="new-recording" href="/">{_translate("viewer-new-recording", lang)}</a>
 <p>Pitch eğrisi pYIN'in ölçtüğü fiziksel frekanstır (Hz). Türk Müziği (Sol Klarnet) ekseni, koma miktarını taşınabilir biçimde gösterir: ör. Re ♭5, Fa ♯1. Ölçülen eğri değiştirilmez.</p>{status}
 <div class="layout-tools"><label>Yerleşim <select id="layout-mode"><option value="stacked">Üst üste</option><option value="side">Video solda · yan yana</option><option value="side-right">Video sağda · yan yana</option></select></label></div>
 <div id="workspace" class="workspace {'audio-only' if is_audio_only else ''}"><div id="media-panel" class="media">{media}{media_handles}</div>

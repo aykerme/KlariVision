@@ -323,7 +323,7 @@ final class RecentLibrary {
     func selectFile(_ url: URL) {
         guard Self.isSupportedMediaFile(url) else {
             selectedFile = nil
-            analysisMessage = "Bu dosya desteklenen bir ses veya video biçimi değil. WAV, MP3, M4A ya da desteklenen bir video seçin."
+            analysisMessage = String(localized: "Bu dosya desteklenen bir ses veya video biçimi değil. WAV, MP3, M4A ya da desteklenen bir video seçin.", bundle: .klariVisionModule)
             return
         }
         selectedFile = url
@@ -332,7 +332,7 @@ final class RecentLibrary {
 
     func acceptDroppedFile(_ url: URL) -> Bool {
         guard Self.isSupportedMediaFile(url) else {
-            analysisMessage = "Bırakılan dosya desteklenmiyor. WAV, MP3, M4A veya video dosyası bırakın."
+            analysisMessage = String(localized: "Bırakılan dosya desteklenmiyor. WAV, MP3, M4A veya video dosyası bırakın.", bundle: .klariVisionModule)
             return false
         }
         selectFile(url)
@@ -372,23 +372,23 @@ final class RecentLibrary {
         // derlenmez -- motor daima pakete gömülü olmalıdır.
         analyseSelectedFileWithLocalPython(selectedFile)
         #else
-        analysisMessage = "KlariVision analiz motoru bulunamadı. Uygulamayı yeniden kur."
+        analysisMessage = String(localized: "KlariVision analiz motoru bulunamadı. Uygulamayı yeniden kur.", bundle: .klariVisionModule)
         #endif
     }
 
     #if DEBUG
     private func analyseSelectedFileWithLocalPython(_ selectedFile: URL) {
         guard let root = projectRoot() else {
-            analysisMessage = "KlariVision analiz motoru bulunamadı. Projeyi Xcode içinden açtığından emin ol."
+            analysisMessage = String(localized: "KlariVision analiz motoru bulunamadı. Projeyi Xcode içinden açtığından emin ol.", bundle: .klariVisionModule)
             return
         }
         guard let python = pythonExecutable(in: root) else {
-            analysisMessage = "Python çalışma ortamı bulunamadı."
+            analysisMessage = String(localized: "Python çalışma ortamı bulunamadı.", bundle: .klariVisionModule)
             return
         }
 
         isAnalysing = true
-        analysisMessage = "Pitch analizi hazırlanıyor…"
+        analysisMessage = String(localized: "Pitch analizi hazırlanıyor…", bundle: .klariVisionModule)
         let sourcePath = selectedFile.path.replacingOccurrences(of: "\\\"", with: "\\\\\\\"")
         let selectedEngine = selectedStudyEngine
         let script = """
@@ -428,18 +428,18 @@ final class RecentLibrary {
                     guard process.terminationStatus == 0,
                           let relativeViewer = standardOutput.split(whereSeparator: \.isNewline).last else {
                         let detail = standardError.isEmpty ? "Lütfen tekrar dene." : standardError
-                        self.analysisMessage = "Analiz oluşturulamadı. \(detail)"
+                        self.analysisMessage = String(localized: "Analiz oluşturulamadı. \(detail)", bundle: .klariVisionModule)
                         return
                     }
                     let viewer = root.appending(path: String(relativeViewer).trimmingCharacters(in: CharacterSet(charactersIn: "/")))
-                    self.analysisMessage = "Pitch eğrisi hazır."
+                    self.analysisMessage = String(localized: "Pitch eğrisi hazır.", bundle: .klariVisionModule)
                     self.activeViewer = viewer
                     self.reload()
                 }
             } catch {
                 DispatchQueue.main.async {
                     self?.isAnalysing = false
-                    self?.analysisMessage = "Analiz motoru başlatılamadı: \(error.localizedDescription)"
+                    self?.analysisMessage = String(localized: "Analiz motoru başlatılamadı: \(error.localizedDescription)", bundle: .klariVisionModule)
                 }
             }
         }
@@ -448,7 +448,7 @@ final class RecentLibrary {
 
     private func analyseWithBundledEngine(_ source: URL, executable: URL) {
         isAnalysing = true
-        analysisMessage = "Pitch analizi hazırlanıyor…"
+        analysisMessage = String(localized: "Pitch analizi hazırlanıyor…", bundle: .klariVisionModule)
         let selectedEngine = selectedStudyEngine
 
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
@@ -461,7 +461,7 @@ final class RecentLibrary {
             case .failure(let error):
                 DispatchQueue.main.async {
                     self?.isAnalysing = false
-                    self?.analysisMessage = "Ses çözülemedi: \(error.localizedDescription)"
+                    self?.analysisMessage = String(localized: "Ses çözülemedi: \(error.localizedDescription)", bundle: .klariVisionModule)
                 }
                 return
             case .success(let url):
@@ -474,6 +474,7 @@ final class RecentLibrary {
             process.arguments = [
                 source.path, "--makam", "huzzam", "--karar", "dugah",
                 "--engine", selectedEngine, "--wav", wavURL.path,
+                "--lang", AppLanguage.engineCode,
             ]
             let output = Pipe()
             let error = Pipe()
@@ -498,17 +499,17 @@ final class RecentLibrary {
                     guard process.terminationStatus == 0,
                           let viewerPath = standardOutput.split(whereSeparator: \.isNewline).last else {
                         let detail = standardError.isEmpty ? "Lütfen tekrar dene." : standardError
-                        self.analysisMessage = "Analiz oluşturulamadı. \(detail)"
+                        self.analysisMessage = String(localized: "Analiz oluşturulamadı. \(detail)", bundle: .klariVisionModule)
                         return
                     }
-                    self.analysisMessage = "Pitch eğrisi hazır."
+                    self.analysisMessage = String(localized: "Pitch eğrisi hazır.", bundle: .klariVisionModule)
                     self.activeViewer = URL(fileURLWithPath: String(viewerPath))
                     self.reload()
                 }
             } catch {
                 DispatchQueue.main.async {
                     self?.isAnalysing = false
-                    self?.analysisMessage = "Analiz motoru başlatılamadı: \(error.localizedDescription)"
+                    self?.analysisMessage = String(localized: "Analiz motoru başlatılamadı: \(error.localizedDescription)", bundle: .klariVisionModule)
                 }
             }
         }
@@ -539,12 +540,12 @@ final class RecentLibrary {
 
     private func refreshWithBundledEngine(_ viewer: URL, executable: URL) {
         isAnalysing = true
-        analysisMessage = "Çalışma güncel arayüzle hazırlanıyor…"
+        analysisMessage = String(localized: "Çalışma güncel arayüzle hazırlanıyor…", bundle: .klariVisionModule)
 
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             let process = Process()
             process.executableURL = executable
-            process.arguments = ["--refresh-viewer", viewer.path]
+            process.arguments = ["--refresh-viewer", viewer.path, "--lang", AppLanguage.engineCode]
             let output = Pipe()
             let error = Pipe()
             process.standardOutput = output
@@ -578,16 +579,16 @@ final class RecentLibrary {
     func reanalyse(_ viewer: URL) {
         guard !isAnalysing else { return }
         guard let executable = bundledEngineExecutable() else {
-            analysisMessage = "Seçili motorla yeniden analiz yalnız paketlenmiş C++ analiz motorunda kullanılabilir."
+            analysisMessage = String(localized: "Seçili motorla yeniden analiz yalnız paketlenmiş C++ analiz motorunda kullanılabilir.", bundle: .klariVisionModule)
             return
         }
         let selectedEngine = selectedStudyEngine
         isAnalysing = true
-        analysisMessage = "\(selectedEngine) ile pitch eğrisi hazırlanıyor…"
+        analysisMessage = String(localized: "\(selectedEngine) ile pitch eğrisi hazırlanıyor…", bundle: .klariVisionModule)
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             let process = Process()
             process.executableURL = executable
-            process.arguments = ["--reanalyze-viewer", viewer.path, "--engine", selectedEngine]
+            process.arguments = ["--reanalyze-viewer", viewer.path, "--engine", selectedEngine, "--lang", AppLanguage.engineCode]
             let output = Pipe()
             let error = Pipe()
             process.standardOutput = output
@@ -602,16 +603,16 @@ final class RecentLibrary {
                     self.isAnalysing = false
                     guard process.terminationStatus == 0,
                           let refreshedPath = standardOutput.split(whereSeparator: \.isNewline).last else {
-                        self.analysisMessage = "Seçili motorla analiz yapılamadı. \(standardError)"
+                        self.analysisMessage = String(localized: "Seçili motorla analiz yapılamadı. \(standardError)", bundle: .klariVisionModule)
                         return
                     }
                     self.activeViewer = URL(fileURLWithPath: String(refreshedPath))
-                    self.analysisMessage = "\(selectedEngine) pitch eğrisi hazır."
+                    self.analysisMessage = String(localized: "\(selectedEngine) pitch eğrisi hazır.", bundle: .klariVisionModule)
                 }
             } catch {
                 DispatchQueue.main.async {
                     self?.isAnalysing = false
-                    self?.analysisMessage = "Motor başlatılamadı: \(error.localizedDescription)"
+                    self?.analysisMessage = String(localized: "Motor başlatılamadı: \(error.localizedDescription)", bundle: .klariVisionModule)
                 }
             }
         }
