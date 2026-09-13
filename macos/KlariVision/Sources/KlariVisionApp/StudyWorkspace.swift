@@ -546,7 +546,9 @@ private final class StudyPlaybackState: ObservableObject {
     @Published var loopEnabled = false
     @Published var loopA = 0.0
     @Published var loopB = 0.0
-    @Published var followsCurve = false
+    /// Sayfadaki `vertical-follow` kutusu varsayılan açık; ilk anlık görüntü
+    /// gelene kadar çubuk da açık görünsün diye aynı değerle başlar.
+    @Published var followsCurve = true
     /// Yalnız "Birlikte Çal" hoparlör düğmesi için: dosyanın ses ÇIKIŞININ
     /// kapalı olup olmadığı. Mikrofon çizimini etkilemez — bkz. `TogetherSession`.
     @Published var muted = false
