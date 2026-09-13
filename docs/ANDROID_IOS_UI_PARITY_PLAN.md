@@ -1,6 +1,6 @@
 # Android ↔ iOS/iPadOS UI/UX Eşitleme Planı
 
-Tarih: 2026-09-13 · Durum: PR #1 ve PR #2 açık; §1.1 ve §1.11 kararları verildi
+Tarih: 2026-09-13 · Durum: PR #1–#3 açık; §1.1, §1.5 ve §1.11 kararları uygulandı
 
 Referans taraf iOS/iPadOS'tur ve referans olarak **çalışan kod** alınır, doküman değil:
 `ipad/KlariVisioniPadCoreSmoke/KlariVisioniPad/*.swift`. Android tarafı:
@@ -69,7 +69,9 @@ düzeltmeler §0'da.
   (`KlariVisioniPadApp.swift:224-255`). Compact genişlikte daha sade bir `compactCard`
   var: dairesiz ikon, 20pt padding, tint opaklığı 0.07 (`iPadCompactLiveWorkspace.swift:165-176`).
 - **Android:** Tek `ModeCard` (`HomeScreen.kt:160-196`), 64dp ikon ve 24dp padding.
-- **Öneri:** Kullanıcı kararına bağlı (§4, soru 2).
+- **Karar:** İki kart da iOS değerleriyle eşlendi (PR #3). Dar ekranda sade kart ve kısa
+  alt metinler, geniş ekranda 72 pt daire, 28 pt dolgu, en az 260 pt ve tonlu çerçeve.
+  Butonlar kart renginde ve ikonsuz.
 
 ### 1.6 Ayarlar bileşen dili — Düşük · S
 - **iOS:** `Form` + `Section`, tema seçimi `Picker` ile.
@@ -179,7 +181,8 @@ eşitlenmesi.
 1. **Navigasyon: iOS'un iki düzeni esas alındı.** Android'deki ORTA düzeni kaldırıldı;
    700 pt altı dar, üstü geniş. Geniş çalışma alanı da iOS'taki gibi grafik üstte, denetim
    çubuğu altta. Uygulandı: PR #2.
-2. **Dar ekran kartı:** Henüz karar verilmedi.
+2. **Dar ekran kartı: iOS'taki sade kart eklendi.** Geniş ekran kartı da iOS ölçülerine
+   çekildi. Uygulandı: PR #3.
 3. **Grafik şablonları: CI'da `diff` kontrolü.** `scripts/check_viewer_parity.sh` ve
    `.github/workflows/viewer-parity.yml`. Uygulandı: PR #2.
 
@@ -200,3 +203,10 @@ eşitlenmesi.
 - `docs/ipad-ui-ux/02` ve `03` iki düzene göre güncellendi.
 - **iOS'tan kalan fark:** Swift geniş Çalma düzeninde tüneri ve makam/kararı grafiğin
   üstünde büyük bir başlıkta gösteriyor; Android'de tüner rozeti alt çubukta kaldı.
+
+**PR #3 (PR #2'nin üstüne)**
+- §1.5: Ana Sayfa'nın iki düzeni iOS'a eşlendi. Dar ekranda `iPadCompactHomeView` kartı:
+  dairesiz ikon, 20 pt dolgu, %7 tonlu zemin, 18 pt köşe ve kısa alt metinler. Geniş
+  ekranda `iPadModeCard` kartı: 72 pt daire, 28 pt dolgu, en az 260 pt yükseklik ve %28
+  tonlu çerçeve. Butonlar kart renginde ve ikonsuz; başlık 34 pt.
+- Ana Sayfa içeriği artık durum çubuğunun altına girmiyor (güvenli alan boşluğu).
