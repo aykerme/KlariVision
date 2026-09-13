@@ -5,14 +5,14 @@
 // çalışma alanlarıdır (bkz. HomeScreen.kt, LibraryScreen.kt).
 //
 // Genişlik sınıfı `BoxWithConstraints` ile ölçülen ham genişlikten türetilir
-// (KvWidthClass.fromWidth — 700/1000 pt eşikleri, Material3'ün kendi
-// Compact/Medium/Expanded eşikleri değil): GENIS'te 280 pt kalıcı kenar
-// çubuğu, ORTA'da 320 pt drawer, DAR'da modal gezinme (bottom bar, çalışma
-// alanı açıkken gizlenir).
+// (KvWidthClass.fromSize — tek 700 pt eşiği, Material3'ün kendi
+// Compact/Medium/Expanded eşikleri değil). Swift gibi yalnız iki düzen var:
+// GENIS'te 280 pt kalıcı kenar çubuğu (regular → NavigationSplitView), DAR'da
+// alt gezinme çubuğu (compact → TabView; çalışma alanı açıkken gizlenir).
 //
 // Grafik WebView'leri (`web/LiveGraphBridge`/`StudyGraphBridge`) burada bir kez
 // `remember`lenip `movableContentOf` ile sarılır ki genişlik/yön değişiminde
-// (dar ↔ orta ↔ geniş) aynı WebView örneği yalnız yeni kapsayıcıya taşınsın —
+// (dar ↔ geniş) aynı WebView örneği yalnız yeni kapsayıcıya taşınsın —
 // asla yeniden yaratılmasın (aksi halde grafik durumu sıfırlanır, bu iOS
 // tarafında zaten bilinçle çözülmüş bir sorun, bkz. iPadLiveWebViewStore/
 // iPadStudyWebViewStore "stable identity" yorumları).
@@ -122,7 +122,7 @@ fun KlariVisionApp(
     var settingsEditingMakam by remember { mutableStateOf<Makam?>(null) }
 
     // WebView'lerin kalıcı sarmalayıcıları — bir kez oluşturulur, genişlik
-    // sınıfı ya da rota değişse de (dar bottom-bar ↔ orta drawer ↔ geniş
+    // sınıfı ya da rota değişse de (dar bottom-bar ↔ geniş
     // sidebar) AndroidView `factory` yeniden çağrılmaz; içerik yalnız yeni
     // konumuna taşınır (bkz. dosya başlığı).
     val liveGraphContent = remember {
@@ -228,12 +228,6 @@ fun KlariVisionApp(
                         PermanentSidebar(destination = destination, onSelect = { destination = it })
                         content(Modifier.weight(1f).fillMaxSize(), widthClass)
                     }
-                    KvWidthClass.ORTA -> Row(modifier = Modifier.fillMaxSize()) {
-                        if (!workspaceActive) {
-                            NavigationDrawerPanel(destination = destination, onSelect = { destination = it })
-                        }
-                        content(Modifier.weight(1f).fillMaxSize(), widthClass)
-                    }
                     KvWidthClass.DAR -> if (workspaceActive) {
                         // Modal: gezinme çubuğu tamamen gizlenir, grafik tüm yüzeyi kaplar.
                         content(Modifier.fillMaxSize(), widthClass)
@@ -258,35 +252,15 @@ fun KlariVisionApp(
     }
 }
 
-/** Geniş sınıf (≥1000 pt): 280 pt kalıcı kenar çubuğu, her zaman görünür. */
+/**
+ * Geniş sınıf (≥700 pt): 280 pt kalıcı kenar çubuğu, çalışma alanı açıkken
+ * de görünür — Swift regular düzenindeki NavigationSplitView kenar çubuğu.
+ */
 @Composable
 private fun PermanentSidebar(destination: Destination, onSelect: (Destination) -> Unit) {
     Column(
         modifier = Modifier
             .width(KvSidebarWidthWide)
-            .fillMaxHeight()
-            .background(MaterialTheme.colorScheme.surface),
-    ) {
-        SidebarHeader()
-        HorizontalDivider()
-        Destination.values().forEach { dest ->
-            NavigationRailItem(
-                selected = destination == dest,
-                onClick = { onSelect(dest) },
-                icon = { NavGlyph(dest) },
-                label = { Text(dest.title) },
-                modifier = Modifier.fillMaxWidth(),
-            )
-        }
-    }
-}
-
-/** Orta sınıf (700–999 pt): 320 pt drawer, çalışma alanı etkin değilken görünür. */
-@Composable
-private fun NavigationDrawerPanel(destination: Destination, onSelect: (Destination) -> Unit) {
-    Column(
-        modifier = Modifier
-            .width(KvDrawerWidthMedium)
             .fillMaxHeight()
             .background(MaterialTheme.colorScheme.surface),
     ) {

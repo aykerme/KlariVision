@@ -344,36 +344,32 @@ fun MakamIntervalEditor(
 }
 
 /**
- * Geniş (tablet) ekranda düğmeleri dikey bir panelde, dar ekranda yatay bir
- * şeritte dizen ortak yardımcı. Çalma ve Dinleme çalışma alanlarının ikisi de
- * kullanır ki "ardışık/yan yana" karar tek yerde alınsın.
+ * Düğmeleri sarmalanan yatay bir şeritte dizen ortak yardımcı. Çalma ve
+ * Dinleme çalışma alanlarının ikisi de kullanır. Swift iki düzende de
+ * denetimleri yatay bir `HStack`te dizdiği için genişlik sınıfına bakmaz.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-internal fun FlowRowButtons(isWide: Boolean, content: @Composable () -> Unit) {
-    if (isWide) {
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) { content() }
-    } else {
-        // GERÇEK sarmalama. Burası daha önce düz bir `Row`'du ve adının
-        // vaat ettiği şeyi yapmıyordu: yedi çocuk (oynat, A, B, döngü,
-        // Takip, hız, kapat) 1080 piksellik telefona sığmayınca son
-        // çocuklar SIFIR genişlik alıp erişilemez oluyordu. Cihazda ölçüldü:
-        // "Hızı artır" düğmesinin sınırları (0,0,0,0) idi, yani kullanıcı
-        // oynatma hızını düşürdükten sonra 1,00×'e geri dönemiyordu
-        // (fiziksel kabul turu bulgusu B-3). `FlowRow` sığmayanı alt satıra
-        // indirir; hiçbir kontrol kaybolmaz.
-        //
-        // Eski `Row`'daki `verticalAlignment = CenterVertically` karşılığı
-        // YOK: bu Compose sürümündeki `FlowRow` satır içi çapraz eksen
-        // hizasını parametre olarak almıyor (`itemVerticalAlignment` yok).
-        // Varsayılan üstten hizadır; satırdaki kontroller benzer yükseklikte
-        // olduğu için fark gözle görülür değil.
-        FlowRow(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
-        ) { content() }
-    }
+internal fun FlowRowButtons(content: @Composable () -> Unit) {
+    // GERÇEK sarmalama. Burası daha önce düz bir `Row`'du ve adının
+    // vaat ettiği şeyi yapmıyordu: yedi çocuk (oynat, A, B, döngü,
+    // Takip, hız, kapat) 1080 piksellik telefona sığmayınca son
+    // çocuklar SIFIR genişlik alıp erişilemez oluyordu. Cihazda ölçüldü:
+    // "Hızı artır" düğmesinin sınırları (0,0,0,0) idi, yani kullanıcı
+    // oynatma hızını düşürdükten sonra 1,00×'e geri dönemiyordu
+    // (fiziksel kabul turu bulgusu B-3). `FlowRow` sığmayanı alt satıra
+    // indirir; hiçbir kontrol kaybolmaz.
+    //
+    // Eski `Row`'daki `verticalAlignment = CenterVertically` karşılığı
+    // YOK: bu Compose sürümündeki `FlowRow` satır içi çapraz eksen
+    // hizasını parametre olarak almıyor (`itemVerticalAlignment` yok).
+    // Varsayılan üstten hizadır; satırdaki kontroller benzer yükseklikte
+    // olduğu için fark gözle görülür değil.
+    FlowRow(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) { content() }
 }
 
 /** Belirsiz/yüzdeli ilerleme göstergesi — progress == null iken belirsiz döner (donmuş yüzde yok). */

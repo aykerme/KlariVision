@@ -1,6 +1,6 @@
 # Android ↔ iOS/iPadOS UI/UX Eşitleme Planı
 
-Tarih: 2026-09-13 · Durum: Faz 0 öncesi, ilk PR başladı
+Tarih: 2026-09-13 · Durum: PR #1 ve PR #2 açık; §1.1 ve §1.11 kararları verildi
 
 Referans taraf iOS/iPadOS'tur ve referans olarak **çalışan kod** alınır, doküman değil:
 `ipad/KlariVisioniPadCoreSmoke/KlariVisioniPad/*.swift`. Android tarafı:
@@ -36,7 +36,7 @@ düzeltmeler §0'da.
   `NavigationBar`), ORTA 700–999 (320dp `NavigationDrawerPanel`), GENIS ≥1000 (280dp
   kalıcı kenar çubuğu). Bu yapı `docs/ipad-ui-ux/03-responsive-contract.md` ile uyumlu,
   ama iOS kodu bu sözleşmeyi uygulamıyor.
-- **Öneri:** Kullanıcı kararına bağlı (§4, soru 1).
+- **Karar:** iOS'un iki düzeni esas alındı; ORTA kaldırıldı (PR #2).
 - **Dosyalar:** `ui/KlariVisionApp.kt`, `ui/DesignTokens.kt`, `docs/ipad-ui-ux/03-responsive-contract.md`.
 
 ### 1.2 Ayarlar → makam aralık düzenleyicisi bağlantısı yok — Yüksek · S — **İlk PR'da çözüldü**
@@ -103,8 +103,8 @@ iPad kodunda da yok (§0). İstenirse iki platform için yeni bir özellik olara
 ### 1.11 Grafik şablonlarının iki kopyası — Orta · M
 Şu an aynılar (§0), ama elle senkron tutuluyorlar. Kopyalardan biri değişirse fark sessizce
 oluşur.
-- **Öneri:** Tek kaynaktan kopyalayan bir derleme adımı ya da CI'da `diff` kontrolü
-  (§4, soru 3).
+- **Karar:** CI'da `diff` kontrolü (PR #2). `scripts/check_viewer_parity.sh` iki kopyayı
+  karşılaştırır; `.github/workflows/viewer-parity.yml` şablonlara dokunan her PR'da koşar.
 
 ---
 
@@ -171,20 +171,32 @@ eşitlenmesi.
 - **Açık kabul turu kalemleri:** `ANDROID_KABUL_TURU.md` #9 başarısız, #12/#13 koşulmadı.
   Bunlar bu planın kapsamında değil.
 - **iOS'ta simülatör yok:** iOS doğrulaması fiziksel cihazda ve elle yapılmak zorunda.
-- **`MakamIntervalsStore` bellekte tutuluyor:** Değişiklikler kalıcı değil ve mağaza
-  gözlemlenebilir değil. "Teori/Özel" etiketi ancak ekran yeniden çizildiğinde güncellenir.
-  Bu mevcut bir sorun ve ayrıca ele alınmalı.
+- **`MakamIntervalsStore` bellekte tutuluyor:** Değişiklikler uygulama kapanınca kaybolur.
+  Mağazanın gözlemlenebilir olmaması (düzenleyicide dokunuşlar ekrana yansımıyordu) PR #6'da
+  düzeltildi; kalıcılık hâlâ ayrı bir iş.
 
-**Açık sorular**
-1. **Navigasyon:** iOS'un iki durumlu yapısı mı esas alınacak (Android'deki ORTA düzeni
-   kaldırılır), yoksa üç durumlu sözleşme mi (iPad'e de ara düzen eklenir)?
-2. **Dar ekran kartı:** iOS'taki sade kart Android'e ayrı bir varyant olarak eklensin mi?
-3. **Grafik şablonları:** Tek kaynaktan kopyalama mı, yoksa CI'da `diff` kontrolü mü?
+**Kararlar (2026-09-13)**
+1. **Navigasyon: iOS'un iki düzeni esas alındı.** Android'deki ORTA düzeni kaldırıldı;
+   700 pt altı dar, üstü geniş. Geniş çalışma alanı da iOS'taki gibi grafik üstte, denetim
+   çubuğu altta. Uygulandı: PR #2.
+2. **Dar ekran kartı:** Henüz karar verilmedi.
+3. **Grafik şablonları: CI'da `diff` kontrolü.** `scripts/check_viewer_parity.sh` ve
+   `.github/workflows/viewer-parity.yml`. Uygulandı: PR #2.
 
 ---
 
-## 5. İlk PR
+## 5. PR'lar
 
+**PR #1 ([#6](https://github.com/aykerme/KlariVision/pull/6))**
 - §1.2: Ayarlar'daki makam satırları aralık düzenleyicisini açıyor.
 - §1.8: TalkBack'te konum için "5 saniye ileri/geri" eylemleri.
+- Aralık mağazası gözlemlenebilir oldu; düzenleyici dokunuşları anında gösteriyor.
 - Bu plan dokümanı.
+
+**PR #2 (PR #1'in üstüne)**
+- §1.1: Genişlik sınıfı ikiye indi (DAR/GENIS). Çekmece paneli kaldırıldı. Geniş çalışma
+  alanında grafik üstte, denetim çubuğu altta. Denetimler iki düzende de yatay diziliyor.
+- §1.11: Şablon eşitliği için CI kontrolü.
+- `docs/ipad-ui-ux/02` ve `03` iki düzene göre güncellendi.
+- **iOS'tan kalan fark:** Swift geniş Çalma düzeninde tüneri ve makam/kararı grafiğin
+  üstünde büyük bir başlıkta gösteriyor; Android'de tüner rozeti alt çubukta kaldı.

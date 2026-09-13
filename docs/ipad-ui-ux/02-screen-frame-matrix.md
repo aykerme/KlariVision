@@ -1,13 +1,15 @@
 # Ekran ve frame matrisi
 
-Her SVG aşağıdaki üç referans sınıftan birinde çizilir. Tasarım, aygıt adına
-değil kullanılabilir genişliğe göre uygulanır.
+Her SVG aşağıdaki üç referans frame'den birinde çizilir. Tasarım, aygıt adına
+değil kullanılabilir genişliğe göre uygulanır. Uygulamada yalnız iki düzen
+vardır: geniş (iOS regular) ve dar (iOS compact). 834 pt dikey frame geniş
+düzene girer; ayrı bir "orta" düzen yoktur (bkz. 03-responsive-contract.md).
 
-| Sınıf | Referans frame | Kullanım |
-|---|---:|---|
-| Geniş | 1376×1032 pt | 13 inç iPad Pro yatay, kalıcı kenar çubuğu |
-| Orta | 834×1194 pt | 11 inç iPad Pro dikey, geri çekilebilir navigasyon |
-| Dar | 694×900 pt | Split View / Stage Manager, tek sütun |
+| Frame adı | Referans frame | Düzen | Kullanım |
+|---|---:|---|---|
+| Geniş | 1376×1032 pt | Geniş | 13 inç iPad Pro yatay, kalıcı kenar çubuğu |
+| Dikey | 834×1194 pt | Geniş | 11 inç iPad Pro dikey |
+| Dar | 694×900 pt | Dar | Split View / Stage Manager, tek sütun |
 
 | SVG | İçerik | Frame |
 |---|---|---:|

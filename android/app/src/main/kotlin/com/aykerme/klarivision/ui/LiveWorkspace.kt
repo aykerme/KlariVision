@@ -3,9 +3,8 @@
 // tarafından yönetilir; bu dosya yalnız düzeni ve kullanıcı niyetlerini
 // (başlat/durdur/kaydet/makam-karar) iletir — pitch kararı üretmez.
 //
-// Üç genişlik sınıfı (03-responsive-contract.md):
-// - GENIS: grafik + 320 pt sabit denetim paneli, 16 pt aralıkla yan yana.
-// - ORTA: tüner/denetim şeridi üstte (220–360 pt bandı), grafik altta en az 360 pt.
+// İki genişlik sınıfı, Swift'in iki düzeni (bkz. KvWidthClass):
+// - GENIS: grafik üstte, denetim çubuğu altta (`iPadLiveWorkspace`).
 // - DAR: grafik tüm yüzeyi kaplar (alt safe area dahil), denetimler grafiğin
 //   üstünde yüzen yarı saydam kart; tüner ayrı bir yüzer rozettir.
 
@@ -19,13 +18,10 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -42,6 +38,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
@@ -98,7 +95,6 @@ fun LiveWorkspace(
 
     var isPresentingSettings by remember { mutableStateOf(false) }
     var isPresentingIntervalEditor by remember { mutableStateOf<Makam?>(null) }
-    val isWide = widthClass != KvWidthClass.DAR
 
     val controls: @Composable ColumnScope.() -> Unit = {
         uiState.errorMessage?.let { message -> StatusLine(message, isError = true) }
@@ -125,7 +121,7 @@ fun LiveWorkspace(
                 )
             }
         }
-        FlowRowButtons(isWide) {
+        FlowRowButtons {
             WorkspaceSettingsButton(label = "Makam ve karar") { isPresentingSettings = true }
             RecordButton(
                 isRecording = uiState.isRecording,
@@ -144,30 +140,25 @@ fun LiveWorkspace(
     }
 
     when (widthClass) {
-        KvWidthClass.GENIS -> Row(modifier = modifier.fillMaxSize()) {
-            Box(modifier = Modifier.weight(1f).fillMaxSize()) { graphContent() }
-            Spacer(modifier = Modifier.width(KvSpacing.lg))
-            Column(
+        // Swift `iPadLiveWorkspace`: grafik ortada yuvarlatılmış bir alanda,
+        // denetimler altta tam genişlikte bir çubuk. Swift başlığı (tüner ·
+        // makam/karar) grafiğin üstüne koyar; burada tüner rozeti çubukta kalır.
+        KvWidthClass.GENIS -> Column(modifier = modifier.fillMaxSize()) {
+            Box(
                 modifier = Modifier
-                    .width(320.dp)
-                    .fillMaxSize()
-                    .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(KvRadius.panel)),
-                verticalArrangement = Arrangement.spacedBy(KvSpacing.md),
-                content = { Column(Modifier.padding(KvSpacing.lg), verticalArrangement = Arrangement.spacedBy(KvSpacing.md), content = controls) },
-            )
-        }
-
-        KvWidthClass.ORTA -> Column(modifier = modifier.fillMaxSize()) {
+                    .fillMaxWidth()
+                    .weight(1f)
+                    .padding(KvSpacing.lg)
+                    .clip(RoundedCornerShape(KvRadius.panel)),
+            ) { graphContent() }
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .heightIn(min = 220.dp, max = 360.dp)
-                    .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(KvRadius.panel))
+                    .background(MaterialTheme.colorScheme.surface)
                     .padding(KvSpacing.lg),
                 verticalArrangement = Arrangement.spacedBy(KvSpacing.md),
                 content = controls,
             )
-            Box(modifier = Modifier.fillMaxWidth().heightIn(min = KvGraphMinHeight).weight(1f)) { graphContent() }
         }
 
         KvWidthClass.DAR -> Box(modifier = modifier.fillMaxSize()) {
