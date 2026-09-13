@@ -174,26 +174,41 @@ kilitlenmişti (süre 0:00'a düşmüştü). Hazır olana kadar (~18 sn) bekleyi
 aynı dokunuşlar sorunsuz işledi. B-2b'nin başka ölçümleri de sessizce
 bozabileceğinin somut örneği.
 
-### B-9 — A/B döngüsü birkaç turdan sonra oynatmayı kilitliyor
+### B-9 — A/B döngüsünde grafik ve konum donuyor (AÇIK)
 
-Döngünün kendisi çalışıyor: medya B'ye ulaşınca A'ya dönüyor (ölçüldü,
-`currentTime` 17,96 → 7,52). Ama birkaç turdan sonra oynatma kalıcı olarak
-duruyor — konum 40+ saniye boyunca sabit kaldı, düğme "Duraklat" göstermeye
-devam ediyor (yani oynadığını sanıyor). Gözlenen dizi (A≈0:05, B≈0:09):
+B-2b düzeltildikten SONRA yeniden ölçüldü ve duruyor: ayrı bir kusur.
 
-    0:09 → 0:12 → 0:08 → 0:10 → 0:13 → 0:13 → 0:13 → ... (kilit)
+**Tarif düzeltildi.** "Oynatma kilitleniyor" değil — **oynatma sürüyor**.
+Sayfaya sorulduğunda medya `paused=false`, `readyState=4`, hatasız ve
+`currentTime` A↔B arasında düzgün dönüyor (22,86 → 8,49). Donan şey
+grafik ve konum göstergesidir; ses döngüye devam eder. Dışarıdan
+"oynatma durdu" gibi görünmesinin sebebi budur.
 
-İki yan gözlem: konum B'yi aşıyor (0:09 sınırına karşı 0:12–0:13'e çıkıyor),
-yani döngü sınırları gevşek uygulanıyor.
+**Ölçülen mekanizma.** Sayfaya BAĞIMSIZ bir `requestAnimationFrame` sayacı
+enjekte edildi. Sayaç, döngü açıldıktan sonra ~3,6 saniye daha normal koştu
+(~120/s), sonra **ilk geri atlama anında** ~1/s'ye çöktü:
 
-**Tanılama uyarısı:** ilk denemede sayfada bir `Uncaught TypeError: Cannot
-read properties of null (reading 'style')` göründü ve sebep sanıldı. DEĞİLDİ:
-o hata TANILAMA İÇİN ENJEKTE ETTİĞİM betikten geliyordu. Enjeksiyonlar
-tamamen söküldükten sonra kilit aynen tekrarlandı ve konsol temiz kaldı.
+    t=19,21  rafSayac=3957
+    t=22,86  rafSayac=4390   (+433 / ~3,6 sn — normal)
+    t=8,49   rafSayac=4393   (+3 / ~3 sn — çökmüş)
 
-Kök sebep bulunamadı. Döngü mantığı paylaşılan `StudyViewer.html` içindedir
-ve o dosya iPad kopyasıyla byte-eşit olmak zorundadır — düzeltme iki platformu
-birden ilgilendiren bir karardır, tek taraflı yapılmadı.
+Yani sayfanın kendi `tick`'i patlamış değil; karesi gelmiyor. Elenenler:
+`document.visibilityState` **visible**, `document.hidden` **false** (Page
+Visibility kısıtlaması DEĞİL); JS konsolunda hata yok; çökme yok. Grafiğe
+dokunmak, döngüyü kapatmak ve başka komut göndermek canlandırmıyor —
+kalıcı.
+
+Ekran görüntüsü kıyası da bunu doğruluyor: 5 saniye arayla alınan iki kare
+byte-birebir aynı.
+
+**Kök sebep BULUNAMADI.** Bilinen: döngü atlaması paylaşılan
+`StudyViewer.html`'in `tick` fonksiyonunda yapılıyor
+(`media.currentTime=a; media.play(); snapClock();`) ve çöküş tam o anda
+oluyor. O dosya iPad kopyasıyla byte-eşit olmak zorunda olduğu için
+düzeltme iki platformu birden ilgilendirir; tek taraflı yapılmadı.
+
+Sonraki oturum için yön: sorun oynatma mantığında değil, **kare
+zamanlamasında** aranmalı.
 
 ### B-10 — Yatay yerleşim kullanılamaz
 
