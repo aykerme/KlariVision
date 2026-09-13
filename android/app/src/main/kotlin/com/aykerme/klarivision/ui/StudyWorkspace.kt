@@ -156,7 +156,7 @@ private fun FailedStudyState(message: String, onRetry: () -> Unit, modifier: Mod
         Icon(KvIcons.Error, contentDescription = null, tint = MaterialTheme.colorScheme.error)
         Text("Çalışma Açılamadı", style = MaterialTheme.typography.titleLarge)
         Text(message, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Button(onClick = onRetry) {
+        Button(onClick = onRetry, colors = kvButtonColors()) {
             Icon(KvIcons.Reanalyze, contentDescription = null, modifier = Modifier.size(18.dp))
             Spacer(modifier = Modifier.padding(horizontal = 4.dp))
             Text("Yeniden Dene")
@@ -227,7 +227,7 @@ private fun ReadyStudyWorkspace(
                 modifier = Modifier.weight(1f),
             )
             onClose?.let { close ->
-                Button(onClick = { orchestrator.pause(); close() }) { Text("Kapat") }
+                Button(onClick = { orchestrator.pause(); close() }, colors = kvButtonColors()) { Text("Kapat") }
             }
         }
 
@@ -362,8 +362,8 @@ private fun StudyTransportButtons(
         ) {
             Icon(imageVector = if (playback?.isPlaying == true) Icons.Filled.Pause else KvIcons.Play, contentDescription = null)
         }
-        Button(onClick = { orchestrator.markA() }) { Text("A") }
-        Button(onClick = { orchestrator.markB() }) { Text("B") }
+        Button(onClick = { orchestrator.markA() }, colors = kvButtonColors()) { Text("A") }
+        Button(onClick = { orchestrator.markB() }, colors = kvButtonColors()) { Text("B") }
         FilledIconToggleButton(
             checked = playback?.loopEnabled == true,
             onCheckedChange = { orchestrator.toggleLoop() },
@@ -453,7 +453,7 @@ private fun TogetherModeControls(
 
     if (uiState.permissionRequired) {
         StatusLine("Mikrofon izni gerekiyor.", isError = false)
-        Button(onClick = onRequestMicPermission) { Text("Mikrofon İzni İste") }
+        Button(onClick = onRequestMicPermission, colors = kvButtonColors()) { Text("Mikrofon İzni İste") }
     }
 
     uiState.errorMessage?.let { message -> StatusLine(message, isError = true) }

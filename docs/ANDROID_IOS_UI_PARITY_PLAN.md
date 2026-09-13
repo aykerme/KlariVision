@@ -210,3 +210,9 @@ eşitlenmesi.
   ekranda `iPadModeCard` kartı: 72 pt daire, 28 pt dolgu, en az 260 pt yükseklik ve %28
   tonlu çerçeve. Butonlar kart renginde ve ikonsuz; başlık 34 pt.
 - Ana Sayfa içeriği artık durum çubuğunun altına girmiyor (güvenli alan boşluğu).
+
+**PR #4 (PR #3'ün üstüne)**
+- Dolu düğmelerde beyaz yazı artık WCAG AA'yı (4,5:1) geçiyor. Vurgu renkleri beyazla kalıyordu: mavi 3,65, yeşil 2,22, klasik kahverengi 4,32. `darkenedForWhiteText` zemini aynı tonda koyulaştırıyor. Vurgu rengi ince metin, ikon ve anahtarlarda parlak kalıyor.
+- Temalarda `onPrimary`/`onSecondary`/`onTertiary` beyaz. "Durdur", "A", "B" ve "Kapat" düğmelerinde koyu mavi yazı çıkıyordu.
+- **iOS'ta açık:** Swift aynı sistem mavisi ve yeşiliyle `.borderedProminent` kullanıyor, kontrast sorunu orada da var. Aynı koyulaştırma iOS'a da uygulanmalı.
+- **Ekran açık tutma, doğrulandı:** Android `FLAG_KEEP_SCREEN_ON` ile uygulama öndeyken ekranı açık tutuyor. 30 sn zaman aşımında 50 sn dokunmadan ekran açık kaldı. iOS ise ekranı yalnız oynatma ve canlı analiz sırasında açık tutuyor (`isIdleTimerDisabled`). Bu bilinçli bir kullanıcı kararı olarak Android'de geniş tutuldu.

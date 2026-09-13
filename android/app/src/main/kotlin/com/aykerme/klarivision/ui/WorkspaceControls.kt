@@ -470,6 +470,7 @@ fun CompletedRecordingRow(
             Button(
                 onClick = onAdd,
                 enabled = !isImporting,
+                colors = kvButtonColors(),
                 modifier = Modifier.semantics {
                     // Swift'teki accessibilityHint karşılığı: düğmenin ne
                     // yapacağını söyler, etiketini tekrar etmez.

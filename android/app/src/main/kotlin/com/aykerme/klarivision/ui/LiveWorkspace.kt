@@ -129,12 +129,12 @@ fun LiveWorkspace(
                 onClick = { orchestrator.toggleRecording() },
             )
             if (uiState.phase == LivePhase2.RUNNING || uiState.phase == LivePhase2.STARTING) {
-                Button(onClick = { orchestrator.stop() }) { Text("Durdur") }
+                Button(onClick = { orchestrator.stop() }, colors = kvButtonColors()) { Text("Durdur") }
             } else {
-                Button(onClick = { orchestrator.start() }) { Text("Başlat") }
+                Button(onClick = { orchestrator.start() }, colors = kvButtonColors()) { Text("Başlat") }
             }
             onClose?.let { close ->
-                Button(onClick = { orchestrator.stop(); close() }) { Text("Kapat") }
+                Button(onClick = { orchestrator.stop(); close() }, colors = kvButtonColors()) { Text("Kapat") }
             }
         }
     }

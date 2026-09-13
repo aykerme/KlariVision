@@ -32,7 +32,6 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -171,7 +170,7 @@ private fun LiveRestartCard(message: String, onRestart: () -> Unit) {
         ) {
             Text("Canlı çalışma durdu", style = MaterialTheme.typography.titleMedium)
             Text(message, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Button(onClick = onRestart) { Text("Yeniden Başlat") }
+            Button(onClick = onRestart, colors = kvButtonColors()) { Text("Yeniden Başlat") }
         }
     }
 }
@@ -228,12 +227,15 @@ private fun CompactModeCard(content: ModeCardContent) {
     }
 }
 
-/** Swift `.buttonStyle(.borderedProminent).tint(tint)`: kart renginde dolu, ikonsuz düğme. */
+/**
+ * Swift `.buttonStyle(.borderedProminent).tint(tint)`: kart renginde dolu, ikonsuz
+ * düğme. Zemin beyaz yazı AA kontrastına göre koyulaştırılır (bkz. [kvButtonColors]).
+ */
 @Composable
 private fun TintedActionButton(content: ModeCardContent) {
     Button(
         onClick = content.onClick,
-        colors = ButtonDefaults.buttonColors(containerColor = content.tint, contentColor = Color.White),
+        colors = kvButtonColors(content.tint),
     ) {
         Text(content.actionLabel)
     }
