@@ -26,6 +26,12 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.width
+import androidx.compose.material.icons.filled.OndemandVideo
+import androidx.compose.material.icons.filled.ShowChart
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Settings
@@ -451,5 +457,44 @@ fun CompletedRecordingRow(
                 },
             ) { Text("Çalışmalara Ekle") }
         }
+    }
+}
+
+/**
+ * Sahneyi dolduran tarafı değiştiren düğme: video ↔ grafik.
+ *
+ * Önceki hâli `Fullscreen`/`FullscreenExit` ok ikonlarıydı ve son kullanıcıya
+ * "ekranı büyüt" gibi görünüyordu; neye geçileceği anlaşılmıyordu (kullanıcı
+ * bildirimi). Artık iPad'deki kanonik tasarımla aynı mantık: düğme HEDEFİ
+ * gösterir — grafik öndeyken video ikonu ve "Video", video öndeyken eğri
+ * ikonu ve "Grafik" (Swift karşılığı `play.rectangle.fill` ↔ `waveform`,
+ * bkz. iPadCompactStudyWorkspace.videoFullscreenToggle).
+ *
+ * Etiket ikona EKLENDİ, onun yerine geçmedi: düğme koyu bir video karesinin
+ * ya da grafiğin üstünde yüzüyor, tek başına ikon orada hem küçük hem
+ * bağlamsız kalıyordu. Dolu zeminli düğme (FilledTonalButton) okunurluğu da
+ * çözüyor — eski `IconButton`'ın zemini yoktu.
+ */
+@Composable
+fun StageToggleButton(
+    isVideoStage: Boolean,
+    onToggle: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val label = if (isVideoStage) "Grafik" else "Video"
+    FilledTonalButton(
+        onClick = onToggle,
+        modifier = modifier.semantics {
+            contentDescription = if (isVideoStage) "Grafiği göster" else "Videoyu göster"
+        },
+        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp),
+    ) {
+        Icon(
+            imageVector = if (isVideoStage) Icons.Filled.ShowChart else Icons.Filled.OndemandVideo,
+            contentDescription = null,
+            modifier = Modifier.size(20.dp),
+        )
+        Spacer(modifier = Modifier.width(6.dp))
+        Text(label, style = MaterialTheme.typography.labelLarge)
     }
 }

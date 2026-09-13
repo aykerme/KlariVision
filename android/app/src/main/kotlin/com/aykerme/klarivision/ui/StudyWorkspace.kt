@@ -205,17 +205,13 @@ private fun ReadyStudyWorkspace(
 
     val fullscreenToggle: @Composable () -> Unit = {
         if (study?.isVideoSource == true) {
-            IconButton(
-                onClick = {
+            StageToggleButton(
+                isVideoStage = isVideoFullscreen,
+                onToggle = {
                     isVideoFullscreen = !isVideoFullscreen
                     orchestrator.setVideoFullscreen(isVideoFullscreen)
                 },
-                modifier = Modifier.semantics {
-                    contentDescription = if (isVideoFullscreen) "Grafiği tam ekran yap" else "Videoyu tam ekran yap"
-                },
-            ) {
-                Icon(if (isVideoFullscreen) Icons.Filled.FullscreenExit else Icons.Filled.Fullscreen, contentDescription = null)
-            }
+            )
         }
     }
 
