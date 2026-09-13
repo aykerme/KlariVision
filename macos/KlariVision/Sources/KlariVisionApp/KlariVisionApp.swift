@@ -447,9 +447,30 @@ final class RecentLibrary {
         let selectedEngine = selectedStudyEngine
 
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            // Motor artık ffmpeg taşımıyor (bkz. docs/app-store/ffmpeg-replacement.md):
+            // kaynağı 48 kHz mono WAV'a burada, AVFoundation ile çözüp
+            // `--wav` bayrağıyla veriyoruz. Kaynak zaten WAV ise doğrudan
+            // onu kullanıyoruz, gereksiz bir kopya/çözme adımı eklemiyoruz.
+            let wavPreparation = MediaToWAVConverter.prepareWAV(for: source)
+            let wavURL: URL
+            switch wavPreparation {
+            case .failure(let error):
+                DispatchQueue.main.async {
+                    self?.isAnalysing = false
+                    self?.analysisMessage = "Ses çözülemedi: \(error.localizedDescription)"
+                }
+                return
+            case .success(let url):
+                wavURL = url
+            }
+            defer { MediaToWAVConverter.cleanUpTemporaryWAV(wavURL, isOriginal: wavURL == source) }
+
             let process = Process()
             process.executableURL = executable
-            process.arguments = [source.path, "--makam", "huzzam", "--karar", "dugah", "--engine", selectedEngine]
+            process.arguments = [
+                source.path, "--makam", "huzzam", "--karar", "dugah",
+                "--engine", selectedEngine, "--wav", wavURL.path,
+            ]
             let output = Pipe()
             let error = Pipe()
             process.standardOutput = output

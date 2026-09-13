@@ -4,6 +4,14 @@
 # Mach-O'yu içten dışa imzalar, ana app'i imzalar ve App Store Connect'e
 # yüklenebilir bir .pkg üretmek üzere -exportArchive çalıştırır.
 #
+# `imageio_ffmpeg` bilerek paketten dışlanır: motor artık ffmpeg'e ihtiyaç
+# duymuyor -- ses/video kaynağı native Swift katmanında AVFoundation ile
+# 48 kHz mono WAV'a çözülüp motora hazır veriliyor (bkz.
+# macos/KlariVision/Sources/KlariVisionApp/MediaToWAVConverter.swift ve
+# docs/app-store/ffmpeg-replacement.md). `yt_dlp` zaten ffmpeg'e bağlıydı;
+# ikisi de dışlanınca linkten açma App Store paketinde koddan erişilemez
+# kalır (Yönerge 5.2.3).
+#
 # Gerçek imzalama kimlik ister; bu betik ortam değişkenleri eksikse
 # anlaşılır bir hatayla çıkar, sahte kimlikle imzalamayı denemez.
 #
@@ -78,9 +86,9 @@ clang++ -std=c++20 -O3 -I "$PROJECT_ROOT/core/include" \
   --specpath "$ENGINE_SPEC" \
   --paths "$PROJECT_ROOT/src" \
   --collect-all numpy \
-  --collect-all imageio_ffmpeg \
   --collect-all openpyxl \
   --exclude-module yt_dlp \
+  --exclude-module imageio_ffmpeg \
   --exclude-module curl_cffi \
   --exclude-module librosa \
   --exclude-module scipy \

@@ -16,6 +16,15 @@ def main() -> None:
     parser.add_argument("--makam", default="huzzam")
     parser.add_argument("--karar", default="dugah")
     parser.add_argument(
+        "--wav",
+        type=Path,
+        metavar="WAV",
+        help=(
+            "Native Swift katmanının AVFoundation ile önceden ürettiği 48 kHz "
+            "mono WAV. Verilirse ffmpeg hiç çalıştırılmaz."
+        ),
+    )
+    parser.add_argument(
         # One engine since D-039. A command line still naming a removed engine
         # is rejected by argparse rather than silently analysed with another.
         "--engine", choices=("unified_v1",), default="unified_v1"
@@ -35,6 +44,7 @@ def main() -> None:
         arguments.makam,
         arguments.karar,
         arguments.engine,
+        precomputed_wav=arguments.wav.expanduser().resolve() if arguments.wav else None,
     )
     print((PROJECT_ROOT / viewer_url.lstrip("/")).resolve())
 

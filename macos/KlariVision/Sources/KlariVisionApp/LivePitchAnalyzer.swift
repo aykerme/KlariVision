@@ -833,9 +833,26 @@ final class LivePitchAnalyzer: ObservableObject, @unchecked Sendable {
             let root = URL(fileURLWithPath: NSHomeDirectory()).appending(path: "Documents/KlariVision")
 
             if let engine = Self.bundledEngineExecutable() {
+                // Paketlenmiş motor artık ffmpeg taşımıyor (bkz.
+                // docs/app-store/ffmpeg-replacement.md); kaynağı burada
+                // AVFoundation ile WAV'a çözüp `--wav` ile veriyoruz.
+                let wavPreparation = MediaToWAVConverter.prepareWAV(for: source)
+                guard case .success(let wavURL) = wavPreparation else {
+                    if case .failure(let error) = wavPreparation {
+                        DispatchQueue.main.async { [weak self] in
+                            guard let self, self.referenceAnalysisID == analysisID else { return }
+                            self.referenceAnalysisMessage = "Kaynak ses çözülemedi: \(error.localizedDescription)"
+                        }
+                    }
+                    return
+                }
+                defer { MediaToWAVConverter.cleanUpTemporaryWAV(wavURL, isOriginal: wavURL == source) }
                 let process = Process()
                 process.executableURL = engine
-                process.arguments = [source.path, "--makam", "huzzam", "--karar", "dugah", "--engine", "vamp"]
+                process.arguments = [
+                    source.path, "--makam", "huzzam", "--karar", "dugah",
+                    "--engine", "vamp", "--wav", wavURL.path,
+                ]
                 let pipe = Pipe()
                 process.standardOutput = pipe
                 process.standardError = Pipe()

@@ -9,6 +9,7 @@ from klarivision.local_app import (
     _form_page,
     _load_recent_analyses,
     _parse_byte_range,
+    _to_wav,
     refresh_existing_viewer,
     _safe_stem,
     _store_recent_analysis,
@@ -96,6 +97,61 @@ def test_analyse_upload_reuses_cached_pitch_when_import_name_changes(tmp_path, m
 
     assert first == second
     assert calls == {"to_wav": 1, "extract": 1}
+
+
+def test_to_wav_copies_a_wav_source_without_importing_ffmpeg(tmp_path) -> None:
+    """The packaged (App Store) app always calls `_to_wav` with a WAV that
+    the native Swift layer already produced via AVFoundation
+    (`MediaToWAVConverter`) -- it must never need `imageio_ffmpeg` (excluded
+    from that build, see scripts/build_app_store.sh) for this case."""
+    source = tmp_path / "precomputed.wav"
+    source.write_bytes(b"RIFF....WAVEfmt ")
+    destination = tmp_path / "audio" / "study.wav"
+
+    _to_wav(source, destination)
+
+    assert destination.read_bytes() == source.read_bytes()
+
+
+def test_analyse_upload_uses_precomputed_wav_instead_of_calling_to_wav(tmp_path, monkeypatch) -> None:
+    """`precomputed_wav` (the WAV the Swift layer already resolved) must be
+    used as-is; `_to_wav`/ffmpeg is a developer/CLI-only fallback and must
+    never run when a precomputed WAV is supplied."""
+    source = tmp_path / "icra.mp4"
+    source.write_bytes(b"video-media")
+    precomputed_wav = tmp_path / "already-decoded.wav"
+    precomputed_wav.write_bytes(b"precomputed-wav-bytes")
+    monkeypatch.setattr("klarivision.local_app.PROJECT_ROOT", tmp_path)
+    monkeypatch.setattr("klarivision.local_app.IMPORTS_DIR", tmp_path / "data" / "imports")
+    monkeypatch.setattr("klarivision.local_app.AUDIO_DIR", tmp_path / "data" / "audio")
+    monkeypatch.setattr("klarivision.local_app.OUTPUTS_DIR", tmp_path / "outputs")
+    monkeypatch.setattr("klarivision.local_app.RECENTS_PATH", tmp_path / "data" / "recent_analyses.json")
+
+    def fail_if_called(*_args, **_kwargs):
+        raise AssertionError("_to_wav should not import/call ffmpeg when a precomputed WAV is given")
+
+    class FakeExtractor:
+        def extract(self, audio_source):
+            assert Path(audio_source.path).read_bytes() == precomputed_wav.read_bytes()
+            return object()
+
+    def fake_write_json(_track, destination):
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        destination.write_text('{"frames":[]}', encoding="utf-8")
+
+    def fake_build_frequency_viewer(_pitch_json, _audio_path, viewer, **_kwargs):
+        viewer.parent.mkdir(parents=True, exist_ok=True)
+        viewer.write_text("<html></html>", encoding="utf-8")
+
+    monkeypatch.setattr("imageio_ffmpeg.get_ffmpeg_exe", fail_if_called, raising=False)
+    monkeypatch.setattr("klarivision.local_app.VampPyinPitchExtractor", FakeExtractor)
+    monkeypatch.setattr("klarivision.local_app.write_json", fake_write_json)
+    monkeypatch.setattr("klarivision.local_app.build_frequency_viewer", fake_build_frequency_viewer)
+
+    analyse_upload(source, "huzzam", "dugah", precomputed_wav=precomputed_wav)
+
+    wav = tmp_path / "data" / "audio" / f"{_analysis_stem(source)}-{_file_signature(source)}.wav"
+    assert wav.read_bytes() == precomputed_wav.read_bytes()
 
 
 def test_analyse_upload_keeps_selected_video_in_app_imports(tmp_path, monkeypatch) -> None:

@@ -20,8 +20,6 @@ from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, quote, unquote, urlparse
 
-import imageio_ffmpeg
-
 from .contour_viewer import KARAR_TONES, MAKAM_PROFILES
 from .frequency_viewer import build_frequency_viewer, prepare_display_frames
 from .pitch.cpp_engine import (
@@ -174,8 +172,29 @@ def _store_recent_analysis(source: Path, viewer_url: str, *, cache_hit: bool) ->
 
 
 def _to_wav(source: Path, destination: Path) -> None:
-    """Extract portable mono 48 kHz PCM for the production C++ engines."""
+    """Extract portable mono 48 kHz PCM for the production C++ engines.
+
+    The packaged (App Store) app never reaches this function with anything
+    that still needs decoding: the native Swift layer already resolves a
+    48 kHz mono WAV with ``MediaToWAVConverter`` (AVFoundation) and hands it
+    to ``analyse_upload``/``refresh_existing_viewer`` as ``precomputed_wav``,
+    which copies it in directly (see below). This function only exists for
+    the developer/CLI flow -- running ``analyse_upload`` straight from a
+    Python shell or the ``.venv`` script without a precomputed WAV -- so
+    ``imageio_ffmpeg`` is imported lazily here rather than at module load
+    time: a packaged build excludes that dependency (see
+    ``scripts/build_app_store.sh``), and importing it unconditionally at
+    the top of this module would make every packaged import of
+    ``klarivision.local_app`` fail even when this function is never called.
+    """
     destination.parent.mkdir(parents=True, exist_ok=True)
+    if source.resolve() == destination.resolve():
+        return
+    if source.suffix.lower() in {".wav", ".wave"}:
+        shutil.copy2(source, destination)
+        return
+    import imageio_ffmpeg
+
     subprocess.run(
         [
             imageio_ffmpeg.get_ffmpeg_exe(),
@@ -206,6 +225,12 @@ def _import_from_url(url: str) -> Path:
         raise RuntimeError(
             "Linkten açma için yt-dlp bileşeni gerekli. Uygulamayı bu bileşenle paketlemeliyiz."
         ) from error
+    # `yt_dlp` and `imageio_ffmpeg` are excluded together from the packaged
+    # (App Store) build -- see scripts/build_app_store.sh -- so if the
+    # import above succeeded (a developer environment with both installed),
+    # this one always will too. Imported lazily for the same reason as in
+    # `_to_wav`: a packaged build must never need this module importable.
+    import imageio_ffmpeg
 
     IMPORTS_DIR.mkdir(parents=True, exist_ok=True)
     output_template = str(IMPORTS_DIR / "link-%(id)s.%(ext)s")
@@ -259,8 +284,21 @@ def _persist_video_source(source: Path, analysis_id: str) -> Path:
     return destination
 
 
-def analyse_upload(source: Path, makam: str, karar: str, engine: str = "vamp") -> str:
-    """Analyse one local media file and return its project-relative viewer URL."""
+def analyse_upload(
+    source: Path,
+    makam: str,
+    karar: str,
+    engine: str = "vamp",
+    precomputed_wav: Path | None = None,
+) -> str:
+    """Analyse one local media file and return its project-relative viewer URL.
+
+    ``precomputed_wav`` is the 48 kHz mono WAV the native Swift layer already
+    produced with AVFoundation (``MediaToWAVConverter``) for the packaged app
+    -- when given, it is copied into place directly and ``_to_wav`` (and
+    therefore ffmpeg) is never invoked. Only the developer/CLI flow, which
+    calls this without a precomputed WAV, still falls back to ffmpeg.
+    """
     if makam not in MAKAM_PROFILES or karar not in KARAR_TONES:
         raise ValueError("Geçersiz makam veya karar sesi seçimi.")
 
@@ -275,7 +313,7 @@ def analyse_upload(source: Path, makam: str, karar: str, engine: str = "vamp") -
     viewer = OUTPUTS_DIR / f"{analysis_id}.html"
     if not wav.is_file():
         _emit_progress("extract", 0, 1)
-        _to_wav(media_source, wav)
+        _to_wav(precomputed_wav if precomputed_wav is not None else media_source, wav)
         _emit_progress("extract", 1, 1)
     cache_hit = pitch_json.is_file()
     if not cache_hit:

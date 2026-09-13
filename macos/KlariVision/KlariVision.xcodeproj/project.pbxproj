@@ -26,6 +26,7 @@
 		A10000000000000000000067 /* PracticeViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000066 /* PracticeViews.swift */; };
 		A10000000000000000000069 /* LivePitchAnalyzer.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000068 /* LivePitchAnalyzer.swift */; };
 		A10000000000000000000071 /* LiveVisuals.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000070 /* LiveVisuals.swift */; };
+		A100000000000000000000C1 /* MediaToWAVConverter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000C0 /* MediaToWAVConverter.swift */; };
 		A10000000000000000000031 /* canli_pitch_referans_v1.wav in Resources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000030 /* canli_pitch_referans_v1.wav */; };
 		A100000000000000000000B1 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000B0 /* PrivacyInfo.xcprivacy */; };
 /* End PBXBuildFile section */
@@ -38,6 +39,7 @@
 		A10000000000000000000066 /* PracticeViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/KlariVisionApp/PracticeViews.swift; sourceTree = "<group>"; };
 		A10000000000000000000068 /* LivePitchAnalyzer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/KlariVisionApp/LivePitchAnalyzer.swift; sourceTree = "<group>"; };
 		A10000000000000000000070 /* LiveVisuals.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/KlariVisionApp/LiveVisuals.swift; sourceTree = "<group>"; };
+		A100000000000000000000C0 /* MediaToWAVConverter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/KlariVisionApp/MediaToWAVConverter.swift; sourceTree = "<group>"; };
 		A10000000000000000000040 /* analysis_engine.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ../../core/src/analysis_engine.cpp; sourceTree = "<group>"; };
 		A10000000000000000000042 /* analysis_engine_c.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ../../core/src/analysis_engine_c.cpp; sourceTree = "<group>"; };
 		A10000000000000000000044 /* mpm.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ../../core/src/mpm.cpp; sourceTree = "<group>"; };
@@ -79,6 +81,7 @@
 				A10000000000000000000066 /* PracticeViews.swift */,
 				A10000000000000000000068 /* LivePitchAnalyzer.swift */,
 				A10000000000000000000070 /* LiveVisuals.swift */,
+				A100000000000000000000C0 /* MediaToWAVConverter.swift */,
 				A10000000000000000000052 /* KlariVisionBridge.h */,
 				A10000000000000000000040 /* analysis_engine.cpp */,
 				A10000000000000000000042 /* analysis_engine_c.cpp */,
@@ -203,6 +206,7 @@
 				A10000000000000000000067 /* PracticeViews.swift in Sources */,
 				A10000000000000000000069 /* LivePitchAnalyzer.swift in Sources */,
 				A10000000000000000000071 /* LiveVisuals.swift in Sources */,
+				A100000000000000000000C1 /* MediaToWAVConverter.swift in Sources */,
 				A10000000000000000000041 /* analysis_engine.cpp in Sources */,
 				A10000000000000000000043 /* analysis_engine_c.cpp in Sources */,
 				A10000000000000000000045 /* mpm.cpp in Sources */,
