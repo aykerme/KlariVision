@@ -33,6 +33,11 @@
 #                         akışlarda kullanılır; App Store Connect app'leri için
 #                         xcodebuild -exportArchive bunu kendi profil/kimlik
 #                         seçimiyle yönetir, burada yalnız doğrulanır)
+#   KV_PROVISIONING_PROFILE  developer.apple.com'dan indirilen "Mac App Store
+#                         Connect" dağıtım profili (.provisionprofile) yolu.
+#                         Pakete Contents/embedded.provisionprofile olarak
+#                         gömülür; App Store Connect profilsiz Mac uygulamasını
+#                         kabul etmez.
 #   KV_X86_PYTHON         x86_64 için PyInstaller + proje bağımlılıklarının
 #                         (numpy, openpyxl, ...) kurulu olduğu bir Python
 #                         yorumlayıcısının yolu (ör. Rosetta altında kurulmuş
@@ -54,6 +59,8 @@ fail() {
 : "${KV_TEAM_ID:?KV_TEAM_ID ortam değişkeni gerekli (Apple Developer Team ID).}"
 : "${KV_APP_IDENTITY:?KV_APP_IDENTITY ortam değişkeni gerekli (\"Apple Distribution: ...\" imza kimliği).}"
 : "${KV_INSTALLER_IDENTITY:?KV_INSTALLER_IDENTITY ortam değişkeni gerekli (\"3rd Party Mac Developer Installer: ...\" kimliği).}"
+: "${KV_PROVISIONING_PROFILE:?KV_PROVISIONING_PROFILE ortam değişkeni gerekli (Mac App Store Connect dağıtım profili .provisionprofile yolu).}"
+[ -f "$KV_PROVISIONING_PROFILE" ] || fail "KV_PROVISIONING_PROFILE ($KV_PROVISIONING_PROFILE) bulunamadı."
 : "${KV_X86_PYTHON:?KV_X86_PYTHON ortam değişkeni gerekli: x86_64 motoru için PyInstaller + proje bağımlılıklarının kurulu olduğu bir Python yorumlayıcısının yolu (bkz. bu betiğin başındaki açıklama). Universal derleme bu ortam olmadan yapılamaz.}"
 
 [ -x "$KV_X86_PYTHON" ] || fail "KV_X86_PYTHON ($KV_X86_PYTHON) çalıştırılabilir bir dosya değil."
@@ -78,6 +85,24 @@ ICON_FILE="$PROJECT_ROOT/macos/KlariVision/Resources/KlariVision.icns"
 PITCH_TRACK_CLI="$PROJECT_ROOT/build/klarivision-pitch-track-cli-universal"
 
 rm -rf "$ARCHIVE_PATH" "$EXPORT_PATH"
+
+# Profilden kimlikleri oku: ExportOptions eşlemesi ve imza izinleri bunlara dayanır.
+PROFILE_PLIST="$PROJECT_ROOT/build/provisioning-profile.plist"
+mkdir -p "$PROJECT_ROOT/build"
+security cms -D -i "$KV_PROVISIONING_PROFILE" > "$PROFILE_PLIST"
+PROFILE_UUID="$(plutil -extract UUID raw "$PROFILE_PLIST")"
+PROFILE_TEAM="$(plutil -extract TeamIdentifier.0 raw "$PROFILE_PLIST")"
+BUNDLE_ID="$(xcodebuild -project "$PROJECT_FILE" -scheme KlariVision -configuration Release -showBuildSettings 2>/dev/null | awk -F' = ' '/ PRODUCT_BUNDLE_IDENTIFIER = / {print $2; exit}')"
+PROFILE_APP_ID="$(plutil -extract Entitlements.com\\.apple\\.application-identifier raw "$PROFILE_PLIST")"
+[ "$PROFILE_TEAM" = "$KV_TEAM_ID" ] || fail "Profilin takımı ($PROFILE_TEAM) KV_TEAM_ID ($KV_TEAM_ID) ile aynı değil."
+[ "$PROFILE_APP_ID" = "$KV_TEAM_ID.$BUNDLE_ID" ] || fail "Profil $PROFILE_APP_ID için; uygulama $KV_TEAM_ID.$BUNDLE_ID."
+
+# App Store imzası uygulama kimliğini ve takımı izinlerde taşımalı; Xcode bunu
+# otomatik imzada profilden ekler, burada elle imzaladığımız için biz ekliyoruz.
+SIGNING_ENTITLEMENTS="$PROJECT_ROOT/build/KlariVision.signing.entitlements"
+cp "$ENTITLEMENTS_APP" "$SIGNING_ENTITLEMENTS"
+plutil -insert "com\\.apple\\.application-identifier" -string "$KV_TEAM_ID.$BUNDLE_ID" "$SIGNING_ENTITLEMENTS"
+plutil -insert "com\\.apple\\.developer\\.team-identifier" -string "$KV_TEAM_ID" "$SIGNING_ENTITLEMENTS"
 
 CORE_SOURCES=(
   "$PROJECT_ROOT/core/src/analysis_engine.cpp"
@@ -204,8 +229,10 @@ done
 # --- ayrı ayrı imzalandı; --deep bunların üstüne yanlış/gereksiz bir    ---
 # --- ikinci imza daha atardı).                                          ---
 
+cp "$KV_PROVISIONING_PROFILE" "$ARCHIVE_APP/Contents/embedded.provisionprofile"
+
 codesign --force --options runtime --timestamp \
-  --entitlements "$ENTITLEMENTS_APP" \
+  --entitlements "$SIGNING_ENTITLEMENTS" \
   --sign "$KV_APP_IDENTITY" \
   "$ARCHIVE_APP"
 
@@ -228,6 +255,11 @@ cat > "$EXPORT_OPTIONS" <<PLIST
     <string>${KV_APP_IDENTITY}</string>
     <key>installerSigningCertificate</key>
     <string>${KV_INSTALLER_IDENTITY}</string>
+    <key>provisioningProfiles</key>
+    <dict>
+        <key>${BUNDLE_ID}</key>
+        <string>${PROFILE_UUID}</string>
+    </dict>
     <key>uploadSymbols</key>
     <false/>
 </dict>
