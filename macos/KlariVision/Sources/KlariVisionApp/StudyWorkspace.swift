@@ -76,6 +76,7 @@ struct WorkspaceView: View {
     // Bu görevde bayrağın davranışı yok; yalnız doğru route'tan gelip gelmediğini taşır.
     var isTogetherMode: Bool = false
     @Environment(\.appTheme) private var appTheme
+    @AppStorage(NoteNamingStyle.storageKey) private var noteNamingRaw = NoteNamingStyle.automatic.rawValue
     @State private var webView: WKWebView?
     @State private var isEditingStudy = false
     @State private var studySettings: StudySettingsDraft?
@@ -251,6 +252,7 @@ struct WorkspaceView: View {
             playback: playback,
             appTheme: appTheme,
             graphAppearance: GraphAppearance(pitchHex: graphPitchHex, noteGuideHex: graphNoteGuideHex, micHex: graphMicHex),
+            noteNaming: (NoteNamingStyle(rawValue: noteNamingRaw) ?? .automatic).resolved(),
             reloadToken: webViewReloadToken,
             webView: $webView,
             micCoordinator: $micCoordinator
@@ -1126,6 +1128,9 @@ private struct LocalViewer: NSViewRepresentable {
     let playback: StudyPlaybackState
     let appTheme: AppTheme
     let graphAppearance: GraphAppearance
+    /// Çözülmüş stil (`.solfege` ya da `.letter`); sayfa eksen etiketlerini
+    /// buna göre yazar. Köprüyü tanımayan eski sayfalar solfejde kalır.
+    let noteNaming: NoteNamingStyle
     let reloadToken: Int
     @Binding var webView: WKWebView?
     // "Birlikte Çal" mikrofon köprüsü buradan dışarı verilir; `webView`
@@ -1600,6 +1605,8 @@ private struct LocalViewer: NSViewRepresentable {
             body.classList.remove('theme-studio', 'theme-classic');
             if ('\(appTheme.rawValue)' === 'studio') body.classList.add('theme-studio');
             if ('\(appTheme.rawValue)' === 'classic') body.classList.add('theme-classic');
+            window.klariVisionNoteNaming = '\(noteNaming.rawValue)';
+            window.klariVisionStudyViewer?.setNoteNaming?.('\(noteNaming.rawValue)');
         })();
         """
         configuration.userContentController.addUserScript(
@@ -1630,6 +1637,7 @@ private struct LocalViewer: NSViewRepresentable {
             // stale cache from the previous page.
             context.coordinator.lastAppliedGraphAppearance = nil
             context.coordinator.lastAppliedTheme = nil
+            context.coordinator.lastAppliedNoteNaming = nil
             context.coordinator.lastAppliedReloadToken = reloadToken
             if urlChanged {
                 webView.loadFileURL(viewer, allowingReadAccessTo: readAccessRoot)
@@ -1652,6 +1660,10 @@ private struct LocalViewer: NSViewRepresentable {
         if context.coordinator.lastAppliedTheme != appTheme {
             applyTheme(to: webView)
             context.coordinator.lastAppliedTheme = appTheme
+        }
+        if context.coordinator.lastAppliedNoteNaming != noteNaming {
+            webView.evaluateJavaScript("window.klariVisionNoteNaming = '\(noteNaming.rawValue)'; window.klariVisionStudyViewer?.setNoteNaming?.('\(noteNaming.rawValue)');")
+            context.coordinator.lastAppliedNoteNaming = noteNaming
         }
     }
 
@@ -1690,6 +1702,7 @@ private struct LocalViewer: NSViewRepresentable {
         let playback: StudyPlaybackState
         var lastAppliedGraphAppearance: GraphAppearance?
         var lastAppliedTheme: AppTheme?
+        var lastAppliedNoteNaming: NoteNamingStyle?
         var lastAppliedReloadToken: Int?
         // "Birlikte Çal" mikrofon köprüsü. `weak`: WKWebView'in kendisi bu
         // temsilcinin ömrünü belirler, tersi değil.

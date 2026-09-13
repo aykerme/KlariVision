@@ -201,7 +201,7 @@ final class RecentLibrary {
 
     func studySummary(for item: Item) -> String {
         let study = study(for: item)
-        return "\(makamName(study.makam)) · \(kararName(study.karar)) karar"
+        return "\(makamName(study.makam)) · \(displayNoteName(kararName(study.karar))) karar"
     }
 
     func formattedAnalysisDate(for item: Item) -> String {
@@ -740,6 +740,8 @@ struct WelcomeView: View {
     /// kendi kenar çubuğu seçiminden ayırır; bkz. aşağıdaki iki `onChange`.
     @State private var selectionSync = StudySelectionSync()
     @State private var itemToRemove: RecentLibrary.Item?
+    /// Kenar çubuğu özeti karar adını kayıtlı nota stiliyle yazar; ayar değişince yenilensin.
+    @AppStorage(NoteNamingStyle.storageKey) private var noteNamingRaw = NoteNamingStyle.automatic.rawValue
     @State private var itemToEdit: RecentLibrary.Item?
     @State private var selectedStudyID: RecentLibrary.Item.ID?
 

@@ -154,6 +154,72 @@ enum AppLanguage {
     }
 }
 
+/// Batı nota adlarının yazımı: Do-Re-Mi ya da C-D-E. Yalnız GÖRÜNTÜ katmanıdır.
+/// Nota adları kodda mantık anahtarı olarak da kullanılır (koma tabloları,
+/// `makamNoteLabel`'ın taban nota ayrıştırması); o tablolar solfejde kalır ve
+/// ad ekrana yazılacağı son noktada `display(_:)`'dan geçer. Makam, perde ve
+/// karar adları bu dönüşümün dışındadır.
+enum NoteNamingStyle: String, CaseIterable, Identifiable {
+    static let storageKey = "klarivision-note-naming-v1"
+
+    case automatic
+    case solfege
+    case letter
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .automatic: String(localized: "Otomatik", bundle: .klariVisionModule)
+        case .solfege: "Do Re Mi"
+        case .letter: "C D E"
+        }
+    }
+
+    /// Otomatik: Türkçe arayüzde solfej, İngilizce arayüzde harf.
+    func resolved(languageCode: String = AppLanguage.engineCode) -> NoteNamingStyle {
+        guard self == .automatic else { return self }
+        return languageCode == "en" ? .letter : .solfege
+    }
+
+    static func stored(defaults: UserDefaults = .standard) -> NoteNamingStyle {
+        NoteNamingStyle(rawValue: defaults.string(forKey: storageKey) ?? "") ?? .automatic
+    }
+
+    func save(defaults: UserDefaults = .standard) {
+        defaults.set(rawValue, forKey: Self.storageKey)
+    }
+
+    private static let letters = ["Do": "C", "Re": "D", "Mi": "E", "Fa": "F", "Sol": "G", "La": "A", "Si": "B"]
+    // Solfej hecesi yalnız bir sözcüğün başındaysa ve ardından küçük harf
+    // gelmiyorsa eşleşir: "Sol4 ♭4", "Fa♯ / Sol♭" dönüşür; "Minör", "Dolap"
+    // gibi sözcükler dönüşmez. Aynı kural frequency_viewer.py'de de vardır.
+    private static let pattern = try! NSRegularExpression(
+        pattern: "(?<![\\p{L}])(Sol|Do|Re|Mi|Fa|La|Si)(?![\\p{Ll}])"
+    )
+
+    /// Solfej yazılmış bir etiketi bu stile göre yazar.
+    func display(_ solfegeLabel: String) -> String {
+        guard resolved() == .letter else { return solfegeLabel }
+        let source = solfegeLabel as NSString
+        var result = ""
+        var cursor = 0
+        for match in Self.pattern.matches(in: solfegeLabel, range: NSRange(location: 0, length: source.length)) {
+            result += source.substring(with: NSRange(location: cursor, length: match.range.location - cursor))
+            result += Self.letters[source.substring(with: match.range)] ?? source.substring(with: match.range)
+            cursor = match.range.location + match.range.length
+        }
+        return result + source.substring(from: cursor)
+    }
+}
+
+/// Kayıtlı stile göre nota etiketi; AppKit/JS köprüleri gibi SwiftUI ortamı
+/// olmayan yerler için. SwiftUI görünümleri stili `@AppStorage` ile gözleyip
+/// `NoteNamingStyle.display(_:)`'ı doğrudan çağırmalı ki ayar değişince yeniden çizilsin.
+func displayNoteName(_ solfegeLabel: String) -> String {
+    NoteNamingStyle.stored().display(solfegeLabel)
+}
+
 extension Bundle {
     /// SwiftPM derlemesinde `Bundle.module`, Xcode hedefinde `Bundle.main` --
     /// `Localizable.xcstrings` her iki derleme yolunda da bu köprüyle bulunur.

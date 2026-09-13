@@ -25,6 +25,13 @@ from klarivision.pitch_reference import extend_reference_octaves, load_turkish_p
 _KNOWN_ENGINE_IDS = frozenset(_ENGINE_LABELS)
 
 
+# Batı nota adlarının harf karşılıkları. Sayfadaki tablolar solfejde kalır;
+# ad yalnız ekrana yazılırken `displayNoteName` ile dönüşür. Aynı eşleme ve
+# kural Swift'te `NoteNamingStyle.display` içindedir (AppSettings.swift).
+NOTE_LETTERS = {"Do": "C", "Re": "D", "Mi": "E", "Fa": "F", "Sol": "G", "La": "A", "Si": "B"}
+NOTE_NAME_PATTERN_JS = r"(?<![\p{L}])(Sol|Do|Re|Mi|Fa|La|Si)(?![\p{Ll}])"
+
+
 SCALE_LABELS = {
     "major": {
         "0": ("Do", "Re", "Mi", "Fa", "Sol", "La", "Si"),
@@ -159,11 +166,11 @@ def build_frequency_viewer(
 ) -> None:
     """Write a self-contained viewer of the measured, sounding frequency.
 
-    ``lang`` (``tr``/``en``) selects the page's `<html lang>`, title, and the
-    handful of static labels below (engine name, "Audio recording", "Engine:
-    ..."). The much larger embedded JS/CSS control UI further down this file
-    is not yet bilingual -- see docs/app-store/localization-inventory.md and
-    the WKWebView caution in StudyWorkspace.swift before touching it.
+    ``lang`` (``tr``/``en``) selects the page's `<html lang>`, title and every
+    user-visible control text (see ``i18n.VIEWER_UI``). It also sets the note
+    naming a standalone page starts with (tr → Do-Re-Mi, en → C-D-E); inside the
+    app ``setNoteNaming`` overrides it. Read the WKWebView caution in
+    StudyWorkspace.swift before touching the embedded JS.
     """
     payload = json.loads(pitch_json_path.read_text(encoding="utf-8"))
     frames = prepare_display_frames(payload)
@@ -243,6 +250,10 @@ let micFrames=[];
 let lastObservedMediaTime=0;
 const validation={validation_json};
 const scaleLabels={json.dumps(SCALE_LABELS, ensure_ascii=False, separators=(',', ':'))};
+const noteLetters={json.dumps(NOTE_LETTERS, separators=(',', ':'))},noteNamePattern=new RegExp({json.dumps(NOTE_NAME_PATTERN_JS)},'gu');
+// Uygulama `setNoteNaming` ile 'solfege'/'letter' verir; tek başına açılan sayfa dile göre başlar.
+let noteNaming=window.klariVisionNoteNaming||{json.dumps("letter" if lang == "en" else "solfege")};
+function displayNoteName(label){{return noteNaming==='letter'?String(label).replace(noteNamePattern,m=>noteLetters[m]||m):label}}
 const turkishReference={json.dumps([record.__dict__ | {"display_notation": record.display_notation, "octave_label": record.octave_label} for record in turkish_reference], ensure_ascii=False, separators=(',', ':'))};
 const makamDefaults={json.dumps(MAKAM_DEFAULT_INTERVALS, ensure_ascii=False, separators=(',', ':'))};
 const media=document.getElementById('media'),canvas=document.getElementById('chart'),ctx=canvas.getContext('2d'),timeScroll=document.getElementById('time-scroll'),verticalScroll=document.getElementById('vertical-scroll');
@@ -311,6 +322,7 @@ function formatClock(time){{const seconds=Math.max(0,Math.floor(Number(time)||0)
 function updateLoopButtons(){{setAButton.title=`A: ${{formatTime(loopA)}}`;setBButton.title=`B: ${{loopBManual?formatTime(loopB):'Video sonu'}}`;loopButton.setAttribute('aria-pressed',String(loopEnabled));if(timeReadout)timeReadout.textContent=`${{formatClock(media.currentTime)}} / ${{formatClock(duration)}}`;}}
 function setMediaReady(ready){{mediaReady=ready;setAButton.disabled=!ready;setBButton.disabled=!ready;loopButton.disabled=!ready;if(ready)countdownStatus.textContent=''}}
 window.klariVisionStudyViewer={{
+    setNoteNaming(style){{noteNaming=style==='letter'?'letter':'solfege';draw()}},
     media,
     scale: scaleMode,
     tonic: tonicInput,
@@ -411,7 +423,7 @@ let frameCentsBounds=null;
 function updateScrollbars(){{const span=String(Math.max(1,Math.round(duration*1000)));if(timeScroll.min!=='0')timeScroll.min=0;if(timeScroll.max!==span)timeScroll.max=span;const timeValue=String(Math.round(playbackTime()*1000));if(timeScroll.value!==timeValue)timeScroll.value=timeValue;if(!frames.length)return;if(!frameCentsBounds){{let min=Infinity,max=-Infinity;for(const p of frames){{const c=cents(p.hz);if(c<min)min=c;if(c>max)max=c}}frameCentsBounds=[min,max]}}const low=String(Math.floor(frameCentsBounds[0]-verticalSpan/2)),high=String(Math.ceil(frameCentsBounds[1]+verticalSpan/2)),centre=String(Math.round(verticalCenter));if(verticalScroll.min!==low)verticalScroll.min=low;if(verticalScroll.max!==high)verticalScroll.max=high;if(verticalScroll.value!==centre)verticalScroll.value=centre}}
 function draw(){{const w=canvas.clientWidth,h=canvas.clientHeight,cw=w-left-right,ch=h-marginTop-bottom,[lo,hi]=range(),palette=chartPalette();ctx.clearRect(0,0,w,h);const x=t=>left+(t-viewStart)/windowSeconds*cw,y=hz=>marginTop+(hi-cents(hz))/(hi-lo)*ch;
 ctx.fillStyle=palette.background;ctx.fillRect(0,0,w,h);ctx.strokeStyle=palette.grid;ctx.lineWidth=1;
-for(const [name,hz,isKarar] of scaleNotes()){{const yy=y(hz);if(yy<marginTop-5||yy>h-bottom+5)continue;ctx.beginPath();ctx.moveTo(left,yy);ctx.lineTo(w-right,yy);if(isKarar){{ctx.strokeStyle=colorWithAlpha(palette.karar,.75);ctx.lineWidth=2}}else{{ctx.strokeStyle=colorWithAlpha(palette.guide,.42);ctx.lineWidth=1}}ctx.stroke();if(isKarar){{ctx.fillStyle=colorWithAlpha(palette.karar,1)}}else{{ctx.fillStyle=colorWithAlpha(palette.guide,.88)}}ctx.textAlign='right';ctx.font='11px system-ui';ctx.fillText(`${{name}}  (${{hz.toFixed(2)}} Hz)`,left-9,yy+4)}}
+for(const [name,hz,isKarar] of scaleNotes()){{const yy=y(hz);if(yy<marginTop-5||yy>h-bottom+5)continue;ctx.beginPath();ctx.moveTo(left,yy);ctx.lineTo(w-right,yy);if(isKarar){{ctx.strokeStyle=colorWithAlpha(palette.karar,.75);ctx.lineWidth=2}}else{{ctx.strokeStyle=colorWithAlpha(palette.guide,.42);ctx.lineWidth=1}}ctx.stroke();if(isKarar){{ctx.fillStyle=colorWithAlpha(palette.karar,1)}}else{{ctx.fillStyle=colorWithAlpha(palette.guide,.88)}}ctx.textAlign='right';ctx.font='11px system-ui';ctx.fillText(`${{displayNoteName(name)}}  (${{hz.toFixed(2)}} Hz)`,left-9,yy+4)}}
 ctx.lineWidth=1;
 for(let t=Math.max(0,Math.ceil(viewStart));t<=Math.min(duration,viewStart+windowSeconds);t++){{const xx=x(t);ctx.strokeStyle=palette.axis;ctx.beginPath();ctx.moveTo(xx,marginTop);ctx.lineTo(xx,h-bottom);ctx.stroke();ctx.fillStyle=palette.label;ctx.textAlign='center';ctx.fillText(`${{t}} {_translate_js("viewer-seconds-unit", lang)}`,xx,h-12)}}
 if(loopEnabled){{const start=Math.max(left,x(loopA)),end=Math.min(w-right,x(loopB));if(end>start){{ctx.fillStyle=palette.loop;ctx.fillRect(start,marginTop,end-start,ch)}}}}

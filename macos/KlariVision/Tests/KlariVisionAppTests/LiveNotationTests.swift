@@ -730,3 +730,37 @@ final class TogetherModeFeatureFlagTests: XCTestCase {
 extension AppRoute {
     fileprivate static var allTestCases: [AppRoute] { [.modeSelection, .listening, .live, .together] }
 }
+
+final class NoteNamingStyleTests: XCTestCase {
+    func testLetterStyleRewritesOnlyWesternNoteNames() {
+        let cases: [(String, String)] = [
+            ("Do", "C"), ("Re", "D"), ("Mi", "E"), ("Fa", "F"), ("Sol", "G"), ("La", "A"), ("Si", "B"),
+            ("La4", "A4"), ("Sol4 ♭4", "G4 ♭4"), ("Si♭", "B♭"), ("Fa♯ / Sol♭4", "F♯ / G♭4"),
+            ("Do♯ / Re♭4", "C♯ / D♭4"), ("La4  (440.00 Hz)", "A4  (440.00 Hz)"),
+            ("Majör · Sol karar", "Majör · G karar"),
+            // Makam adları ve sıradan sözcükler dönüşmez.
+            ("Nihavend", "Nihavend"), ("Kürdilihicazkâr", "Kürdilihicazkâr"), ("Minör", "Minör"),
+            ("Dolap", "Dolap"), ("Lale", "Lale"), ("Sinyal", "Sinyal"), ("koma", "koma"),
+        ]
+        for (input, expected) in cases {
+            XCTAssertEqual(NoteNamingStyle.letter.display(input), expected, input)
+            XCTAssertEqual(NoteNamingStyle.solfege.display(input), input, input)
+        }
+    }
+
+    func testAutomaticFollowsInterfaceLanguage() {
+        XCTAssertEqual(NoteNamingStyle.automatic.resolved(languageCode: "tr"), .solfege)
+        XCTAssertEqual(NoteNamingStyle.automatic.resolved(languageCode: "en"), .letter)
+        XCTAssertEqual(NoteNamingStyle.solfege.resolved(languageCode: "en"), .solfege)
+        XCTAssertEqual(NoteNamingStyle.letter.resolved(languageCode: "tr"), .letter)
+    }
+
+    func testStoredStyleRoundTripsAndDefaultsToAutomatic() {
+        let defaults = UserDefaults(suiteName: "NoteNamingStyleTests-\(UUID().uuidString)")!
+        XCTAssertEqual(NoteNamingStyle.stored(defaults: defaults), .automatic)
+        NoteNamingStyle.letter.save(defaults: defaults)
+        XCTAssertEqual(NoteNamingStyle.stored(defaults: defaults), .letter)
+        defaults.set("bozuk", forKey: NoteNamingStyle.storageKey)
+        XCTAssertEqual(NoteNamingStyle.stored(defaults: defaults), .automatic)
+    }
+}

@@ -220,6 +220,8 @@ struct TunerPanel: View {
     let tonic: Int
     let intervals: [Int]
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @AppStorage(NoteNamingStyle.storageKey) private var noteNamingRaw = NoteNamingStyle.automatic.rawValue
+    private var noteNaming: NoteNamingStyle { NoteNamingStyle(rawValue: noteNamingRaw) ?? .automatic }
     private var target: LiveTunerTarget? {
         guard let frequency else { return nil }
         return liveTunerTarget(for: frequency, scale: scale, tonic: tonic, intervals: intervals)
@@ -240,8 +242,8 @@ struct TunerPanel: View {
         .accessibilityLabel("Tüner")
         .accessibilityValue(target.map { item in
             item.usesKoma
-                ? "\(item.label), \(String(format: "%+.1f", item.komaOffset)) koma"
-                : "\(item.label), \(String(format: "%+.1f", item.centOffset)) cent"
+                ? "\(noteNaming.display(item.label)), \(String(format: "%+.1f", item.komaOffset)) koma"
+                : "\(noteNaming.display(item.label)), \(String(format: "%+.1f", item.centOffset)) cent"
         } ?? "Ses bekleniyor")
         .animation(reduceMotion ? nil : .easeOut(duration: 0.12), value: target?.centOffset ?? 0)
     }
@@ -254,9 +256,9 @@ struct TunerPanel: View {
         let offset = -target.centOffset * pointsPerCent
         let markerColor: Color = abs(target.centOffset) <= 8 ? .green : .orange
 
-        drawText("\(scale.title) · \(noteName(tonic)) karar", in: &context, at: CGPoint(x: 12, y: 10), font: .caption2.weight(.medium), color: .secondary, anchor: .topLeading)
+        drawText("\(scale.title) · \(noteNaming.display(noteName(tonic))) karar", in: &context, at: CGPoint(x: 12, y: 10), font: .caption2.weight(.medium), color: .secondary, anchor: .topLeading)
         drawText(String(format: "%.1f Hz", frequency ?? 0), in: &context, at: CGPoint(x: size.width - 12, y: 10), font: .caption2.monospacedDigit(), color: .secondary, anchor: .topTrailing)
-        drawText(target.label, in: &context, at: CGPoint(x: centreX, y: 28), font: .system(size: 24, weight: .medium, design: .rounded), color: .primary)
+        drawText(noteNaming.display(target.label), in: &context, at: CGPoint(x: centreX, y: 28), font: .system(size: 24, weight: .medium, design: .rounded), color: .primary)
         let offsetText = target.usesKoma
             ? String(format: "%+.1f koma", target.komaOffset)
             : String(format: "%+.1f cent", target.centOffset)
@@ -269,7 +271,7 @@ struct TunerPanel: View {
     }
 
     private func drawEmptyTuner(_ context: inout GraphicsContext, size: CGSize) {
-        drawText("\(scale.title) · \(noteName(tonic)) karar", in: &context, at: CGPoint(x: 12, y: 10), font: .caption2.weight(.medium), color: .secondary, anchor: .topLeading)
+        drawText("\(scale.title) · \(noteNaming.display(noteName(tonic))) karar", in: &context, at: CGPoint(x: 12, y: 10), font: .caption2.weight(.medium), color: .secondary, anchor: .topLeading)
         drawText("Ses yok", in: &context, at: CGPoint(x: size.width / 2, y: size.height / 2), font: .system(size: 22, weight: .medium, design: .rounded), color: .secondary)
     }
 
@@ -296,11 +298,12 @@ struct TunerPanel: View {
         var occupied: [ClosedRange<CGFloat>] = []
         for item in labels.sorted(by: { abs($0.centOffset - targetCentOffset) < abs($1.centOffset - targetCentOffset) }) {
             let x = centreX + CGFloat(item.centOffset) * pointsPerCent + offset
-            let estimatedWidth = max(28, CGFloat(item.label.count) * 5.8)
+            let label = noteNaming.display(item.label)
+            let estimatedWidth = max(28, CGFloat(label.count) * 5.8)
             let range = (x - estimatedWidth / 2)...(x + estimatedWidth / 2)
             guard range.lowerBound >= 8, range.upperBound <= width - 8,
                   !occupied.contains(where: { $0.overlaps(range) }) else { continue }
-            drawText(item.label, in: &context, at: CGPoint(x: x, y: y), font: font, color: color)
+            drawText(label, in: &context, at: CGPoint(x: x, y: y), font: font, color: color)
             occupied.append(range)
         }
     }
@@ -876,7 +879,7 @@ final class PitchGraphNSView: NSView {
             path.move(to: CGPoint(x: 0, y: y))
             path.addLine(to: CGPoint(x: chart.width, y: y))
             let text = textLayer(
-                pitchGraphNoteLabel(line.label, frequency: line.frequency),
+                displayNoteName(pitchGraphNoteLabel(line.label, frequency: line.frequency)),
                 color: NSColor(palette.label),
                 fontSize: 11,
                 scale: scale,
@@ -1182,6 +1185,9 @@ struct LiveWebPitchGraph: NSViewRepresentable {
     let verticalSpan: Double
     let onScroll: (LiveGraphScrollEvent) -> Void
     let onVerticalDrag: (LiveGraphVerticalDragEvent) -> Void
+    /// Etiketler `enqueue` içinde kayıtlı stile göre yazılır; bu gözlem ayar
+    /// değişince `updateNSView`'ın yeniden çalışmasını sağlar.
+    @AppStorage(NoteNamingStyle.storageKey) private var noteNamingRaw = NoteNamingStyle.automatic.rawValue
 
     func makeCoordinator() -> Coordinator {
         Coordinator(onScroll: onScroll, onVerticalDrag: onVerticalDrag)
@@ -1260,7 +1266,7 @@ struct LiveWebPitchGraph: NSViewRepresentable {
             let payload: [String: Any] = [
                 "reset": reset,
                 "points": additions.map { ["t": $0.time, "hz": $0.frequency] },
-                "guides": guides.map { ["label": pitchGraphNoteLabel($0.label, frequency: $0.frequency), "hz": $0.frequency, "karar": $0.isKarar] },
+                "guides": guides.map { ["label": displayNoteName(pitchGraphNoteLabel($0.label, frequency: $0.frequency)), "hz": $0.frequency, "karar": $0.isKarar] },
                 "pitch": appearance.pitchHex,
                 "guide": appearance.noteGuideHex,
                 "karar": appearance.kararHex,
