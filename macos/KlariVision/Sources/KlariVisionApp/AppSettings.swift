@@ -37,9 +37,9 @@ enum AppTheme: String, CaseIterable, Identifiable {
     var id: String { rawValue }
     var title: String {
         switch self {
-        case .focus: "Çalışma odaklı"
-        case .studio: "Stüdyo"
-        case .classic: "Sıcak klasik"
+        case .focus: String(localized: "Çalışma odaklı", bundle: .klariVisionModule)
+        case .studio: String(localized: "Stüdyo", bundle: .klariVisionModule)
+        case .classic: String(localized: "Sıcak klasik", bundle: .klariVisionModule)
         }
     }
     var colorScheme: ColorScheme? { self == .studio ? .dark : .light }
@@ -100,7 +100,7 @@ enum PitchEngineSettings {
     /// all still carry an engine *id*, and a second engine would be added
     /// here again.
     static let userChoices = [
-        PitchEngineChoice(id: "unified_v1", title: "Birleşik (Unified v1)"),
+        PitchEngineChoice(id: "unified_v1", title: String(localized: "Birleşik (Unified v1)", bundle: .klariVisionModule)),
     ]
 
     /// Any stored value that is not a live engine id resolves to the engine

@@ -15,11 +15,19 @@ enum LiveScale: String, CaseIterable, Identifiable {
 
     var id: String { rawValue }
 
+    /// "major"/"minor" Batı dizisi adıdır, özel isim değil -- İngilizcede
+    /// "Major"/"Minor" olarak gösterilir. Diğerleri (Nihavend, Kürdi, Uşşak,
+    /// Hicaz, Kürdilihicazkâr, Hicazkâr) makam özel ismidir, aynı kalır.
     var title: String {
-        [
-            "major": "Majör", "minor": "Minör", "nihavent": "Nihavend", "kurdi": "Kürdi",
-            "ussak": "Uşşak", "hicaz": "Hicaz", "kurdilihicazkar": "Kürdilihicazkâr", "hicazkar": "Hicazkâr",
-        ][rawValue] ?? rawValue
+        switch self {
+        case .major: return AppLanguage.engineCode == "en" ? "Major" : "Majör"
+        case .minor: return AppLanguage.engineCode == "en" ? "Minor" : "Minör"
+        default:
+            return [
+                "nihavent": "Nihavend", "kurdi": "Kürdi",
+                "ussak": "Uşşak", "hicaz": "Hicaz", "kurdilihicazkar": "Kürdilihicazkâr", "hicazkar": "Hicazkâr",
+            ][rawValue] ?? rawValue
+        }
     }
 
     /// Major/minor use concert-pitch names. Turkish makam guides use the
@@ -1346,9 +1354,9 @@ struct LiveWebPitchGraph: NSViewRepresentable {
         x.fillStyle=bg;x.fillRect(0,0,w,h);x.font='600 11px -apple-system,system-ui';x.textAlign='right';
         const Y=hz=>T+(high-1200*Math.log2(hz/440))/s.verticalSpan*ch,X=t=>L+(t-start)/s.visibleDuration*cw;
         x.strokeStyle=s.guide+'70';x.lineWidth=1;for(const g of s.guides){if(g.karar)continue;const y=Y(g.hz);if(y<T-4||y>h-B+4)continue;x.beginPath();x.moveTo(L,y);x.lineTo(w-R,y);x.stroke();x.fillStyle=label;x.fillText(g.label,L-7,y+4)}x.strokeStyle=s.karar+'C0';x.lineWidth=2;for(const g of s.guides){if(!g.karar)continue;const y=Y(g.hz);if(y<T-4||y>h-B+4)continue;x.beginPath();x.moveTo(L,y);x.lineTo(w-R,y);x.stroke();x.fillStyle=label;x.fillText(g.label,L-7,y+4)}x.lineWidth=1;
-        const step=s.visibleDuration<=12?1:s.visibleDuration<=30?2:5;x.font='500 9px -apple-system,system-ui';x.textAlign='center';for(let t=Math.max(0,Math.ceil(start/step)*step);t<=now+.001;t+=step){const xx=X(t);x.strokeStyle=axis+'38';x.beginPath();x.moveTo(xx,T);x.lineTo(xx,h-B);x.stroke();x.fillStyle=label;x.fillText(Math.round(t)+' sn',xx,h-B+15)}
+        const step=s.visibleDuration<=12?1:s.visibleDuration<=30?2:5;x.font='500 9px -apple-system,system-ui';x.textAlign='center';for(let t=Math.max(0,Math.ceil(start/step)*step);t<=now+.001;t+=step){const xx=X(t);x.strokeStyle=axis+'38';x.beginPath();x.moveTo(xx,T);x.lineTo(xx,h-B);x.stroke();x.fillStyle=label;x.fillText(Math.round(t)+'\#(AppLanguage.engineCode == "en" ? " s" : " sn")',xx,h-B+15)}
         x.save();x.beginPath();x.rect(L,T,cw,ch);x.clip();x.strokeStyle=s.pitch;x.lineWidth=1.7;x.lineJoin='round';x.lineCap='round';x.beginPath();let p=null;for(const q of s.points){if(q.t<start-.05||q.t>now+.05)continue;const xx=X(q.t),yy=Y(q.hz),ok=p&&q.t-p.t>0&&q.t-p.t<.040&&Math.abs(1200*Math.log2(q.hz/p.hz))<520;ok?x.lineTo(xx,yy):x.moveTo(xx,yy);p=q}x.stroke();x.strokeStyle=dark?'#9a6ab0':'#7755b8';x.lineWidth=1.5;x.beginPath();x.moveTo(w-R,T);x.lineTo(w-R,h-B);x.stroke();x.restore();x.strokeStyle=axis+'66';x.strokeRect(L,T,cw,ch);
-        if(!s.points.length){x.fillStyle=label;x.font='13px -apple-system,system-ui';x.textAlign='center';x.fillText('Mikrofonu başlatıp klarnet çalmaya başla.',w/2,h/2)}
+        if(!s.points.length){x.fillStyle=label;x.font='13px -apple-system,system-ui';x.textAlign='center';x.fillText('\#(jsText("Mikrofonu başlatıp klarnet çalmaya başla."))',w/2,h/2)}
         requestAnimationFrame(draw);
       };
       window.KlariLiveGraph={update:v=>{if(v.reset)s.points=[];if(v.points?.length)s.points.push(...v.points);s.points=s.points.filter(p=>p.t>=v.now-65);const {points,reset,...config}=v;Object.assign(s,config);s.received=performance.now()}};

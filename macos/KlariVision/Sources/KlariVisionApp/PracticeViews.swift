@@ -8,7 +8,10 @@ import SwiftUI
 
 struct SettingsSheet<Content: View>: View {
     @Environment(\.dismiss) private var dismiss
-    let title: String
+    // `LocalizedStringKey`: both call sites pass a literal, and a `String`
+    // parameter here forced `Label(title, ...)` onto the non-localizing
+    // StringProtocol overload (bkz. HoverTooltip'teki aynı düzeltme notu).
+    let title: LocalizedStringKey
     let applyEnabled: Bool
     let apply: () -> Void
     @ViewBuilder let content: Content

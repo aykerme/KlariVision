@@ -119,9 +119,12 @@ struct SignalGateControls: View {
             HStack {
                 Text("−60 dBFS")
                 Spacer()
-                Text(signalLevel.rms > 0
-                    ? String(format: "Güncel: %.1f dBFS", SignalGateSettings.decibels(forRMS: signalLevel.rms))
-                    : "Çalma modu bekleniyor")
+                Text(verbatim: signalLevel.rms > 0
+                    ? String(
+                        format: String(localized: "Güncel: %.1f dBFS", bundle: .klariVisionModule),
+                        SignalGateSettings.decibels(forRMS: signalLevel.rms)
+                    )
+                    : String(localized: "Çalma modu bekleniyor", bundle: .klariVisionModule))
                 Spacer()
                 Text("−20 dBFS")
             }
@@ -361,10 +364,10 @@ enum LiveAnalysisResolution: String, CaseIterable, Identifiable {
     var id: String { rawValue }
     var title: String {
         switch self {
-        case .balanced: return "Akıcı"
-        case .detailed: return "Dengeli"
-        case .precision: return "Sabit nota"
-        case .vibrato: return "Hızlı vibrato"
+        case .balanced: return String(localized: "Akıcı", bundle: .klariVisionModule)
+        case .detailed: return String(localized: "Dengeli", bundle: .klariVisionModule)
+        case .precision: return String(localized: "Sabit nota", bundle: .klariVisionModule)
+        case .vibrato: return String(localized: "Hızlı vibrato", bundle: .klariVisionModule)
         }
     }
 
@@ -401,7 +404,7 @@ enum LivePitchEngine: String, CaseIterable, Identifiable {
     var id: String { rawValue }
     var title: String {
         switch self {
-        case .unified: return "Birleşik (Unified v1)"
+        case .unified: return String(localized: "Birleşik (Unified v1)", bundle: .klariVisionModule)
         }
     }
 
@@ -1068,7 +1071,7 @@ final class LivePitchAnalyzer: ObservableObject, @unchecked Sendable {
         guard let temporaryURL else { return }
 
         if isRunning {
-            status = "Mikrofon dinleniyor. Ses kaydedilmiyor."
+            status = String(localized: "Mikrofon dinleniyor. Ses kaydedilmiyor.", bundle: .klariVisionModule)
         }
         Task { @MainActor in
             Self.presentRecordingSavePanel(for: temporaryURL)
@@ -1117,7 +1120,12 @@ final class LivePitchAnalyzer: ObservableObject, @unchecked Sendable {
         let formatter = DateFormatter()
         formatter.locale = Locale(identifier: "tr_TR")
         formatter.dateFormat = "yyyy-MM-dd HH.mm.ss"
-        return "KlariVision Kayıt \(formatter.string(from: now)).wav"
+        // "Kayıt" (Record, verb) is already a catalog key for the toolbar
+        // button -- reusing it here would put the wrong part of speech in an
+        // English filename, so the noun is chosen directly instead of through
+        // the shared catalog entry.
+        let word = AppLanguage.engineCode == "en" ? "Recording" : "Kayıt"
+        return "KlariVision \(word) \(formatter.string(from: now)).wav"
     }
 
     func runBenchmark() {
@@ -1217,8 +1225,8 @@ final class LivePitchAnalyzer: ObservableObject, @unchecked Sendable {
             isRunning = true
             isBenchmarkRunning = true
             status = sourceURL == nil
-                ? "Motor testi çalışıyor · Mikrofon kullanılmıyor."
-                : "Seçilen dosya canlı motorla işleniyor · Mikrofon kullanılmıyor."
+                ? String(localized: "Motor testi çalışıyor · Mikrofon kullanılmıyor.", bundle: .klariVisionModule)
+                : String(localized: "Seçilen dosya canlı motorla işleniyor · Mikrofon kullanılmıyor.", bundle: .klariVisionModule)
 
             processingQueue.async { [weak self] in
                 self?.resetProcessingState()
@@ -1483,7 +1491,7 @@ final class LivePitchAnalyzer: ObservableObject, @unchecked Sendable {
         guard let best else { return }
         referenceTimeOffset = best.offset
         referenceAnalysisMessage = String(
-            format: "Referans eğrisi eklendi · otomatik zaman eşleme: %+.3f sn",
+            format: String(localized: "Referans eğrisi eklendi · otomatik zaman eşleme: %+.3f sn", bundle: .klariVisionModule),
             best.offset
         )
     }
@@ -1649,7 +1657,10 @@ final class LivePitchAnalyzer: ObservableObject, @unchecked Sendable {
             String(format: "%.2f–%.2f sn (%.0f cent)", $0.start, $0.end, $0.peak)
         }
         referenceValidationSummary = String(
-            format: "Doğrulama: %d/%d kapsama · ortanca %@ cent · %%95 %@ cent · %d hata adayı · sessizlikte %d yanlış nokta · sesli hedefte %d eksik nokta",
+            format: String(
+                localized: "Doğrulama: %d/%d kapsama · ortanca %@ cent · %%95 %@ cent · %d hata adayı · sessizlikte %d yanlış nokta · sesli hedefte %d eksik nokta",
+                bundle: .klariVisionModule
+            ),
             matchedExpected, voicedReference.count,
             median.map { String(format: "%.1f", $0) } ?? "—",
             p95.map { String(format: "%.1f", $0) } ?? "—",
@@ -1659,8 +1670,11 @@ final class LivePitchAnalyzer: ObservableObject, @unchecked Sendable {
             String(format: "%.2f–%.2f sn (eksik)", $0.start, $0.end)
         }
         referenceValidationDetails = (listed + missingListed).isEmpty
-            ? "Kalıcı büyük sapma veya eksik perde bulunmadı."
-            : "İncelenecek aralıklar: " + (listed + missingListed).joined(separator: " · ")
+            ? String(localized: "Kalıcı büyük sapma veya eksik perde bulunmadı.", bundle: .klariVisionModule)
+            : String(
+                format: String(localized: "İncelenecek aralıklar: %@", bundle: .klariVisionModule),
+                (listed + missingListed).joined(separator: " · ")
+            )
 
         // pYIN can finish before the direct-source YIN replay. Keep the live
         // on-screen estimate, but write the regression history only once the
@@ -1842,11 +1856,17 @@ final class LivePitchAnalyzer: ObservableObject, @unchecked Sendable {
         let seriousNonHarmonic = classifiedPoints.filter { $0.isSerious && $0.severity == .nonHarmonicError }.count
         let meanCorrect = correctPitch > 0 ? correctAbsoluteCents / Double(correctPitch) : nil
         referenceValidationSummary = String(
-            format: "Ciddi doğrulama: yanlış sesli %d · eksik sesli %d · harmonik %d · diğer %d · yakın %d",
+            format: String(
+                localized: "Ciddi doğrulama: yanlış sesli %d · eksik sesli %d · harmonik %d · diğer %d · yakın %d",
+                bundle: .klariVisionModule
+            ),
             seriousFalseVoiced, seriousMissingVoiced, seriousHarmonic, seriousNonHarmonic, nearPitch
         )
         referenceValidationDetails = String(
-            format: "Ham: yanlış %d · eksik %d · harmonik %d · diğer %d · geçiş toleransı %d · kısa tolerans %d · doğru ort. %@ cent",
+            format: String(
+                localized: "Ham: yanlış %d · eksik %d · harmonik %d · diğer %d · geçiş toleransı %d · kısa tolerans %d · doğru ort. %@ cent",
+                bundle: .klariVisionModule
+            ),
             falseVoiced, missingVoiced, harmonicError, nonHarmonicError, transitionTolerated, transientTolerated,
             meanCorrect.map { String(format: "%.2f", $0) } ?? "—"
         )
@@ -2121,7 +2141,7 @@ final class LivePitchAnalyzer: ObservableObject, @unchecked Sendable {
                             player?.play()
                             self.status = String(localized: "Canlı referans testi oynuyor: \(playbackURL.lastPathComponent) · Ses kaydedilmiyor.", bundle: .klariVisionModule)
                         case .failed:
-                            let detail = item.error?.localizedDescription ?? "bilinmeyen hata"
+                            let detail = item.error?.localizedDescription ?? String(localized: "bilinmeyen hata", bundle: .klariVisionModule)
                             self.status = String(localized: "Kaynak dosya oynatılamadı: \(detail)", bundle: .klariVisionModule)
                         default:
                             break
@@ -2130,8 +2150,8 @@ final class LivePitchAnalyzer: ObservableObject, @unchecked Sendable {
                 }
             } else {
                 status = isRecording
-                    ? "Mikrofon dinleniyor. Kayıt yapılıyor."
-                    : "Mikrofon dinleniyor. Ses kaydedilmiyor."
+                    ? String(localized: "Mikrofon dinleniyor. Kayıt yapılıyor.", bundle: .klariVisionModule)
+                    : String(localized: "Mikrofon dinleniyor. Ses kaydedilmiyor.", bundle: .klariVisionModule)
             }
         } catch {
             input.removeTap(onBus: 0)

@@ -101,20 +101,22 @@ private final class StderrProgressCapture: @unchecked Sendable {
     // src/klarivision/local_app.py): one line, "KV-PROGRESS <stage>
     // <processed>/<total>". <stage> is a stable lowercase token; this is the
     // one place that maps it to the Turkish text a user sees.
-    private static let stageLabels: [String: String] = [
-        "extract": "Ses çıkarılıyor",
-        "decode": "Ses okunuyor",
-        "causal": "Temel geçiş",
-        "pitch": "Perde analizi",
-        "write": "Sonuçlar yazılıyor",
-        "viewer": "Görünüm oluşturuluyor",
-    ]
+    private static var stageLabels: [String: String] {
+        [
+            "extract": String(localized: "Ses çıkarılıyor", bundle: .klariVisionModule),
+            "decode": String(localized: "Ses okunuyor", bundle: .klariVisionModule),
+            "causal": String(localized: "Temel geçiş", bundle: .klariVisionModule),
+            "pitch": String(localized: "Perde analizi", bundle: .klariVisionModule),
+            "write": String(localized: "Sonuçlar yazılıyor", bundle: .klariVisionModule),
+            "viewer": String(localized: "Görünüm oluşturuluyor", bundle: .klariVisionModule),
+        ]
+    }
 
     private static func progressMessage(from line: String) -> String? {
         guard line.hasPrefix("KV-PROGRESS ") else { return nil }
         let parts = line.dropFirst("KV-PROGRESS ".count).split(separator: " ")
         guard parts.count == 2 else { return nil }
-        let label = stageLabels[String(parts[0])] ?? "İşleniyor"
+        let label = stageLabels[String(parts[0])] ?? String(localized: "İşleniyor", bundle: .klariVisionModule)
         let fraction = parts[1].split(separator: "/")
         guard fraction.count == 2,
               let processed = Int(fraction[0]),
@@ -299,11 +301,19 @@ final class RecentLibrary {
         }
     }
 
+    /// Makam/dizi adları özel isimdir ve İngilizcede aynı kalır (Nihavend,
+    /// Kürdi, Uşşak, Hicaz, Kürdilihicazkâr, Hicazkâr) -- tek istisna "major"/
+    /// "minor": bunlar Türk makamı değil Batı dizisi adıdır, bu yüzden
+    /// İngilizcede "Major"/"Minor" olarak gösterilir. Sonuç düz bir `String`
+    /// olduğundan (ör. `studySummary` interpolasyonuna girer) katalog burada
+    /// işe yaramaz -- dil seçimi doğrudan `AppLanguage.engineCode`'a bakar.
     func makamName(_ value: String) -> String {
-        [
-            "major": "Majör", "minor": "Minör", "nihavent": "Nihavend", "kurdi": "Kürdi",
+        if value == "major" { return AppLanguage.engineCode == "en" ? "Major" : "Majör" }
+        if value == "minor" { return AppLanguage.engineCode == "en" ? "Minor" : "Minör" }
+        return [
+            "nihavent": "Nihavend", "kurdi": "Kürdi",
             "ussak": "Uşşak", "hicaz": "Hicaz", "kurdilihicazkar": "Kürdilihicazkâr", "hicazkar": "Hicazkâr",
-        ][value] ?? "Majör"
+        ][value] ?? (AppLanguage.engineCode == "en" ? "Major" : "Majör")
     }
 
     func kararName(_ value: Int) -> String {
@@ -427,7 +437,7 @@ final class RecentLibrary {
                     self.isAnalysing = false
                     guard process.terminationStatus == 0,
                           let relativeViewer = standardOutput.split(whereSeparator: \.isNewline).last else {
-                        let detail = standardError.isEmpty ? "Lütfen tekrar dene." : standardError
+                        let detail = standardError.isEmpty ? String(localized: "Lütfen tekrar dene.", bundle: .klariVisionModule) : standardError
                         self.analysisMessage = String(localized: "Analiz oluşturulamadı. \(detail)", bundle: .klariVisionModule)
                         return
                     }
@@ -498,7 +508,7 @@ final class RecentLibrary {
                     self.isAnalysing = false
                     guard process.terminationStatus == 0,
                           let viewerPath = standardOutput.split(whereSeparator: \.isNewline).last else {
-                        let detail = standardError.isEmpty ? "Lütfen tekrar dene." : standardError
+                        let detail = standardError.isEmpty ? String(localized: "Lütfen tekrar dene.", bundle: .klariVisionModule) : standardError
                         self.analysisMessage = String(localized: "Analiz oluşturulamadı. \(detail)", bundle: .klariVisionModule)
                         return
                     }
@@ -961,7 +971,14 @@ private struct ListeningModeCard: View {
                 Text("Dinleme Modu")
                     .font(.title3.weight(.bold))
 
-                Text(selectedFile?.lastPathComponent ?? "Ses veya video dosyanızı yükleyin, pitch analizini başlatın.")
+                Group {
+                    if let selectedFile {
+                        // Dosya adı kullanıcı verisidir, çevrilmez.
+                        Text(verbatim: selectedFile.lastPathComponent)
+                    } else {
+                        Text("Ses veya video dosyanızı yükleyin, pitch analizini başlatın.")
+                    }
+                }
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
@@ -1067,7 +1084,14 @@ private struct TogetherModeCard: View {
                 Text("Birlikte Çal")
                     .font(.title3.weight(.bold))
 
-                Text(selectedFile?.lastPathComponent ?? "Dosya çalarken kendi çalışınızı aynı grafikte, ikinci renkle görün.")
+                Group {
+                    if let selectedFile {
+                        // Dosya adı kullanıcı verisidir, çevrilmez.
+                        Text(verbatim: selectedFile.lastPathComponent)
+                    } else {
+                        Text("Dosya çalarken kendi çalışınızı aynı grafikte, ikinci renkle görün.")
+                    }
+                }
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)

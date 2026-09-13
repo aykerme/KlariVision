@@ -1,6 +1,720 @@
 {
   "sourceLanguage": "tr",
   "strings": {
+    "Mikrofonu başlatıp klarnet çalmaya başla.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Start the microphone and begin playing the clarinet."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mikrofonu başlatıp klarnet çalmaya başla."
+          }
+        }
+      }
+    },
+    "İmleçte A işaretini oluştur": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Create mark A at cursor"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "İmleçte A işaretini oluştur"
+          }
+        }
+      }
+    },
+    "İmleçte B işaretini oluştur": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Create mark B at cursor"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "İmleçte B işaretini oluştur"
+          }
+        }
+      }
+    },
+    "Başa dön": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Back to start"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Başa dön"
+          }
+        }
+      }
+    },
+    "Görünüm, çalışma bağlamı ve makam aralıklarını buradan düzenleyebilirsin.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You can edit appearance, study context, and makam intervals here."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Görünüm, çalışma bağlamı ve makam aralıklarını buradan düzenleyebilirsin."
+          }
+        }
+      }
+    },
+    "Oynatma": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Playback"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Oynatma"
+          }
+        }
+      }
+    },
+    "Makam aralıkları": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Makam intervals"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Makam aralıkları"
+          }
+        }
+      }
+    },
+    "Yedi aralık toplamı bir oktavda 53 koma olmalıdır.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Seven intervals must sum to 53 koma in one octave."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Yedi aralık toplamı bir oktavda 53 koma olmalıdır."
+          }
+        }
+      }
+    },
+    "53 koma doğrulandı": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "53 koma confirmed"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "53 koma doğrulandı"
+          }
+        }
+      }
+    },
+    "Toplam %@ koma; 53 olmalı": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Total %@ koma; must be 53"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Toplam %@ koma; 53 olmalı"
+          }
+        }
+      }
+    },
+    "Takip": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Follow"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Takip"
+          }
+        }
+      }
+    },
+    "Pitch eğrisini dikeyde takip et": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Follow the pitch curve vertically"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pitch eğrisini dikeyde takip et"
+          }
+        }
+      }
+    },
+    "Çalma hızı": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Playback speed"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Çalma hızı"
+          }
+        }
+      }
+    },
+    "Oynatma Hızı": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Playback Speed"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Oynatma Hızı"
+          }
+        }
+      }
+    },
+    "Ses veya video dosyanızı yükleyin, pitch analizini başlatın.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Upload your audio or video file and start pitch analysis."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ses veya video dosyanızı yükleyin, pitch analizini başlatın."
+          }
+        }
+      }
+    },
+    "Güncel: %.1f dBFS": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Current: %.1f dBFS"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Güncel: %.1f dBFS"
+          }
+        }
+      }
+    },
+    "Çalma modu bekleniyor": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Waiting for playing mode"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Çalma modu bekleniyor"
+          }
+        }
+      }
+    },
+    "Kayıt başlatılamadı: Geçerli bir mikrofon biçimi bulunamadı.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recording could not be started: no valid microphone format was found."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kayıt başlatılamadı: Geçerli bir mikrofon biçimi bulunamadı."
+          }
+        }
+      }
+    },
+    "Motor testi çalışıyor · Mikrofon kullanılmıyor.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Engine test running · Microphone not in use."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Motor testi çalışıyor · Mikrofon kullanılmıyor."
+          }
+        }
+      }
+    },
+    "Seçilen dosya canlı motorla işleniyor · Mikrofon kullanılmıyor.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The selected file is being processed by the live engine · Microphone not in use."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Seçilen dosya canlı motorla işleniyor · Mikrofon kullanılmıyor."
+          }
+        }
+      }
+    },
+    "Mikrofon dinleniyor. Ses kaydedilmiyor.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Listening to microphone. Not recording audio."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mikrofon dinleniyor. Ses kaydedilmiyor."
+          }
+        }
+      }
+    },
+    "bilinmeyen hata": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "unknown error"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "bilinmeyen hata"
+          }
+        }
+      }
+    },
+    "Akıcı": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fluid"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Akıcı"
+          }
+        }
+      }
+    },
+    "Dengeli": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Balanced"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dengeli"
+          }
+        }
+      }
+    },
+    "Sabit nota": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fixed note"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sabit nota"
+          }
+        }
+      }
+    },
+    "Hızlı vibrato": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fast vibrato"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hızlı vibrato"
+          }
+        }
+      }
+    },
+    "Ses çıkarılıyor": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Extracting audio"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ses çıkarılıyor"
+          }
+        }
+      }
+    },
+    "Ses okunuyor": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Decoding audio"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ses okunuyor"
+          }
+        }
+      }
+    },
+    "Temel geçiş": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Causal filter"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Temel geçiş"
+          }
+        }
+      }
+    },
+    "Perde analizi": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pitch analysis"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Perde analizi"
+          }
+        }
+      }
+    },
+    "Sonuçlar yazılıyor": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Writing results"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sonuçlar yazılıyor"
+          }
+        }
+      }
+    },
+    "Görünüm oluşturuluyor": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Building viewer"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Görünüm oluşturuluyor"
+          }
+        }
+      }
+    },
+    "İşleniyor": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Processing"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "İşleniyor"
+          }
+        }
+      }
+    },
+    "Lütfen tekrar dene.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Please try again."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lütfen tekrar dene."
+          }
+        }
+      }
+    },
+    "Çözümleme motoru": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Analysis engine"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Çözümleme motoru"
+          }
+        }
+      }
+    },
+    "Çalma Ayarları": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Playing Settings"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Çalma Ayarları"
+          }
+        }
+      }
+    },
+    "Referans eğrisi eklendi · otomatik zaman eşleme: %+.3f sn": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reference curve added · automatic time alignment: %+.3f sec"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Referans eğrisi eklendi · otomatik zaman eşleme: %+.3f sn"
+          }
+        }
+      }
+    },
+    "Doğrulama: %d/%d kapsama · ortanca %@ cent · %%95 %@ cent · %d hata adayı · sessizlikte %d yanlış nokta · sesli hedefte %d eksik nokta": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Validation: %d/%d coverage · median %@ cent · %%95 %@ cent · %d error candidates · %d false points in silence · %d missing points at voiced target"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Doğrulama: %d/%d kapsama · ortanca %@ cent · %%95 %@ cent · %d hata adayı · sessizlikte %d yanlış nokta · sesli hedefte %d eksik nokta"
+          }
+        }
+      }
+    },
+    "Kalıcı büyük sapma veya eksik perde bulunmadı.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No persistent large deviation or missing pitch found."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kalıcı büyük sapma veya eksik perde bulunmadı."
+          }
+        }
+      }
+    },
+    "İncelenecek aralıklar: %@": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ranges to review: %@"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "İncelenecek aralıklar: %@"
+          }
+        }
+      }
+    },
+    "Ciddi doğrulama: yanlış sesli %d · eksik sesli %d · harmonik %d · diğer %d · yakın %d": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Serious validation: false voiced %d · missing voiced %d · harmonic %d · other %d · near %d"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ciddi doğrulama: yanlış sesli %d · eksik sesli %d · harmonik %d · diğer %d · yakın %d"
+          }
+        }
+      }
+    },
+    "Ham: yanlış %d · eksik %d · harmonik %d · diğer %d · geçiş toleransı %d · kısa tolerans %d · doğru ort. %@ cent": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Raw: false %d · missing %d · harmonic %d · other %d · transition tolerance %d · short tolerance %d · correct avg. %@ cent"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ham: yanlış %d · eksik %d · harmonik %d · diğer %d · geçiş toleransı %d · kısa tolerans %d · doğru ort. %@ cent"
+          }
+        }
+      }
+    },
     "Mikrofonu başlatmaya hazır.": {
       "extractionState": "manual",
       "localizations": {
@@ -48,23 +762,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Canlı motor matematiksel hedef eğriyle karşılaştırılıyor."
-          }
-        }
-      }
-    },
-    "Kayıt başlatılamadı: Geçerli bir mikrofon biçimi bulunamadı.": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Recording could not be started: no valid microphone format was found."
-          }
-        },
-        "tr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Kayıt başlatılamadı: Geçerli bir mikrofon biçimi bulunamadı."
           }
         }
       }
@@ -664,23 +1361,6 @@
         }
       }
     },
-    "Ses veya video dosyanızı yükleyin, pitch analizini başlatın.": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Upload your audio or video file and start pitch analysis."
-          }
-        },
-        "tr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ses veya video dosyanızı yükleyin, pitch analizini başlatın."
-          }
-        }
-      }
-    },
     "Dosya Seç / Yükle": {
       "extractionState": "manual",
       "localizations": {
@@ -925,7 +1605,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Majör"
+            "value": "Major"
           }
         },
         "tr": {
@@ -942,7 +1622,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Minör"
+            "value": "Minor"
           }
         },
         "tr": {
@@ -1922,23 +2602,6 @@
         }
       }
     },
-    "Yedi aralık toplamı bir oktavda 53 koma olmalıdır.": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Seven intervals must sum to 53 komas in one octave."
-          }
-        },
-        "tr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Yedi aralık toplamı bir oktavda 53 koma olmalıdır."
-          }
-        }
-      }
-    },
     "Makam": {
       "extractionState": "manual",
       "localizations": {
@@ -2234,7 +2897,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Follow the curve"
+            "value": "Follow Curve"
           }
         },
         "tr": {
