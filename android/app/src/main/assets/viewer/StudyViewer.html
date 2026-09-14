@@ -24,7 +24,11 @@
   #curve { display:block; background:linear-gradient(160deg,#172437,#0e1420); touch-action:none; }
   #mediaSlot { background:#000; overflow:hidden; display:flex; align-items:center; justify-content:center; }
   audio, video { display:block; width:100%; height:100%; background:#000; }
-  video { object-fit:contain; }
+  video { object-fit:contain; transform-origin:50% 50%; }
+  /* Android barındırıcısı video yakınlaştırmayı sayfa içinde ister (bkz.
+     `videoGestures` komutu); o zaman tarayıcı dokunuşları kaydırma/zoom
+     diye sahiplenmemeli. */
+  #mediaSlot.gestures { touch-action:none; }
   #empty { display:grid; place-items:center; height:100%; color:#9eb2cc; font-size:16px; }
   /* Exactly one of graph/video fills the stage at a time — no mini corner
      preview of the inactive side. An in-page preview box was tried and
@@ -56,7 +60,7 @@
   const canvas = document.getElementById('curve'), ctx = canvas.getContext('2d');
   const slot = document.getElementById('mediaSlot');
   const stage = document.getElementById('stage');
-  const setMode = mode => { stage.classList.toggle('mode-video', mode === 'video'); stage.classList.toggle('mode-graph', mode !== 'video'); resize(); };
+  const setMode = mode => { stage.classList.toggle('mode-video', mode === 'video'); stage.classList.toggle('mode-graph', mode !== 'video'); if (mode !== 'video') resetVideoZoom(); resize(); };
   var media = null, frames = [], a = null, b = null, looping = false, following = false, verticalCenter = null;
   // Declared total duration, supplied by the `load` command. A fragmented MP4
   // can carry no total duration at all (no `mehd`, no `sidx`, `mvhd.duration`
@@ -137,8 +141,8 @@
     return low;
   };
   const micRangeFor = (start, end) => [micIndexAtOrAfter(start), micIndexAtOrAfter(end + 1e-9)];
-  const send = () => bridge?.postMessage({time:Number(media?.currentTime)||0,duration:mediaDuration(),isPlaying:media ? !media.paused : false,rate:Number(media?.playbackRate)||1,loopA:a,loopB:b,loopEnabled:looping,followsCurve:following});
-  const resize = () => { const r=canvas.getBoundingClientRect(), scale=devicePixelRatio||1; canvas.width=r.width*scale; canvas.height=r.height*scale; ctx.setTransform(scale,0,0,scale,0,0); draw(); };
+  const send = () => bridge?.postMessage({time:Number(media?.currentTime)||0,duration:mediaDuration(),isPlaying:media ? !media.paused : false,rate:Number(media?.playbackRate)||1,loopA:a,loopB:b,loopEnabled:looping,followsCurve:following,mediaError:media?.error?.code ?? null});
+  const resize = () => { const r=canvas.getBoundingClientRect(), scale=devicePixelRatio||1; canvas.width=r.width*scale; canvas.height=r.height*scale; ctx.setTransform(scale,0,0,scale,0,0); applyVideoZoom(); draw(); };
   // Visible time-window length (seconds) and vertical pitch-range multiplier.
   // Both are mutable so the pinch handler below (which classifies each pinch
   // by the angle between the two touches) can drive either axis
@@ -387,12 +391,95 @@
     // scrubber/controls stay off to avoid competing control surfaces on screen.
     media.controls=false;media.preload='metadata';media.src=url;media.playsInline=true;
     slot.replaceChildren(media);
+    resetVideoZoom();
     slot.classList.toggle('has-video',isVideo);
     setMode('graph');
-    ['loadedmetadata','play','pause','ratechange','seeked','timeupdate','ended'].forEach(e=>media.addEventListener(e,send));
+    ['loadedmetadata','play','pause','ratechange','seeked','timeupdate','ended','error'].forEach(e=>media.addEventListener(e,send));
     ['seeking','seeked','play','playing','ratechange','loadedmetadata','ended'].forEach(e=>media.addEventListener(e,snapClock));
     media.addEventListener('loadedmetadata',()=>{resize();send();});
   };
+  // Video yakınlaştırma ve kaydırma — yalnız barındırıcı `videoGestures`
+  // komutuyla açınca. iOS video modunda WKWebView'in kendi scroll-view
+  // zoom'unu kullanır (iPadStudyWebView.applyMode), bu blok orada kapalı
+  // kalır. Android WebView'in native zoom'u grafik jestleriyle çakıştığı için
+  // tamamen kapalı (ViewerAssets.configureSecurity); aynı davranış burada
+  // yalnız video öğesine CSS transform ile verilir: iki parmakla parmakların
+  // ortası sabit kalarak 1×–5×, büyütülmüşken tek parmakla kaydırma, çift
+  // dokunma ile 2,5× ↔ sığdır. Konumlar `mediaSlot` merkezine göredir.
+  let videoGestures = false, vz = {s:1, x:0, y:0}, vTouch = null, lastTap = null;
+  const VIDEO_MAX_ZOOM = 5, DOUBLE_TAP_ZOOM = 2.5;
+  const videoContent = () => {
+    const w = slot.clientWidth, h = slot.clientHeight;
+    const vw = media?.videoWidth || w, vh = media?.videoHeight || h, fit = Math.min(w / vw, h / vh);
+    return {w, h, cw: vw * fit, ch: vh * fit};
+  };
+  // Görüntü kenarı ekranın içine giremez; sığdırılmış hâlde kaydırma yoktur.
+  const clampVideo = () => {
+    vz.s = Math.min(VIDEO_MAX_ZOOM, Math.max(1, vz.s));
+    const {w, h, cw, ch} = videoContent();
+    const mx = Math.max(0, (cw * vz.s - w) / 2), my = Math.max(0, (ch * vz.s - h) / 2);
+    vz.x = Math.min(mx, Math.max(-mx, vz.x)); vz.y = Math.min(my, Math.max(-my, vz.y));
+  };
+  function applyVideoZoom() {
+    if (media?.tagName !== 'VIDEO') return;
+    clampVideo();
+    media.style.transform = vz.s === 1 ? '' : `translate(${vz.x}px,${vz.y}px) scale(${vz.s})`;
+  }
+  function resetVideoZoom() {
+    vz = {s:1, x:0, y:0}; vTouch = null;
+    if (media) media.style.transform = '';
+  }
+  const slotPoint = t => { const r = slot.getBoundingClientRect(); return {x: t.clientX - r.left - r.width / 2, y: t.clientY - r.top - r.height / 2}; };
+  const fingers = (t0, t1) => { const a = slotPoint(t0), b = slotPoint(t1); return {x: (a.x + b.x) / 2, y: (a.y + b.y) / 2, d: Math.hypot(b.x - a.x, b.y - a.y)}; };
+  const beginPan = t => { const p = slotPoint(t); vTouch = {kind:'pan', x:p.x, y:p.y, ox:vz.x, oy:vz.y, at:performance.now(), moved:false}; };
+  const videoGesturesActive = () => videoGestures && media?.tagName === 'VIDEO' && stage.classList.contains('mode-video');
+  slot.addEventListener('touchstart', e => {
+    if (!videoGesturesActive()) return;
+    e.preventDefault();
+    if (e.touches.length >= 2) {
+      const f = fingers(e.touches[0], e.touches[1]);
+      vTouch = {kind:'pinch', x:f.x, y:f.y, d:Math.max(1, f.d), s:vz.s, ox:vz.x, oy:vz.y};
+    } else {
+      beginPan(e.touches[0]);
+    }
+  }, {passive:false});
+  slot.addEventListener('touchmove', e => {
+    if (!videoGesturesActive() || !vTouch) return;
+    e.preventDefault();
+    if (vTouch.kind === 'pinch' && e.touches.length >= 2) {
+      // Başlangıçta parmakların ortasındaki görüntü noktası, parmakların
+      // şimdiki ortasına taşınır: yakınlaştırma ve iki parmakla kaydırma tek
+      // hareket. Her kare başlangıç durumundan hesaplanır, sınır birikmez.
+      const f = fingers(e.touches[0], e.touches[1]);
+      const s = Math.min(VIDEO_MAX_ZOOM, Math.max(1, vTouch.s * f.d / vTouch.d)), k = s / vTouch.s;
+      vz = {s, x: f.x - (vTouch.x - vTouch.ox) * k, y: f.y - (vTouch.y - vTouch.oy) * k};
+      applyVideoZoom();
+    } else if (vTouch.kind === 'pan' && e.touches.length === 1) {
+      const p = slotPoint(e.touches[0]), dx = p.x - vTouch.x, dy = p.y - vTouch.y;
+      if (Math.hypot(dx, dy) > 10) vTouch.moved = true;
+      if (vz.s > 1) { vz.x = vTouch.ox + dx; vz.y = vTouch.oy + dy; applyVideoZoom(); }
+    }
+  }, {passive:false});
+  const endVideoTouch = e => {
+    if (!videoGesturesActive() || !vTouch) return;
+    // İki parmaktan biri kalkınca kalan parmakla kaydırma sıçramadan sürer.
+    if (e.touches.length === 1) { beginPan(e.touches[0]); vTouch.moved = true; return; }
+    if (e.touches.length > 0) return;
+    const tap = vTouch.kind === 'pan' && !vTouch.moved && performance.now() - vTouch.at < 300;
+    const point = tap ? {x: vTouch.x, y: vTouch.y} : null;
+    vTouch = null;
+    if (!tap) { lastTap = null; return; }
+    const now = performance.now();
+    if (lastTap && now - lastTap.at < 300 && Math.hypot(point.x - lastTap.x, point.y - lastTap.y) < 40) {
+      lastTap = null;
+      if (vz.s > 1) { vz = {s:1, x:0, y:0}; applyVideoZoom(); }
+      else { const k = DOUBLE_TAP_ZOOM; vz = {s:k, x: point.x - point.x * k, y: point.y - point.y * k}; applyVideoZoom(); }
+    } else {
+      lastTap = {at: now, x: point.x, y: point.y};
+    }
+  };
+  slot.addEventListener('touchend', endVideoTouch);
+  slot.addEventListener('touchcancel', endVideoTouch);
   window.kvStudy={
     setDiagnostics(flag){diagnosticsOn=!!flag;draw();},
     micAppend,
@@ -417,6 +504,7 @@
         case'micTruncate':micTruncate(p.time);break;
         case'setMicColor':setMicColor(p.hex);break;
         case'mute':if(media)media.muted=!!p.muted;break;
+        case'videoGestures':videoGestures=!!p.enabled;slot.classList.toggle('gestures',videoGestures);if(!videoGestures)resetVideoZoom();break;
       }
       send();draw();
     }

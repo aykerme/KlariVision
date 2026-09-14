@@ -56,6 +56,7 @@ class StudyGraphBridge(
         webView.webViewClient = ViewerWebViewClient(assetLoader, importsDir) {
             ready = true
             sendSafeAreaInsets()
+            enableVideoGestures()
             flushIfReady()
         }
     }
@@ -161,6 +162,15 @@ class StudyGraphBridge(
             "document.documentElement.style.setProperty('--kv-inset-top','${safeTopDp}px');" +
                 "document.documentElement.style.setProperty('--kv-inset-bottom','${safeBottomDp}px');",
         )
+    }
+
+    /**
+     * Video modunda iki parmakla yakınlaştırma ve kaydırmayı sayfanın kendisine
+     * yaptırır. iOS bunu WKWebView'in native zoom'uyla yapar; burada native zoom
+     * grafik jestleriyle çakıştığı için kapalı (bkz. [ViewerAssets.disableNativeGestures]).
+     */
+    private fun enableVideoGestures() {
+        evaluateRaw("window.kvStudy && window.kvStudy.receive({\"type\":\"videoGestures\",\"enabled\":true});")
     }
 
     private fun evaluateRaw(script: String) {

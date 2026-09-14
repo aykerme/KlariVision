@@ -23,7 +23,9 @@ data class PlaybackSnapshot(
     val loopA: Double? = null,
     val loopB: Double? = null,
     val loopEnabled: Boolean = false,
-    val followsCurve: Boolean = true
+    val followsCurve: Boolean = true,
+    /** `HTMLMediaElement.error.code` (1-4); oynatma sağlıklıyken `null`. */
+    val mediaError: Int? = null
 ) {
     companion object {
         private val json = Json {
