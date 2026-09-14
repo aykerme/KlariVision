@@ -222,14 +222,14 @@ fun KlariVisionApp(
             BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
                 val widthClass = rememberWidthClass(maxWidth, maxHeight)
 
-                // Dar düzende grafik sayfaları kenardan kenara çizilir; sistem
-                // çubuğu boşluklarını Compose ölçer ve köprüler üzerinden
+                // Dar düzende grafik sayfaları alt kenara kadar çizilir; alt
+                // sistem çubuğu boşluğunu Compose ölçer ve köprüler üzerinden
                 // sayfaya bildirir. View seviyesindeki inset dinleyicisi Compose
                 // barındırıcısında güvenilir ateşlenmiyor, bu yüzden değer
-                // buradan AÇIKÇA veriliyor. Geniş düzende içerik zaten güvenli
-                // alanın içinde durduğu için sayfaya 0 gider; yoksa boşluk iki
-                // kez uygulanır.
-                val graphInsetTop = if (widthClass == KvWidthClass.GENIS) 0f else safeTop.value
+                // buradan AÇIKÇA veriliyor. Üst boşluk iki düzende de 0: dar
+                // düzende grafik `WorkspaceTopBar`'ın altında başlar, geniş
+                // düzende içerik zaten güvenli alanın içindedir.
+                val graphInsetTop = 0f
                 val graphInsetBottom = if (widthClass == KvWidthClass.GENIS) 0f else safeBottom.value
                 LaunchedEffect(graphInsetTop, graphInsetBottom) {
                     liveGraphBridge.setSafeAreaInsets(graphInsetTop, graphInsetBottom)

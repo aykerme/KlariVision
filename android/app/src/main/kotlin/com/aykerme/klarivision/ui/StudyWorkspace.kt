@@ -11,8 +11,19 @@
 package com.aykerme.klarivision.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.FilledTonalIconButton
+import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.Switch
+import androidx.compose.material3.TextButton
+import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.foundation.rememberScrollState
@@ -246,6 +257,27 @@ private fun ReadyStudyWorkspace(
             togetherOrchestrator = togetherOrchestrator,
             onRequestMicPermission = onRequestMicPermission,
         )
+        playbackErrorMessage(playback?.mediaError)?.let { StatusLine(it, isError = true) }
+    }
+
+    // Swift `iPadCompactStudyWorkspace.compactControls`: başlık ve "Kapat" üst
+    // çubukta durur; kartta konum, aktarım satırı ve Birlikte Çal kalır. Hız
+    // ve takip dar düzende ayar sayfasındadır.
+    val compactTransport: @Composable ColumnScope.() -> Unit = {
+        PositionReadout(
+            time = playback?.time ?: 0.0,
+            duration = playback?.duration ?: (study?.duration ?: 0.0),
+            modifier = Modifier.fillMaxWidth(),
+            onSeek = orchestrator::seek,
+        )
+        CompactStudyTransportRow(orchestrator = orchestrator, playback = playback) {
+            WorkspaceSettingsButton(label = "Çalışma ayarları") { isPresentingSettings = true }
+        }
+        TogetherModeControls(
+            togetherOrchestrator = togetherOrchestrator,
+            onRequestMicPermission = onRequestMicPermission,
+        )
+        playbackErrorMessage(playback?.mediaError)?.let { StatusLine(it, isError = true) }
     }
 
     when (widthClass) {
@@ -272,48 +304,76 @@ private fun ReadyStudyWorkspace(
             )
         }
 
-        KvWidthClass.DAR -> Box(modifier = modifier.fillMaxSize()) {
-            graphContent()
-            Box(
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .windowInsetsPadding(WindowInsets.safeDrawing)
-                    .padding(KvSpacing.lg),
-            ) { fullscreenToggle() }
-            Column(
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .fillMaxWidth()
-                    // Dar ekranda denetimler grafiğin ÜSTÜNDE yüzen bir karttır;
-                    // yığılan satırlar (başlık, konum, aktarım, Birlikte Çal)
-                    // sınırsız bırakılırsa ekranın yarısını kaplıyordu. Kart
-                    // yüksekliği sınırlanır ve içerik kaydırılabilir olur —
-                    // hiçbir denetim erişilemez hâle gelmez.
-                    .heightIn(max = 320.dp)
-                    .verticalScroll(rememberScrollState())
-                    // Spesifikasyon (03-responsive-contract.md, "Güvenli alanlar"):
-                    // gezinme ve alt denetim çubuğu sistem güvenli alanının
-                    // İÇİNDE kalır; grafik ise tüm yüzeyi kaplar. targetSdk 35
-                    // ile Android 15+ kenardan kenara çizmeye zorladığı için
-                    // boşluk açıkça verilmeli (cihazda gözlendi).
-                    .windowInsetsPadding(WindowInsets.safeDrawing)
-                    .padding(KvSpacing.md)
-                    .background(
-                        MaterialTheme.colorScheme.surface.copy(alpha = 0.92f),
-                        RoundedCornerShape(KvRadius.panel),
-                    )
-                    .padding(KvSpacing.md),
-                verticalArrangement = Arrangement.spacedBy(KvSpacing.sm),
-                content = transport,
+        // Swift `iPadCompactStudyWorkspace`: üstte satır içi gezinme çubuğu,
+        // altında kenardan kenara grafik; denetimler grafiğin üstünde yüzen
+        // kart. Grafik durum çubuğunun altına girmez (etiketler saatle
+        // çakışıyordu), alt güvenli alana ise uzanır.
+        KvWidthClass.DAR -> Column(modifier = modifier.fillMaxSize()) {
+            WorkspaceTopBar(
+                title = study?.title ?: "Dinleme",
+                onClose = onClose?.let { close -> { orchestrator.pause(); close() } },
             )
+            Box(modifier = Modifier.fillMaxWidth().weight(1f)) {
+                graphContent()
+                Box(modifier = Modifier.align(Alignment.TopEnd).padding(KvSpacing.lg)) { fullscreenToggle() }
+                Column(
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .fillMaxWidth()
+                        // Güvenli alan boşluğu yükseklik sınırının DIŞINDA:
+                        // içeride kalınca sınırın bir kısmını gezinme çubuğu
+                        // yiyor ve son satır (Birlikte Çal) kesiliyordu.
+                        .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom + WindowInsetsSides.Horizontal))
+                        .padding(horizontal = KvSpacing.md, vertical = KvSpacing.sm)
+                        .background(
+                            MaterialTheme.colorScheme.surface.copy(alpha = 0.92f),
+                            RoundedCornerShape(KvSpacing.xl),
+                        )
+                        .heightIn(max = 320.dp)
+                        .verticalScroll(rememberScrollState())
+                        .padding(horizontal = KvSpacing.md, vertical = KvSpacing.sm),
+                    verticalArrangement = Arrangement.spacedBy(KvSpacing.sm),
+                    content = compactTransport,
+                )
+            }
         }
     }
 
     if (isPresentingSettings) {
         ModalBottomSheet(onDismissRequest = { isPresentingSettings = false }) {
-            Column(modifier = Modifier.fillMaxWidth().padding(KvSpacing.lg)) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
+                    .navigationBarsPadding()
+                    .padding(KvSpacing.lg),
+            ) {
                 Text("Dinleme Ayarları", style = MaterialTheme.typography.titleLarge)
                 Spacer(modifier = Modifier.padding(KvSpacing.xs))
+                // Swift `iPadStudySettingsSheet`: "Oynatma" bölümü her zaman,
+                // "Eğriyi takip et" yalnız compact düzende (geniş düzende
+                // çubukta kendi anahtarı var).
+                SheetSectionHeader("Oynatma")
+                Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Text("Hız", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+                    RateStepper(rate = playback?.rate ?: 1.0, onRateChange = { orchestrator.setRate(it) })
+                }
+                if ((playback?.rate ?: 1.0) != 1.0) {
+                    TextButton(onClick = { orchestrator.setRate(1.0) }) { Text("Normal Hıza Dön") }
+                }
+                Text(
+                    "0,10× – 2,00× arası, 0,05× adımlarla.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                if (widthClass == KvWidthClass.DAR) {
+                    SheetSectionHeader("Grafik")
+                    Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        Text("Eğriyi takip et", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+                        Switch(checked = playback?.followsCurve ?: true, onCheckedChange = { orchestrator.toggleFollow() })
+                    }
+                }
+                Spacer(modifier = Modifier.padding(KvSpacing.sm))
                 MusicContextSection(
                     makam = makam,
                     karar = karar,
@@ -381,6 +441,79 @@ private fun StudyTransportButtons(
         RateStepper(rate = playback?.rate ?: 1.0, onRateChange = { orchestrator.setRate(it) })
         trailing()
     }
+}
+
+/**
+ * Dar düzenin aktarım satırı — Swift `compactControls` ile aynı dizilim:
+ * solda dolu oynat düğmesi, ortada A · B · döngü, sağda ayar düğmesi.
+ */
+@Composable
+private fun CompactStudyTransportRow(
+    orchestrator: StudyOrchestrator,
+    playback: PlaybackSnapshot?,
+    trailing: @Composable () -> Unit,
+) {
+    val isPlaying = playback?.isPlaying == true
+    val loopEnabled = playback?.loopEnabled == true
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(KvSpacing.sm),
+    ) {
+        Button(
+            onClick = { orchestrator.playPause() },
+            colors = kvButtonColors(),
+            contentPadding = PaddingValues(horizontal = 18.dp),
+            modifier = Modifier
+                .heightIn(min = 44.dp)
+                .semantics { contentDescription = if (isPlaying) "Duraklat" else "Oynat" },
+        ) {
+            Icon(imageVector = if (isPlaying) Icons.Filled.Pause else KvIcons.Play, contentDescription = null)
+        }
+        Spacer(modifier = Modifier.weight(1f))
+        MarkerButton("A", label = "A noktasını işaretle") { orchestrator.markA() }
+        MarkerButton("B", label = "B noktasını işaretle") { orchestrator.markB() }
+        FilledTonalIconButton(
+            onClick = { orchestrator.toggleLoop() },
+            colors = if (loopEnabled) {
+                IconButtonDefaults.filledTonalIconButtonColors(
+                    containerColor = MaterialTheme.colorScheme.primary.darkenedForWhiteText(),
+                    contentColor = Color.White,
+                )
+            } else {
+                IconButtonDefaults.filledTonalIconButtonColors(contentColor = MaterialTheme.colorScheme.primary)
+            },
+            modifier = Modifier
+                .size(44.dp)
+                .semantics { contentDescription = "Döngü: ${if (loopEnabled) "Açık" else "Kapalı"}" },
+        ) {
+            Icon(Icons.Filled.Repeat, contentDescription = null)
+        }
+        Spacer(modifier = Modifier.weight(1f))
+        trailing()
+    }
+}
+
+@Composable
+private fun MarkerButton(title: String, label: String, onClick: () -> Unit) {
+    FilledTonalButton(
+        onClick = onClick,
+        colors = ButtonDefaults.filledTonalButtonColors(contentColor = MaterialTheme.colorScheme.primary),
+        contentPadding = PaddingValues(horizontal = 16.dp),
+        modifier = Modifier
+            .heightIn(min = 44.dp)
+            .semantics { contentDescription = label },
+    ) { Text(title, style = MaterialTheme.typography.bodyLarge) }
+}
+
+@Composable
+private fun SheetSectionHeader(title: String) {
+    Text(
+        title.uppercase(),
+        style = MaterialTheme.typography.labelMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.padding(top = KvSpacing.lg, bottom = KvSpacing.xs),
+    )
 }
 
 /**

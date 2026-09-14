@@ -20,6 +20,12 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.only
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -34,6 +40,12 @@ import androidx.compose.material.icons.filled.OndemandVideo
 import androidx.compose.material.icons.filled.ShowChart
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.GpsFixed
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.FilledTonalIconButton
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.HorizontalDivider
@@ -66,13 +78,79 @@ import com.aykerme.klarivision.music.MakamIntervalsStore
 import com.aykerme.klarivision.music.ScaleDisplay
 
 /**
+ * Dar düzende çalışma alanının üst çubuğu: solda "Kapat", ortada başlık.
+ * Swift compact çalışma alanlarındaki satır içi gezinme çubuğunun karşılığı.
+ * Durum çubuğu boşluğunu kendisi alır; altındaki grafik bu yüzden durum
+ * çubuğunun altına taşmaz.
+ */
+@Composable
+fun WorkspaceTopBar(title: String, onClose: (() -> Unit)?, modifier: Modifier = Modifier) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .background(MaterialTheme.colorScheme.surface)
+            .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal))
+            .heightIn(min = 52.dp)
+            .padding(horizontal = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(modifier = Modifier.width(88.dp)) {
+            onClose?.let { close -> TextButton(onClick = close) { Text("Kapat", style = MaterialTheme.typography.bodyLarge) } }
+        }
+        Text(
+            title,
+            modifier = Modifier.weight(1f),
+            style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold),
+            textAlign = TextAlign.Center,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+        Spacer(modifier = Modifier.width(88.dp))
+    }
+}
+
+/**
+ * "Takip" düğmesi: açıkken vurgu tonunda dolu, kapalıyken zeminsiz.
+ * Swift `Toggle(...).toggleStyle(.button)` ile aynı görünüm ve davranış.
+ */
+@Composable
+fun FollowToggleButton(checked: Boolean, onToggle: () -> Unit, modifier: Modifier = Modifier) {
+    val accent = MaterialTheme.colorScheme.primary
+    FilledTonalButton(
+        onClick = onToggle,
+        modifier = modifier
+            .heightIn(min = 44.dp)
+            .semantics { contentDescription = "Eğriyi takip et: ${if (checked) "Açık" else "Kapalı"}" },
+        colors = ButtonDefaults.filledTonalButtonColors(
+            containerColor = if (checked) accent.copy(alpha = 0.18f) else Color.Transparent,
+            contentColor = accent,
+        ),
+        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp),
+    ) {
+        Icon(Icons.Filled.GpsFixed, contentDescription = null, modifier = Modifier.size(20.dp))
+        Spacer(modifier = Modifier.width(6.dp))
+        Text("Takip", style = MaterialTheme.typography.labelLarge)
+    }
+}
+
+/**
+ * Sayfanın bildirdiği `HTMLMediaElement.error.code` için kullanıcı metni.
+ * `null` gelirse oynatma sağlıklıdır ve hiçbir şey gösterilmez.
+ */
+fun playbackErrorMessage(code: Int?): String? = when (code) {
+    null -> null
+    4 -> "Bu dosya bu cihazda oynatılamıyor: biçim desteklenmiyor."
+    else -> "Oynatma durdu: medya okunamadı. Çalışmayı kapatıp yeniden açın."
+}
+
+/**
  * Ayar sayfasını açan dişli düğmesi — Swift `iPadWorkspaceSettingsButton` ile
  * aynı görev. VoiceOver adı (contentDescription) her zaman verilir.
  */
 @Composable
 fun WorkspaceSettingsButton(label: String, modifier: Modifier = Modifier, onClick: () -> Unit) {
-    IconButton(onClick = onClick, modifier = modifier.size(44.dp)) {
-        Icon(Icons.Filled.Settings, contentDescription = label)
+    FilledTonalIconButton(onClick = onClick, modifier = modifier.size(44.dp)) {
+        Icon(Icons.Filled.Settings, contentDescription = label, tint = MaterialTheme.colorScheme.primary)
     }
 }
 

@@ -64,4 +64,13 @@ class PlaybackSnapshotTest {
         assertNull(PlaybackSnapshot.parse("{\"time\":\"oops\"}"))
         assertNull(PlaybackSnapshot.parse(""))
     }
+
+    @Test
+    fun parsesMediaErrorCode() {
+        val base = "\"time\":1.3,\"duration\":56.8,\"isPlaying\":false,\"rate\":1"
+
+        assertEquals(3, PlaybackSnapshot.parse("{$base,\"mediaError\":3}")!!.mediaError)
+        assertNull(PlaybackSnapshot.parse("{$base,\"mediaError\":null}")!!.mediaError)
+        assertNull(PlaybackSnapshot.parse("{$base}")!!.mediaError)
+    }
 }

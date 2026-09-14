@@ -21,6 +21,7 @@ import androidx.webkit.WebViewAssetLoader
 import androidx.webkit.WebViewClientCompat
 import java.io.File
 import java.io.FileInputStream
+import java.io.InputStream
 
 object ViewerAssets {
     private const val DOMAIN = "appassets.androidplatform.net"
@@ -126,24 +127,11 @@ object ViewerAssets {
             return WebResourceResponse(mime, null, 200, "OK", headers, FileInputStream(file))
         }
 
-        val match = Regex("bytes=(\\d*)-(\\d*)").find(rangeHeader) ?: return null
-        val startText = match.groupValues[1]
-        val endText = match.groupValues[2]
-        val start = if (startText.isNotEmpty()) startText.toLong() else 0L
-        val end = if (endText.isNotEmpty()) minOf(endText.toLong(), length - 1) else length - 1
-        if (start > end || start >= length) return null
-
-        val stream = FileInputStream(file)
-        // `InputStream.skip()` istenen kadar atlamayı GARANTİ ETMEZ; eksik
-        // atlarsa sunulan baytlar kayar ve medya sessizce bozulur. Ölçümde bu
-        // cihazda tam atlıyor, ama sözleşme bunu vaat etmediği için konum
-        // kanaldan kuruluyor.
-        stream.channel.position(start)
-        val count = end - start + 1
+        val range = parseByteRange(rangeHeader, length) ?: return null
         val headers = mapOf(
             "Accept-Ranges" to "bytes",
-            "Content-Length" to count.toString(),
-            "Content-Range" to "bytes $start-$end/$length",
+            "Content-Length" to range.count.toString(),
+            "Content-Range" to "bytes ${range.start}-${range.end}/$length",
         )
         return WebResourceResponse(
             mime,
@@ -151,9 +139,37 @@ object ViewerAssets {
             206,
             "Partial Content",
             headers,
-            LimitedInputStream(stream, count),
+            rangedStream(FileInputStream(file), range),
         )
     }
+
+    /** Tek bir `bytes=başlangıç-bitiş` aralığı; ikisi de dahil. */
+    internal data class ByteRange(val start: Long, val end: Long) {
+        val count: Long get() = end - start + 1
+    }
+
+    /** `Range` başlığını [length] baytlık dosyaya göre çözer; karşılanamazsa `null`. */
+    internal fun parseByteRange(header: String, length: Long): ByteRange? {
+        val match = Regex("bytes=(\\d*)-(\\d*)").find(header) ?: return null
+        val startText = match.groupValues[1]
+        val endText = match.groupValues[2]
+        val start = if (startText.isNotEmpty()) startText.toLong() else 0L
+        val end = if (endText.isNotEmpty()) minOf(endText.toLong(), length - 1) else length - 1
+        if (start > end || start >= length) return null
+        return ByteRange(start, end)
+    }
+
+    /**
+     * Aralık yanıtının akışı. Dosyanın BAŞINDAN başlar: WebView, isteğin
+     * Range başlığını döndürülen akışa kendisi uygular ve `start` kadar baytı
+     * kendisi atlar. Akış burada `start`'a konumlanınca kayma iki kez
+     * uygulanıyor, çözücüye yanlış baytlar gidiyor ve oynatma birkaç saniye
+     * sonra PIPELINE_ERROR_DECODE ile duruyordu (Galaxy A73, WebView 151'de
+     * gözlendi). Sınır `end + 1`, yani atlanan baytlar dahil: okuma istenen
+     * aralığın sonunda biter.
+     */
+    internal fun rangedStream(fromFileStart: InputStream, range: ByteRange): InputStream =
+        LimitedInputStream(fromFileStart, range.end + 1)
 
     private fun guessMediaMime(name: String): String = when (name.substringAfterLast('.', "").lowercase()) {
         "mp4", "m4v" -> "video/mp4"
