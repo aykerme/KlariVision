@@ -686,15 +686,15 @@ final class LiveNotationTests: XCTestCase {
     }
 }
 
-/// Sürüm 1: "Birlikte Çal" `FeatureFlags.togetherModeEnabled` üzerinden
-/// gizlenir; bu bayrak kapalıyken `AppRoute.together`'a giden hiçbir yolun
-/// çalışmadığını doğrular (bkz. KlariVisionApp.swift → AppRoute.normalized,
+/// "Birlikte Çal" `FeatureFlags.togetherModeEnabled` üzerinden açılıp
+/// kapatılır; bayrak kapalıyken `AppRoute.together`'a giden hiçbir yolun
+/// çalışmadığını, açıkken modun korunduğunu doğrular (bkz. KlariVisionApp.swift → AppRoute.normalized,
 /// ModeSelectionView, WelcomeView.onAppear/.onChange(of: route)).
 final class TogetherModeFeatureFlagTests: XCTestCase {
-    func testTogetherModeIsDisabledForVersionOne() {
-        // Kanarya: biri bunu Sürüm 1 için yanlışlıkla `true` yaparsa bu test
-        // kırılır ve bu dosyanın başındaki notu hatırlatır.
-        XCTAssertFalse(FeatureFlags.togetherModeEnabled)
+    func testTogetherModeIsEnabledForGitHubRelease() {
+        // Kanarya: GitHub dağıtımında mod açık (2026-09-14). Bir dağıtım için
+        // kapatılırsa bu test bilinçli olarak güncellenmeli.
+        XCTAssertTrue(FeatureFlags.togetherModeEnabled)
     }
 
     func testTogetherRouteNormalizesToModeSelectionWhenFlagIsDisabled() {
@@ -702,9 +702,7 @@ final class TogetherModeFeatureFlagTests: XCTestCase {
     }
 
     func testTogetherRouteIsKeptWhenFlagIsEnabled() {
-        // Bayrak Sürüm 2'de açıldığında normalizasyonun modu bozmadığını
-        // garanti eder — regresyonu yalnız kapalı durum için test etmek
-        // yeterli değildir.
+        // Bayrak açıkken normalizasyonun modu bozmadığını garanti eder.
         XCTAssertEqual(AppRoute.together.normalized(togetherModeEnabled: true), .together)
     }
 
@@ -715,14 +713,14 @@ final class TogetherModeFeatureFlagTests: XCTestCase {
         }
     }
 
-    @MainActor
-    func testWorkspaceNeverEntersTogetherModeWhileFlagIsDisabled() {
+    func testWorkspaceEntersTogetherModeOnlyOnTogetherRouteWhenFlagIsEnabled() {
         // WorkspaceView'e geçen `isTogetherMode` iki koşulun birleşimidir:
-        // route == .together VE bayrak açık. Bayrak kapalıyken route ne
-        // olursa olsun sonuç her zaman false olmalı.
-        for route: AppRoute in AppRoute.allTestCases {
-            let isTogetherMode = FeatureFlags.togetherModeEnabled && route == .together
-            XCTAssertFalse(isTogetherMode, "route=\(route) için isTogetherMode false olmalı")
+        // route == .together VE bayrak açık. İki durum da denenir.
+        for flag in [false, true] {
+            for route: AppRoute in AppRoute.allTestCases {
+                let isTogetherMode = flag && route.normalized(togetherModeEnabled: flag) == .together
+                XCTAssertEqual(isTogetherMode, flag && route == .together, "flag=\(flag) route=\(route)")
+            }
         }
     }
 }

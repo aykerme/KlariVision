@@ -908,9 +908,8 @@ private struct ModeSelectionView: View {
                         route = .live
                     }
 
-                    // Sürüm 1: "Birlikte Çal" kartı FeatureFlags.togetherModeEnabled
-                    // açılana kadar hiç oluşturulmaz — kod silinmez, yalnız erişim
-                    // kapatılır (bkz. docs/app-store/PLAN.md, "Sürüm 2 — Pro kilidi").
+                    // "Birlikte Çal" kartı FeatureFlags.togetherModeEnabled kapalıyken
+                    // hiç oluşturulmaz — kod silinmez, yalnız erişim kapatılır.
                     if FeatureFlags.togetherModeEnabled {
                         TogetherModeCard(selectedFile: library.selectedFile) {
                             // Mikrofon henüz bağlanmadı; burada tek teardown noktası

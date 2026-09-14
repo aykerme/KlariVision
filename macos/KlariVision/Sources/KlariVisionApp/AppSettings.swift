@@ -13,15 +13,16 @@ import UniformTypeIdentifiers
 import WebKit
 import os
 
-/// Sürüm başına açık/kapalı derleme bayrakları. Tek kaynak: bir moda giden
+/// Dağıtım başına açık/kapalı derleme bayrakları. Tek kaynak: bir moda giden
 /// hiçbir yol (kart, menü, kısayol, kayıtlı durum geri yükleme) burada
 /// `false` olan bir bayrağı dolaşarak çalışmamalı. Kod silinmez — yalnız bu
-/// sabitler üzerinden erişim kapatılır; Sürüm 2'de `true`'ya çevrilecek.
+/// sabitler üzerinden erişim açılıp kapatılır.
 enum FeatureFlags {
-    /// "Birlikte Çal" modu Sürüm 1'de gizli (bkz. docs/app-store/PLAN.md,
-    /// "Sürüm 2 — Pro kilidi"). `AppRoute.together`'a giden her yol bu
-    /// bayrağı kontrol etmelidir.
-    static let togetherModeEnabled = false
+    /// "Birlikte Çal" modu. GitHub dağıtımında açık (2026-09-14). App Store
+    /// sürümünde Pro'ya ayrılırsa kilit bu bayrakla değil satın alma
+    /// durumuyla verilmeli (bkz. docs/app-store/PLAN.md, "Sürüm 2 — Pro kilidi").
+    /// `AppRoute.together`'a giden her yol bu bayrağı kontrol etmelidir.
+    static let togetherModeEnabled = true
 }
 
 /// A single, persisted appearance choice shared by every native surface.  The

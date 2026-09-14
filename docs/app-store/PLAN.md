@@ -28,6 +28,10 @@ Kurulum notu (Gatekeeper "Yine de Aç" adımları, TR/EN): `docs/install-macos.m
 Bu sürüm sandbox'sız (geçici imza her derlemede değiştiği için konteyner erişimi güncellemede
 kırılabilir). App Store yolu ve aşağıdaki belgeler üyelik alındığında kullanılmak üzere duruyor.
 
+**Birlikte Çal GitHub sürümünde açık (2026-09-14).** `FeatureFlags.togetherModeEnabled = true`.
+App Store'a geçilirse mağaza metinleri ve ekran görüntüleri (`metadata.md`, `review-notes.md`)
+bu moda göre yeniden ele alınmalı; Pro'ya ayrılacaksa kilit satın alma durumuyla verilmeli.
+
 ## Durum (2026-09-13 akşam)
 
 | Adım | Durum |

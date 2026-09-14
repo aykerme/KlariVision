@@ -37,7 +37,7 @@ shasum -a 256 ~/Downloads/KlariVision-*-macos-universal.dmg
 
 ### Mikrofon izni
 
-Çalma Modu ilk açıldığında macOS mikrofon izni ister. Yeni sürüm kurduktan sonra
+Çalma Modu ya da Birlikte Çal ilk açıldığında macOS mikrofon izni ister. Yeni sürüm kurduktan sonra
 izni yeniden sorabilir. İzni **Sistem Ayarları → Gizlilik ve Güvenlik → Mikrofon**
 bölümünden yönetebilirsiniz.
 
@@ -84,7 +84,7 @@ shasum -a 256 ~/Downloads/KlariVision-*-macos-universal.dmg
 
 ### Microphone access
 
-Playing Mode asks for microphone access the first time. It may ask again after you
+Playing Mode or Play Together asks for microphone access the first time. It may ask again after you
 install a new version. Manage it in **System Settings → Privacy & Security →
 Microphone**.
 
