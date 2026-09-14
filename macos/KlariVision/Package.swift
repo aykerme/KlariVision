@@ -5,6 +5,7 @@ import PackageDescription
 
 let package = Package(
     name: "KlariVision",
+    defaultLocalization: "tr",
     platforms: [.macOS(.v14)],
     products: [
         .executable(name: "KlariVision", targets: ["KlariVisionApp"]),
@@ -12,6 +13,7 @@ let package = Package(
     targets: [
         .executableTarget(
             name: "KlariVisionApp",
+            resources: [.process("Localizable.xcstrings")],
             swiftSettings: [.define("KLARIVISION_SWIFT_PACKAGE")]
         ),
         .testTarget(name: "KlariVisionAppTests", dependencies: ["KlariVisionApp"]),

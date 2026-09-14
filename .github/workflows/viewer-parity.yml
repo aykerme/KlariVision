@@ -1,0 +1,31 @@
+name: Viewer template parity
+
+# StudyViewer.html / LiveViewer.html iPad ve Android'de ayrı kopyalar olarak
+# duruyor. Bu iş, iki kopya ayrışırsa PR'ı kırmızıya çevirir.
+# Karar kaydı: docs/ANDROID_IOS_UI_PARITY_PLAN.md §1.11.
+
+on:
+  pull_request:
+    paths:
+      - "ipad/KlariVisioniPadCoreSmoke/KlariVisioniPad/Resources/*Viewer.html"
+      - "android/app/src/main/assets/viewer/*Viewer.html"
+      - "scripts/check_viewer_parity.sh"
+      - ".github/workflows/viewer-parity.yml"
+  push:
+    branches: [main]
+    paths:
+      - "ipad/KlariVisioniPadCoreSmoke/KlariVisioniPad/Resources/*Viewer.html"
+      - "android/app/src/main/assets/viewer/*Viewer.html"
+      - "scripts/check_viewer_parity.sh"
+      - ".github/workflows/viewer-parity.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  diff:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: iPad ve Android şablonlarını karşılaştır
+        run: sh scripts/check_viewer_parity.sh

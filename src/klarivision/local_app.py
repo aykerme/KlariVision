@@ -20,10 +20,8 @@ from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, quote, unquote, urlparse
 
-import imageio_ffmpeg
-
-from .contour_viewer import KARAR_TONES, MAKAM_PROFILES
 from .frequency_viewer import build_frequency_viewer, prepare_display_frames
+from .i18n import SUPPORTED_LANGUAGES, get_language, set_language, translate
 from .pitch.cpp_engine import (
     ENGINES as CPP_ENGINES,
     OFFLINE_TRACK_ENGINES as CPP_TRACK_ENGINES,
@@ -42,7 +40,7 @@ IMPORTS_DIR = PROJECT_ROOT / "data" / "imports"
 AUDIO_DIR = PROJECT_ROOT / "data" / "audio"
 OUTPUTS_DIR = PROJECT_ROOT / "outputs"
 RECENTS_PATH = PROJECT_ROOT / "data" / "recent_analyses.json"
-VIDEO_SUFFIXES = {".mp4", ".mov", ".m4v", ".webm"}
+VIDEO_SUFFIXES = {".mp4", ".mov", ".m4v"}
 MEDIA_SUFFIXES = VIDEO_SUFFIXES | {".wav", ".mp3", ".m4a"}
 
 
@@ -84,19 +82,19 @@ def _parse_byte_range(value: str | None, size: int) -> tuple[int, int] | None:
         return None
     match = re.fullmatch(r"bytes=(\d*)-(\d*)", value.strip())
     if match is None or size <= 0:
-        raise ValueError("Geçersiz byte aralığı.")
+        raise ValueError(translate("invalid-byte-range"))
     first, last = match.groups()
     if not first and not last:
-        raise ValueError("Geçersiz byte aralığı.")
+        raise ValueError(translate("invalid-byte-range"))
     if not first:
         length = int(last)
         if length <= 0:
-            raise ValueError("Geçersiz byte aralığı.")
+            raise ValueError(translate("invalid-byte-range"))
         return max(0, size - length), size - 1
     start = int(first)
     end = int(last) if last else size - 1
     if start >= size or end < start:
-        raise ValueError("Karşılanamayan byte aralığı.")
+        raise ValueError(translate("unsatisfiable-byte-range"))
     return start, min(end, size - 1)
 
 
@@ -174,8 +172,26 @@ def _store_recent_analysis(source: Path, viewer_url: str, *, cache_hit: bool) ->
 
 
 def _to_wav(source: Path, destination: Path) -> None:
-    """Extract portable mono 48 kHz PCM for the production C++ engines."""
+    """Extract portable mono 48 kHz PCM for the production C++ engines.
+
+    The packaged (App Store) app never reaches this function with anything
+    that still needs decoding: the native Swift layer already resolves a
+    48 kHz mono WAV with ``MediaToWAVConverter`` (AVFoundation) and hands it
+    to ``analyse_upload``/``refresh_existing_viewer`` as ``precomputed_wav``,
+    which is copied in directly by ``analyse_upload``. This function only exists for
+    the developer/CLI flow -- running ``analyse_upload`` straight from a
+    Python shell or the ``.venv`` script without a precomputed WAV -- so
+    ``imageio_ffmpeg`` is imported lazily here rather than at module load
+    time: a packaged build excludes that dependency (see
+    ``scripts/build_app_store.sh``), and importing it unconditionally at
+    the top of this module would make every packaged import of
+    ``klarivision.local_app`` fail even when this function is never called.
+    """
     destination.parent.mkdir(parents=True, exist_ok=True)
+    # A WAV is decoded too: it may be 44.1 kHz, stereo or 24-bit, and the
+    # engines only accept mono 48 kHz PCM.
+    import imageio_ffmpeg
+
     subprocess.run(
         [
             imageio_ffmpeg.get_ffmpeg_exe(),
@@ -199,13 +215,19 @@ def _import_from_url(url: str) -> Path:
     """Download one user-supplied web video into the local imports folder."""
     parsed = urlparse(url.strip())
     if parsed.scheme not in {"http", "https"} or not parsed.netloc:
-        raise ValueError("Geçerli bir internet bağlantısı gir.")
+        raise ValueError(translate("invalid-internet-connection"))
     try:
         from yt_dlp import YoutubeDL
     except ImportError as error:  # pragma: no cover - depends on the packaged app environment.
         raise RuntimeError(
             "Linkten açma için yt-dlp bileşeni gerekli. Uygulamayı bu bileşenle paketlemeliyiz."
         ) from error
+    # `yt_dlp` and `imageio_ffmpeg` are excluded together from the packaged
+    # (App Store) build -- see scripts/build_app_store.sh -- so if the
+    # import above succeeded (a developer environment with both installed),
+    # this one always will too. Imported lazily for the same reason as in
+    # `_to_wav`: a packaged build must never need this module importable.
+    import imageio_ffmpeg
 
     IMPORTS_DIR.mkdir(parents=True, exist_ok=True)
     output_template = str(IMPORTS_DIR / "link-%(id)s.%(ext)s")
@@ -230,15 +252,15 @@ def _import_from_url(url: str) -> Path:
         except Exception as error:  # YouTube occasionally rejects a first extraction attempt.
             last_error = error
             if attempt:
-                raise RuntimeError(f"Bağlantıdan medya alınamadı: {error}") from error
+                raise RuntimeError(translate("media-from-link-failed", error=error)) from error
     if downloaded is None:
-        raise RuntimeError(f"Bağlantıdan medya alınamadı: {last_error}")
+        raise RuntimeError(translate("media-from-link-failed", error=last_error))
     merged = downloaded.with_suffix(".mp4")
     if merged.is_file():
         return merged
     if downloaded.is_file():
         return downloaded
-    raise RuntimeError("Bağlantıdan medya alınamadı.")
+    raise RuntimeError(translate("media-from-link-failed-generic"))
 
 
 def _persist_video_source(source: Path, analysis_id: str) -> Path:
@@ -259,23 +281,40 @@ def _persist_video_source(source: Path, analysis_id: str) -> Path:
     return destination
 
 
-def analyse_upload(source: Path, makam: str, karar: str, engine: str = "vamp") -> str:
-    """Analyse one local media file and return its project-relative viewer URL."""
-    if makam not in MAKAM_PROFILES or karar not in KARAR_TONES:
-        raise ValueError("Geçersiz makam veya karar sesi seçimi.")
+def analyse_upload(
+    source: Path,
+    engine: str = "vamp",
+    precomputed_wav: Path | None = None,
+    lang: str = "tr",
+) -> str:
+    """Analyse one local media file and return its project-relative viewer URL.
 
+    ``precomputed_wav`` is the 48 kHz mono WAV the native Swift layer already
+    produced with AVFoundation (``MediaToWAVConverter``) for the packaged app
+    -- when given, it is copied into place directly and ``_to_wav`` (and
+    therefore ffmpeg) is never invoked. Only the developer/CLI flow, which
+    calls this without a precomputed WAV, still falls back to ffmpeg.
+
+    ``lang`` is the interface language Swift resolved for the user
+    (``tr``/``en``); it only selects which language error/status text and the
+    viewer page use -- it never changes analysis behaviour.
+    """
     signature = _file_signature(source)
     analysis_id = f"{_analysis_stem(source)}-{signature}"
     media_source = _persist_video_source(source, analysis_id)
     wav = AUDIO_DIR / f"{analysis_id}.wav"
     if engine not in {"vamp", "python", *CPP_ENGINES}:
-        raise ValueError("Geçersiz pitch motoru seçimi.")
+        raise ValueError(translate("invalid-pitch-engine", lang))
     profile = f".offline_track_v1.{OFFLINE_TRACK_REVISION}" if engine in CPP_ENGINES else ""
     pitch_json = OUTPUTS_DIR / f"{analysis_id}.{engine}{profile}.json"
     viewer = OUTPUTS_DIR / f"{analysis_id}.html"
     if not wav.is_file():
         _emit_progress("extract", 0, 1)
-        _to_wav(media_source, wav)
+        if precomputed_wav is not None:
+            wav.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(precomputed_wav, wav)
+        else:
+            _to_wav(media_source, wav)
         _emit_progress("extract", 1, 1)
     cache_hit = pitch_json.is_file()
     if not cache_hit:
@@ -302,11 +341,10 @@ def analyse_upload(source: Path, makam: str, karar: str, engine: str = "vamp") -
             if media_source.suffix.lower() in VIDEO_SUFFIXES
             else None
         ),
-        analysis_status=(
-            "Önceki pitch analizi kullanıldı." if cache_hit else "Yeni pitch analizi oluşturuldu."
-        ),
+        analysis_status=translate("cached-analysis-used" if cache_hit else "new-analysis-created", lang),
         validation=validation_for_study(source.name, wav, pitch_json, engine, prepare_display_frames),
         engine=engine,
+        lang=lang,
     )
     _emit_progress("viewer", 1, 1)
     viewer_url = "/" + quote(viewer.relative_to(PROJECT_ROOT).as_posix())
@@ -314,17 +352,17 @@ def analyse_upload(source: Path, makam: str, karar: str, engine: str = "vamp") -
     return viewer_url
 
 
-def refresh_existing_viewer(viewer: Path, engine: str | None = None) -> Path:
+def refresh_existing_viewer(viewer: Path, engine: str | None = None, lang: str = "tr") -> Path:
     """Refresh a saved HTML viewer without running pitch analysis again."""
     viewer = viewer.expanduser().resolve()
     if viewer.parent != OUTPUTS_DIR.resolve() or viewer.suffix.lower() != ".html":
-        raise ValueError("Geçersiz kayıt görünümü.")
+        raise ValueError(translate("invalid-recording-viewer", lang))
     if not viewer.is_file():
-        raise FileNotFoundError("Kaydedilmiş çalışma bulunamadı.")
+        raise FileNotFoundError(translate("saved-study-not-found", lang))
 
     wav = AUDIO_DIR / f"{viewer.stem}.wav"
     if not wav.is_file():
-        raise FileNotFoundError("Bu çalışma için ses önbelleği bulunamadı.")
+        raise FileNotFoundError(translate("audio-cache-not-found", lang))
 
     previous_html = viewer.read_text(encoding="utf-8")
 
@@ -344,7 +382,7 @@ def refresh_existing_viewer(viewer: Path, engine: str | None = None) -> Path:
 
         if not pitch_json.is_file():
             raise FileNotFoundError(
-                f"Seçilen {selected_engine} motoru için pitch verisi bulunamadı: {pitch_json.name}"
+                translate("pitch-data-not-found-for-engine", lang, engine=selected_engine, file=pitch_json.name)
             )
     else:
         # Engine not provided: try to read from HTML meta tag
@@ -369,7 +407,7 @@ def refresh_existing_viewer(viewer: Path, engine: str | None = None) -> Path:
                 reverse=True,
             )
             if not pitch_candidates:
-                raise FileNotFoundError("Bu çalışma için pitch verisi bulunamadı.")
+                raise FileNotFoundError(translate("pitch-data-not-found", lang))
             pitch_json = pitch_candidates[0]
 
             # Extract engine identifier from the filename
@@ -383,9 +421,9 @@ def refresh_existing_viewer(viewer: Path, engine: str | None = None) -> Path:
     video_relative_path = html.unescape(video_match.group(1)) if video_match else None
 
     # Build status message with engine information
-    status_msg = "Önceki pitch analizi kullanıldı. Arayüz güncellendi."
+    status_msg = translate("cached-analysis-used-and-refreshed", lang)
     if engine and selected_engine and selected_engine != engine:
-        status_msg = f"Varsayılan {selected_engine} motoru kullanıldı. Arayüz güncellendi."
+        status_msg = translate("default-engine-used-and-refreshed", lang, engine=selected_engine)
 
     build_frequency_viewer(
         pitch_json,
@@ -395,20 +433,21 @@ def refresh_existing_viewer(viewer: Path, engine: str | None = None) -> Path:
         analysis_status=status_msg,
         validation=validation_for_study(viewer.stem, wav, pitch_json, selected_engine or "cached", prepare_display_frames),
         engine=selected_engine,
+        lang=lang,
     )
     return viewer
 
 
-def reanalyse_existing_viewer(viewer: Path, engine: str) -> Path:
+def reanalyse_existing_viewer(viewer: Path, engine: str, lang: str = "tr") -> Path:
     """Create or reuse the selected portable C++ track for one saved study."""
     viewer = viewer.expanduser().resolve()
     if viewer.parent != OUTPUTS_DIR.resolve() or viewer.suffix.lower() != ".html":
-        raise ValueError("Geçersiz kayıt görünümü.")
+        raise ValueError(translate("invalid-recording-viewer", lang))
     if engine not in CPP_ENGINES:
-        raise ValueError("Çalışma için taşınabilir bir C++ motor seç.")
+        raise ValueError(translate("choose-portable-engine", lang))
     wav = AUDIO_DIR / f"{viewer.stem}.wav"
     if not wav.is_file():
-        raise FileNotFoundError("Bu çalışma için ses önbelleği bulunamadı.")
+        raise FileNotFoundError(translate("audio-cache-not-found", lang))
     pitch_json = OUTPUTS_DIR / f"{viewer.stem}.{engine}.offline_track_v1.{OFFLINE_TRACK_REVISION}.json"
     if not pitch_json.is_file():
         extract_cpp_pitch(wav, engine, pitch_json)
@@ -420,21 +459,15 @@ def reanalyse_existing_viewer(viewer: Path, engine: str) -> Path:
         os.path.relpath(wav, start=viewer.parent).replace(os.sep, "/"),
         viewer,
         video_relative_path=video_relative_path,
-        analysis_status=f"{engine} C++ çalışma eğrisi kullanılıyor.",
+        analysis_status=translate("cpp-track-in-use", lang, engine=engine),
         validation=validation_for_study(viewer.stem, wav, pitch_json, engine, prepare_display_frames),
         engine=engine,
+        lang=lang,
     )
     return viewer
 
 
 def _form_page(message: str = "") -> str:
-    makam_options = "".join(
-        f'<option value="{key}">{label}</option>' for key, label in MAKAM_PROFILES.items()
-    )
-    karar_options = "".join(
-        f'<option value="{key}">{value["name"]}</option>'
-        for key, value in KARAR_TONES.items()
-    )
     notice = f'<p class="notice">{html.escape(message)}</p>' if message else ""
     recent_items = "".join(
         "<a class=\"recent-item\" href=\"{url}\"><strong>{label}</strong>"
@@ -460,9 +493,9 @@ h1{{margin-bottom:6px}}p{{line-height:1.5}}form{{margin-top:24px;padding:24px;bo
 <h1>KlariVision</h1><p>Yeni bir çalışma için video veya ses dosyası seç. Analiz tamamlanana kadar burada grafik ya da video gösterilmez.</p>{notice}
 <form id="analysis-form" method="post" action="/analyse" enctype="multipart/form-data">
 <input id="recording" class="file-input" name="recording" type="file" accept="video/*,audio/*,.wav,.mp3,.m4a" required><label class="file-button" for="recording">Video veya ses seç</label><span id="file-name" class="file-name">Henüz dosya seçilmedi</span>
-<input type="hidden" name="makam" value="huzzam"><input type="hidden" name="karar" value="dugah"><input type="hidden" name="engine" value="vamp">
+<input type="hidden" name="engine" value="vamp">
 <div id="progress" class="progress" aria-live="polite"><div class="progress-track"><div id="progress-value" class="progress-value"></div></div><span id="progress-label" class="progress-label">Dosya hazırlanıyor…</span></div>
-</form><form id="link-form" method="post" action="/analyse-link" enctype="application/x-www-form-urlencoded"><div class="link-row"><input id="media-url" name="url" type="text" inputmode="url" placeholder="YouTube veya video bağlantısı" required><button id="link-button" type="submit">Linkten aç</button></div><input type="hidden" name="makam" value="huzzam"><input type="hidden" name="karar" value="dugah"><input type="hidden" name="engine" value="vamp"></form><script>
+</form><form id="link-form" method="post" action="/analyse-link" enctype="application/x-www-form-urlencoded"><div class="link-row"><input id="media-url" name="url" type="text" inputmode="url" placeholder="YouTube veya video bağlantısı" required><button id="link-button" type="submit">Linkten aç</button></div><input type="hidden" name="engine" value="vamp"></form><script>
 const form=document.getElementById('analysis-form'),linkForm=document.getElementById('link-form'),recording=document.getElementById('recording'),fileName=document.getElementById('file-name'),fileButton=document.querySelector('.file-button'),linkButton=document.getElementById('link-button'),mediaUrl=document.getElementById('media-url'),progress=document.getElementById('progress'),progressValue=document.getElementById('progress-value'),progressLabel=document.getElementById('progress-label');
 let analysisStarted=false,shownProgress=0,analysisTimer=null;
 function showProgress(value,label){{shownProgress=Math.max(shownProgress,Math.min(100,value));progressValue.style.width=`${{shownProgress}}%`;progressLabel.textContent=label}}
@@ -562,22 +595,20 @@ class KlariVisionHandler(SimpleHTTPRequestHandler):
             )
             recording = form["recording"]
             if not getattr(recording, "filename", None):
-                raise ValueError("Lütfen bir video veya ses dosyası seç.")
+                raise ValueError(translate("choose-video-or-audio"))
             suffix = Path(recording.filename).suffix.lower()
             if not suffix:
-                raise ValueError("Dosyanın uzantısı tanınamadı.")
+                raise ValueError(translate("extension-not-recognized"))
             IMPORTS_DIR.mkdir(parents=True, exist_ok=True)
             saved = IMPORTS_DIR / f"{_safe_stem(recording.filename)}-{uuid.uuid4().hex[:8]}{suffix}"
             with saved.open("wb") as target:
                 shutil.copyfileobj(recording.file, target)
             result_url = analyse_upload(
                 saved,
-                form.getfirst("makam", "huzzam"),
-                form.getfirst("karar", "dugah"),
                 form.getfirst("engine", "vamp"),
             )
         except Exception as error:  # User-facing local app; preserve the server process after an error.
-            self._send_text(f"Analiz oluşturulamadı: {error}", status=400)
+            self._send_text(translate("analysis-failed", error=error), status=400)
             return
         self.send_response(303)
         self.send_header("Location", result_url)
@@ -592,12 +623,10 @@ class KlariVisionHandler(SimpleHTTPRequestHandler):
             source = _import_from_url(fields.get("url", [""])[0])
             result_url = analyse_upload(
                 source,
-                fields.get("makam", ["huzzam"])[0],
-                fields.get("karar", ["dugah"])[0],
                 fields.get("engine", ["vamp"])[0],
             )
         except Exception as error:  # User-facing local app; preserve the server process after an error.
-            self._send_text(f"Linkten analiz oluşturulamadı: {error}", status=400)
+            self._send_text(translate("analysis-from-link-failed", error=error), status=400)
             return
         self.send_response(303)
         self.send_header("Location", result_url)
@@ -628,9 +657,11 @@ def create_server(port: int = 8765) -> ThreadingHTTPServer:
 def main() -> None:
     parser = argparse.ArgumentParser(description="Run the local KlariVision recording picker.")
     parser.add_argument("--port", type=int, default=8765)
+    parser.add_argument("--lang", choices=SUPPORTED_LANGUAGES, default="tr")
     arguments = parser.parse_args()
+    set_language(arguments.lang)
     server = create_server(arguments.port)
-    print(f"KlariVision hazır: http://127.0.0.1:{arguments.port}")
+    print(translate("server-ready", url=f"http://127.0.0.1:{arguments.port}"))
     server.serve_forever()
 
 

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!-- App Sandbox: Mac App Store dağıtımı için zorunlu. -->
+    <key>com.apple.security.app-sandbox</key>
+    <true/>
+    <!-- Çalma Modu ve Birlikte Çal, canlı pitch analizi için mikrofona ihtiyaç duyar. -->
+    <key>com.apple.security.device.audio-input</key>
+    <true/>
+    <!-- Dinleme Modu, kullanıcının NSOpenPanel veya sürükle-bırak ile seçtiği
+         ses/video dosyasını okur. Çalma Modu'ndaki "Kaydı Sakla" ise
+         NSSavePanel ile kullanıcının seçtiği yere WAV yazar; bu yüzden
+         read-only yetmez. Uygulama kendi seçtiği hiçbir dış yola yazmaz. -->
+    <key>com.apple.security.files.user-selected.read-write</key>
+    <true/>
+</dict>
+</plist>

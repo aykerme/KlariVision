@@ -388,3 +388,28 @@ def test_frequency_viewer_karar_drawing_with_distinct_style(tmp_path) -> None:
     assert "ctx.fillStyle=colorWithAlpha(palette.karar,1)" in html
     # Döngüden sonra lineWidth sıfırlanmalı
     assert "ctx.lineWidth=1;" in html
+
+
+def test_note_naming_matches_swift_display_rule(tmp_path) -> None:
+    """The page and the native app must spell note names the same way."""
+    import re
+    from pathlib import Path
+
+    from klarivision.frequency_viewer import NOTE_LETTERS, NOTE_NAME_PATTERN_JS
+
+    swift = (Path(__file__).resolve().parents[1] / "macos/KlariVision/Sources/KlariVisionApp/AppSettings.swift").read_text(encoding="utf-8")
+    swift_letters = dict(re.findall(r'"(Do|Re|Mi|Fa|Sol|La|Si)": "([A-G])"', swift))
+    swift_pattern = re.search(r'pattern: "(.+?)"\n', swift).group(1).replace("\\\\", "\\")
+    assert swift_letters == NOTE_LETTERS
+    assert swift_pattern == NOTE_NAME_PATTERN_JS
+
+    pitch_json = tmp_path / "pitch.json"
+    pitch_json.write_text(json.dumps({"frames": [{"time_seconds": 0.0, "frequency_hz": 440.0}]}), encoding="utf-8")
+    for lang, default in (("tr", "solfege"), ("en", "letter")):
+        output = tmp_path / f"viewer-{lang}.html"
+        build_frequency_viewer(pitch_json, "audio.wav", output, lang=lang)
+        html = output.read_text(encoding="utf-8")
+        assert f"let noteNaming=window.klariVisionNoteNaming||{json.dumps(default)};" in html
+        assert json.dumps(NOTE_LETTERS, separators=(",", ":")) in html
+        assert "setNoteNaming(style)" in html
+        assert "${displayNoteName(name)}" in html

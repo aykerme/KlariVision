@@ -4,6 +4,8 @@
 
 package com.aykerme.klarivision.music
 
+import androidx.compose.runtime.mutableStateMapOf
+
 /**
  * Ayarlanabilir makamlar için 7 koma-aralığı adımı için kalıcı, kullanıcı tarafından
  * değiştirilebilir geçersiz kılmaları tutacak mağaza. Majör/Minör sabit diyatonic
@@ -24,8 +26,14 @@ class MakamIntervalsStore {
 
     /**
      * Makam başına kalıcı geçersiz kılmalar. Başlangıçta boş.
+     *
+     * Compose anlık görüntü haritasıdır: düzenleyici ve Ayarlar'daki
+     * "Teori/Özel" etiketi `intervals()` okuduğu için değişiklikte yeniden
+     * çizilir. Düz `mutableMapOf` iken düzenleyicide dokunuş ekrana
+     * yansımıyor, sonraki dokunuşlar da eski değerler üzerinden hesaplanıyordu
+     * (cihazda gözlendi). Swift karşılığı `@Observable` mağazadır.
      */
-    private val overrides = mutableMapOf<Makam, List<Int>>()
+    private val overrides = mutableStateMapOf<Makam, List<Int>>()
 
     /**
      * Makamın 7 koma delta adımı — kendi kümülatif guideCommas'ından türetildi

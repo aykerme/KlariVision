@@ -44,47 +44,43 @@ object KvRadius {
 val KvMinTouchTarget: Dp = 44.dp
 
 /**
- * 02-screen-frame-matrix.md ve 03-responsive-contract.md'deki üç genişlik
- * sınıfı — cihaz adına değil kullanılabilir genişliğe göre uygulanır.
- * Material3'ün kendi Compact/Medium/Expanded eşikleri (600/840dp) yerine
- * spesifikasyonun kendi eşikleri (700/1000pt) kullanılır.
+ * iOS'un iki boyut sınıfının karşılığı — cihaz adına değil kullanılabilir
+ * genişliğe göre uygulanır. Swift `iPadRootView` yalnız
+ * `horizontalSizeClass`'a bakar: compact'ta TabView + tam ekran çalışma
+ * alanı, regular'da NavigationSplitView + grafik üstte/denetim çubuğu altta.
+ * Ara bir "orta" düzen yoktur (docs/ANDROID_IOS_UI_PARITY_PLAN.md §1.1).
+ * Android boyut sınıfını ham ölçüden türettiği için compact/regular sınırı
+ * 700 pt olarak alınır (en küçük tam ekran iPad, 744 pt, regular'dır).
  */
 enum class KvWidthClass {
-    /** <700 pt: tek sütun, modal gezinme, grafik tüm yüzeyi kaplar. */
+    /** <700 pt — iOS compact: alt gezinme çubuğu, grafik tüm yüzeyi kaplar, denetimler yüzen kart. */
     DAR,
 
-    /** 700–999 pt: 320 pt drawer, medya üstte 220–360 pt. */
-    ORTA,
-
-    /** ≥1000 pt: 280 pt kalıcı kenar çubuğu, medya %32 / grafik kalan, 16 pt aralık. */
+    /** ≥700 pt — iOS regular: kalıcı kenar çubuğu, grafik üstte, denetim çubuğu altta. */
     GENIS,
     ;
 
     companion object {
-        fun fromWidth(widthDp: Dp): KvWidthClass = when {
-            widthDp < 700.dp -> DAR
-            widthDp < 1000.dp -> ORTA
-            else -> GENIS
-        }
+        fun fromWidth(widthDp: Dp): KvWidthClass =
+            if (widthDp < 700.dp) DAR else GENIS
 
         /**
          * Genişlik VE yüksekliğe bakan sınıf. Yalnız genişliğe bakmak yatay
          * çevrilmiş bir telefonda yanlış cevap veriyordu: 2400×1080 piksel,
-         * yani 853×384 dp — genişlik ORTA eşiğini geçiyor ve ORTA/GENIS
-         * yerleşimi seçiliyordu, oysa o yerleşimler dikey yığılır ve
-         * [KvMediaHeightMediumMin] (220) + [KvGraphMinHeight] (360) = 580 dp
-         * ister. 384 dp'lik pencerede sonuç, kontrol panelinin tüm ekranı
-         * kaplaması ve grafiğin ~60 piksellik bir şeride sıkışmasıydı
-         * (fiziksel kabul turu bulgusu B-10).
+         * yani 853×384 dp — genişlik eşiği geçiyor ve geniş yerleşim
+         * seçiliyordu, oysa geniş yerleşimde grafik ile denetim çubuğu dikey
+         * yığılır. 384 dp'lik pencerede sonuç, denetimlerin ekranı kaplaması
+         * ve grafiğin ~60 piksellik bir şeride sıkışmasıydı (fiziksel kabul
+         * turu bulgusu B-10).
          *
-         * Pencere bu yüksekliği veremiyorsa DAR'a düşülür: tek sütun, grafik
-         * yüzeyi kaplar, düğmeler sarmalanan bir satırda durur. Tablet
-         * yatayda (≥580 dp yükseklik) davranış DEĞİŞMEZ.
+         * Pencere bu yüksekliği veremiyorsa DAR'a düşülür. Bu koşul iOS'ta
+         * yoktur; Android'e özgü bir güvenlik ağıdır. Tablet yatayda
+         * (≥580 dp yükseklik) davranış DEĞİŞMEZ.
          */
         fun fromSize(widthDp: Dp, heightDp: Dp): KvWidthClass =
             if (heightDp < MinimumHeightForWideLayouts) DAR else fromWidth(widthDp)
 
-        /** ORTA/GENIS yerleşimlerinin dikey olarak isteyebileceği en az yükseklik. */
+        /** Geniş yerleşimin dikey olarak isteyebileceği en az yükseklik. */
         private val MinimumHeightForWideLayouts: Dp = 580.dp
     }
 }
@@ -92,15 +88,8 @@ enum class KvWidthClass {
 /** Geniş sınıfta kalıcı kenar çubuğu genişliği. */
 val KvSidebarWidthWide: Dp = 280.dp
 
-/** Orta sınıfta gezinme drawer genişliği. */
-val KvDrawerWidthMedium: Dp = 320.dp
-
 /** Geniş çalışma alanında dinleme medyasının iç alandaki payı (%32). */
 const val KvMediaFractionWide = 0.32f
-
-/** Orta sınıfta dinleme medyası yüksekliği aralığı. */
-val KvMediaHeightMediumMin: Dp = 220.dp
-val KvMediaHeightMediumMax: Dp = 360.dp
 
 /** Hiçbir sınıfta grafiğin bu değerin altına düşmemesi gerekir. */
 val KvGraphMinHeight: Dp = 360.dp

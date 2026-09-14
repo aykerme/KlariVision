@@ -8,14 +8,47 @@
 
 package com.aykerme.klarivision.ui
 
+import androidx.compose.material3.ButtonColors
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
+
+/** WCAG 2.1 AA: normal boyutta metin için gereken en az kontrast oranı. */
+const val KvMinTextContrast = 4.5f
+
+/** Bu rengin beyazla WCAG kontrast oranı. */
+fun Color.contrastWithWhite(): Float = 1.05f / (luminance() + 0.05f)
+
+/**
+ * Dolu düğme zemini: aynı renk tonu, beyaz yazı en az [KvMinTextContrast]
+ * olana kadar siyaha doğru koyulaştırılır. Vurgu renkleri (#0A84FF mavi
+ * 3,65:1, #34C759 yeşil 2,22:1, klasik #B5652E 4,32:1) beyaz yazıyla AA'yı
+ * geçmiyordu. Vurgu rengi ince metin, ikon ve anahtarlarda parlak kalır;
+ * koyu temada koyulaştırılmış renk o yerlerde okunmaz olurdu.
+ */
+fun Color.darkenedForWhiteText(minContrast: Float = KvMinTextContrast): Color {
+    var color = this
+    var step = 0
+    while (color.contrastWithWhite() < minContrast && step < 40) {
+        color = lerp(color, Color.Black, 0.03f)
+        step++
+    }
+    return color
+}
+
+/** Metinli dolu düğmelerin renkleri: koyulaştırılmış zemin, beyaz yazı. */
+@Composable
+fun kvButtonColors(container: Color = MaterialTheme.colorScheme.primary): ButtonColors =
+    ButtonDefaults.buttonColors(containerColor = container.darkenedForWhiteText(), contentColor = Color.White)
 
 /** settings/SettingsKeys.THEME olası değerleri — buradaki adlarla birebir eşleşir. */
 object KlariVisionThemeNames {
@@ -26,8 +59,11 @@ object KlariVisionThemeNames {
 
 private val FocusLight = lightColorScheme(
     primary = KvColors.AccentListening,
+    onPrimary = Color.White,
     secondary = KvColors.AccentPractice,
+    onSecondary = Color.White,
     tertiary = KvColors.StatusRecording,
+    onTertiary = Color.White,
     background = androidx.compose.ui.graphics.Color(0xFFF6F8FB),
     surface = androidx.compose.ui.graphics.Color(0xFFFFFFFF),
     outline = KvColors.GraphGuide,
@@ -35,8 +71,11 @@ private val FocusLight = lightColorScheme(
 
 private val StudioDark = darkColorScheme(
     primary = KvColors.AccentListening,
+    onPrimary = Color.White,
     secondary = KvColors.AccentPractice,
+    onSecondary = Color.White,
     tertiary = KvColors.StatusRecording,
+    onTertiary = Color.White,
     background = KvColors.StudioSurface,
     surface = KvColors.StudioControl,
     outline = KvColors.GraphGuide,
@@ -44,8 +83,11 @@ private val StudioDark = darkColorScheme(
 
 private val ClassicLight = lightColorScheme(
     primary = androidx.compose.ui.graphics.Color(0xFFB5652E),
+    onPrimary = Color.White,
     secondary = KvColors.AccentPractice,
+    onSecondary = Color.White,
     tertiary = KvColors.StatusRecording,
+    onTertiary = Color.White,
     background = KvColors.ClassicSurface,
     surface = KvColors.ClassicControl,
     outline = KvColors.GraphGuide,

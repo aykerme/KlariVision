@@ -8,7 +8,10 @@ import SwiftUI
 
 struct SettingsSheet<Content: View>: View {
     @Environment(\.dismiss) private var dismiss
-    let title: String
+    // `LocalizedStringKey`: both call sites pass a literal, and a `String`
+    // parameter here forced `Label(title, ...)` onto the non-localizing
+    // StringProtocol overload (bkz. HoverTooltip'teki aynı düzeltme notu).
+    let title: LocalizedStringKey
     let applyEnabled: Bool
     let apply: () -> Void
     @ViewBuilder let content: Content
@@ -51,7 +54,16 @@ struct StudySettingsView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var draft: StudySettingsDraft
     @State private var intervalScale: LiveScale
+    @State private var noteNaming = NoteNamingStyle.stored()
     let apply: (StudySettingsDraft) -> Void
+
+    private var noteNamingPicker: some View {
+        Picker("Nota adları", selection: $noteNaming) {
+            ForEach(NoteNamingStyle.allCases) { style in
+                Text(verbatim: style.title).tag(style)
+            }
+        }
+    }
 
     init(draft: StudySettingsDraft, apply: @escaping (StudySettingsDraft) -> Void) {
         _draft = State(initialValue: draft)
@@ -68,6 +80,7 @@ struct StudySettingsView: View {
     var body: some View {
         SettingsSheet(title: "Dinleme Modu Ayarları", applyEnabled: LiveMakamIntervals.isValid(draft.intervals), apply: {
             apply(draft)
+            noteNaming.save()
             dismiss()
         }) {
             Form {
@@ -76,6 +89,7 @@ struct StudySettingsView: View {
                     ColorPicker("Nota kılavuzları", selection: graphColorBinding(\.noteGuideHex))
                     ColorPicker("Karar sesi", selection: graphColorBinding(\.kararHex))
                     Button("Varsayılan renklere dön") { draft.graphAppearance = GraphAppearance() }
+                    noteNamingPicker
                 }
 
                 Section("Çalışma bağlamı") {
@@ -86,7 +100,7 @@ struct StudySettingsView: View {
                     }
                     Picker("Karar", selection: $draft.tonic) {
                         ForEach([0, 2, 4, 5, 7, 9, 11], id: \.self) { note in
-                            Text(noteName(note)).tag(note)
+                            Text(verbatim: noteNaming.display(noteName(note))).tag(note)
                         }
                     }
                     Stepper("Geri sayım: \(draft.countdown) sn", value: $draft.countdown, in: 0...60)
@@ -139,6 +153,15 @@ struct LivePracticeSettingsView: View {
     @State private var selectedScale: LiveScale
     @State private var draft: [String: [Int]]
     @State private var draftGraphAppearance: GraphAppearance
+    @State private var noteNaming = NoteNamingStyle.stored()
+
+    private var noteNamingPicker: some View {
+        Picker("Nota adları", selection: $noteNaming) {
+            ForEach(NoteNamingStyle.allCases) { style in
+                Text(verbatim: style.title).tag(style)
+            }
+        }
+    }
 
     init(intervals: Binding<[String: [Int]]>, selectedScale: LiveScale) {
         _intervals = intervals
@@ -158,6 +181,7 @@ struct LivePracticeSettingsView: View {
             intervals = draft
             LiveMakamIntervals.save(draft)
             draftGraphAppearance.save()
+            noteNaming.save()
             dismiss()
         }) {
             Form {
@@ -168,6 +192,7 @@ struct LivePracticeSettingsView: View {
                     Button("Varsayılan renklere dön") {
                         draftGraphAppearance = GraphAppearance()
                     }
+                    noteNamingPicker
                 }
 
                 Section("Sinyal Kapısı") {
@@ -246,6 +271,8 @@ struct LivePracticeView: View {
     @AppStorage(GraphAppearance.pitchColorKey) private var graphPitchHex = GraphAppearance.defaultPitchHex
     @AppStorage(GraphAppearance.noteGuideColorKey) private var graphNoteGuideHex = GraphAppearance.defaultNoteGuideHex
     @AppStorage(GraphAppearance.kararColorKey) private var graphKararHex = GraphAppearance.defaultKararHex
+    @AppStorage(NoteNamingStyle.storageKey) private var noteNamingRaw = NoteNamingStyle.automatic.rawValue
+    private var storedNoteNaming: NoteNamingStyle { NoteNamingStyle(rawValue: noteNamingRaw) ?? .automatic }
     let close: () -> Void
 
     var body: some View {
@@ -450,7 +477,7 @@ struct LivePracticeView: View {
 
             Picker("Karar", selection: $tonic) {
                 ForEach([0, 2, 4, 5, 7, 9, 11], id: \.self) { note in
-                    Text(noteName(note)).tag(note)
+                    Text(verbatim: storedNoteNaming.display(noteName(note))).tag(note)
                 }
             }
             .labelsHidden()

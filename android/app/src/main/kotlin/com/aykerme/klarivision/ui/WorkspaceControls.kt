@@ -54,7 +54,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.aykerme.klarivision.music.Karar
@@ -77,12 +80,33 @@ fun WorkspaceSettingsButton(label: String, modifier: Modifier = Modifier, onClic
  * Oynatma konumu göstergesi — native transport, `t / süre` biçiminde.
  * Kaydırma grafiğin kendi tek-parmak yatay sürüklemesiyle yapılır; bu salt
  * okunabilir bir konum etiketidir (Swift `iPadStudyPositionReadout`).
+ *
+ * Jestsiz arama yolu da budur: Swift VoiceOver'da `accessibilityAdjustableAction`
+ * ile 5 saniyelik adımlar verir; TalkBack'te aynı adımlar özel eylem olarak
+ * sunulur. `onSeek` verilmezse gösterge salt okunur kalır.
  */
 @Composable
-fun PositionReadout(time: Double, duration: Double, modifier: Modifier = Modifier) {
+fun PositionReadout(
+    time: Double,
+    duration: Double,
+    modifier: Modifier = Modifier,
+    onSeek: ((Double) -> Unit)? = null,
+) {
     Row(
-        modifier = modifier.semantics {
+        modifier = modifier.clearAndSetSemantics {
             contentDescription = "Konum: ${formatTime(time)} / ${formatTime(duration)}"
+            if (onSeek != null) {
+                customActions = listOf(
+                    CustomAccessibilityAction("5 saniye ileri") {
+                        onSeek(if (duration > 0) minOf(duration, time + 5) else time + 5)
+                        true
+                    },
+                    CustomAccessibilityAction("5 saniye geri") {
+                        onSeek(maxOf(0.0, time - 5))
+                        true
+                    },
+                )
+            }
         },
         horizontalArrangement = Arrangement.Center,
     ) {
@@ -320,36 +344,32 @@ fun MakamIntervalEditor(
 }
 
 /**
- * Geniş (tablet) ekranda düğmeleri dikey bir panelde, dar ekranda yatay bir
- * şeritte dizen ortak yardımcı. Çalma ve Dinleme çalışma alanlarının ikisi de
- * kullanır ki "ardışık/yan yana" karar tek yerde alınsın.
+ * Düğmeleri sarmalanan yatay bir şeritte dizen ortak yardımcı. Çalma ve
+ * Dinleme çalışma alanlarının ikisi de kullanır. Swift iki düzende de
+ * denetimleri yatay bir `HStack`te dizdiği için genişlik sınıfına bakmaz.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-internal fun FlowRowButtons(isWide: Boolean, content: @Composable () -> Unit) {
-    if (isWide) {
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) { content() }
-    } else {
-        // GERÇEK sarmalama. Burası daha önce düz bir `Row`'du ve adının
-        // vaat ettiği şeyi yapmıyordu: yedi çocuk (oynat, A, B, döngü,
-        // Takip, hız, kapat) 1080 piksellik telefona sığmayınca son
-        // çocuklar SIFIR genişlik alıp erişilemez oluyordu. Cihazda ölçüldü:
-        // "Hızı artır" düğmesinin sınırları (0,0,0,0) idi, yani kullanıcı
-        // oynatma hızını düşürdükten sonra 1,00×'e geri dönemiyordu
-        // (fiziksel kabul turu bulgusu B-3). `FlowRow` sığmayanı alt satıra
-        // indirir; hiçbir kontrol kaybolmaz.
-        //
-        // Eski `Row`'daki `verticalAlignment = CenterVertically` karşılığı
-        // YOK: bu Compose sürümündeki `FlowRow` satır içi çapraz eksen
-        // hizasını parametre olarak almıyor (`itemVerticalAlignment` yok).
-        // Varsayılan üstten hizadır; satırdaki kontroller benzer yükseklikte
-        // olduğu için fark gözle görülür değil.
-        FlowRow(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
-        ) { content() }
-    }
+internal fun FlowRowButtons(content: @Composable () -> Unit) {
+    // GERÇEK sarmalama. Burası daha önce düz bir `Row`'du ve adının
+    // vaat ettiği şeyi yapmıyordu: yedi çocuk (oynat, A, B, döngü,
+    // Takip, hız, kapat) 1080 piksellik telefona sığmayınca son
+    // çocuklar SIFIR genişlik alıp erişilemez oluyordu. Cihazda ölçüldü:
+    // "Hızı artır" düğmesinin sınırları (0,0,0,0) idi, yani kullanıcı
+    // oynatma hızını düşürdükten sonra 1,00×'e geri dönemiyordu
+    // (fiziksel kabul turu bulgusu B-3). `FlowRow` sığmayanı alt satıra
+    // indirir; hiçbir kontrol kaybolmaz.
+    //
+    // Eski `Row`'daki `verticalAlignment = CenterVertically` karşılığı
+    // YOK: bu Compose sürümündeki `FlowRow` satır içi çapraz eksen
+    // hizasını parametre olarak almıyor (`itemVerticalAlignment` yok).
+    // Varsayılan üstten hizadır; satırdaki kontroller benzer yükseklikte
+    // olduğu için fark gözle görülür değil.
+    FlowRow(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) { content() }
 }
 
 /** Belirsiz/yüzdeli ilerleme göstergesi — progress == null iken belirsiz döner (donmuş yüzde yok). */
@@ -450,6 +470,7 @@ fun CompletedRecordingRow(
             Button(
                 onClick = onAdd,
                 enabled = !isImporting,
+                colors = kvButtonColors(),
                 modifier = Modifier.semantics {
                     // Swift'teki accessibilityHint karşılığı: düğmenin ne
                     // yapacağını söyler, etiketini tekrar etmez.

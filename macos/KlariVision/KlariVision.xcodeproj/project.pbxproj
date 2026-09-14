@@ -26,7 +26,11 @@
 		A10000000000000000000067 /* PracticeViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000066 /* PracticeViews.swift */; };
 		A10000000000000000000069 /* LivePitchAnalyzer.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000068 /* LivePitchAnalyzer.swift */; };
 		A10000000000000000000071 /* LiveVisuals.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000070 /* LiveVisuals.swift */; };
+		A100000000000000000000C1 /* MediaToWAVConverter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000C0 /* MediaToWAVConverter.swift */; };
 		A10000000000000000000031 /* canli_pitch_referans_v1.wav in Resources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000030 /* canli_pitch_referans_v1.wav */; };
+		A100000000000000000000B1 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000B0 /* PrivacyInfo.xcprivacy */; };
+		A100000000000000000000D1 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000D0 /* Localizable.xcstrings */; };
+		A100000000000000000000D3 /* InfoPlist.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000D2 /* InfoPlist.xcstrings */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -37,6 +41,7 @@
 		A10000000000000000000066 /* PracticeViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/KlariVisionApp/PracticeViews.swift; sourceTree = "<group>"; };
 		A10000000000000000000068 /* LivePitchAnalyzer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/KlariVisionApp/LivePitchAnalyzer.swift; sourceTree = "<group>"; };
 		A10000000000000000000070 /* LiveVisuals.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/KlariVisionApp/LiveVisuals.swift; sourceTree = "<group>"; };
+		A100000000000000000000C0 /* MediaToWAVConverter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/KlariVisionApp/MediaToWAVConverter.swift; sourceTree = "<group>"; };
 		A10000000000000000000040 /* analysis_engine.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ../../core/src/analysis_engine.cpp; sourceTree = "<group>"; };
 		A10000000000000000000042 /* analysis_engine_c.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ../../core/src/analysis_engine_c.cpp; sourceTree = "<group>"; };
 		A10000000000000000000044 /* mpm.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ../../core/src/mpm.cpp; sourceTree = "<group>"; };
@@ -52,6 +57,11 @@
 		A100000000000000000000A8 /* harmonic_evidence.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ../../core/src/harmonic_evidence.cpp; sourceTree = "<group>"; };
 		A10000000000000000000030 /* canli_pitch_referans_v1.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; name = canli_pitch_referans_v1.wav; path = ../../data/benchmarks/canli_pitch_referans_v1.wav; sourceTree = "<group>"; };
 		A10000000000000000000012 /* KlariVision.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = KlariVision.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		A100000000000000000000B0 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Sources/KlariVisionApp/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		A100000000000000000000B2 /* KlariVision.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = KlariVision.entitlements; sourceTree = "<group>"; };
+		A100000000000000000000B3 /* Engine.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Engine.entitlements; sourceTree = "<group>"; };
+		A100000000000000000000D0 /* Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Sources/KlariVisionApp/Localizable.xcstrings; sourceTree = "<group>"; };
+		A100000000000000000000D2 /* InfoPlist.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = InfoPlist.xcstrings; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -75,6 +85,7 @@
 				A10000000000000000000066 /* PracticeViews.swift */,
 				A10000000000000000000068 /* LivePitchAnalyzer.swift */,
 				A10000000000000000000070 /* LiveVisuals.swift */,
+				A100000000000000000000C0 /* MediaToWAVConverter.swift */,
 				A10000000000000000000052 /* KlariVisionBridge.h */,
 				A10000000000000000000040 /* analysis_engine.cpp */,
 				A10000000000000000000042 /* analysis_engine_c.cpp */,
@@ -89,6 +100,11 @@
 				A100000000000000000000A6 /* frame_spectrum.cpp */,
 				A100000000000000000000A8 /* harmonic_evidence.cpp */,
 				A10000000000000000000030 /* canli_pitch_referans_v1.wav */,
+				A100000000000000000000B0 /* PrivacyInfo.xcprivacy */,
+				A100000000000000000000B2 /* KlariVision.entitlements */,
+				A100000000000000000000B3 /* Engine.entitlements */,
+				A100000000000000000000D0 /* Localizable.xcstrings */,
+				A100000000000000000000D2 /* InfoPlist.xcstrings */,
 				A10000000000000000000015 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -139,9 +155,10 @@
 			};
 			buildConfigurationList = A10000000000000000000020 /* Build configuration list for PBXProject "KlariVision" */;
 			compatibilityVersion = "Xcode 14.0";
-			developmentRegion = en;
+			developmentRegion = tr;
 			hasScannedForEncodings = 0;
 			knownRegions = (
+				tr,
 				en,
 				Base,
 			);
@@ -161,6 +178,9 @@
 			buildActionMask = 2147483647;
 			files = (
 				A10000000000000000000031 /* canli_pitch_referans_v1.wav in Resources */,
+				A100000000000000000000B1 /* PrivacyInfo.xcprivacy in Resources */,
+				A100000000000000000000D1 /* Localizable.xcstrings in Resources */,
+				A100000000000000000000D3 /* InfoPlist.xcstrings in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -195,6 +215,7 @@
 				A10000000000000000000067 /* PracticeViews.swift in Sources */,
 				A10000000000000000000069 /* LivePitchAnalyzer.swift in Sources */,
 				A10000000000000000000071 /* LiveVisuals.swift in Sources */,
+				A100000000000000000000C1 /* MediaToWAVConverter.swift in Sources */,
 				A10000000000000000000041 /* analysis_engine.cpp in Sources */,
 				A10000000000000000000043 /* analysis_engine_c.cpp in Sources */,
 				A10000000000000000000045 /* mpm.cpp in Sources */,
@@ -231,6 +252,8 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
+				ARCHS = "arm64 x86_64";
+				ONLY_ACTIVE_ARCH = NO;
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_ENABLE_OBJC_ARC = YES;
 				CLANG_CXX_LANGUAGE_STANDARD = "c++20";
@@ -245,12 +268,16 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
+				CODE_SIGN_ENTITLEMENTS = KlariVision.entitlements;
+				ENABLE_HARDENED_RUNTIME = YES;
 				CLANG_CXX_LANGUAGE_STANDARD = "c++20";
 				HEADER_SEARCH_PATHS = "$(SRCROOT)/../../core/include";
 				DEVELOPMENT_TEAM = "";
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = Info.plist;
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MARKETING_VERSION = 0.6.0;
+				CURRENT_PROJECT_VERSION = 7;
 				PRODUCT_BUNDLE_IDENTIFIER = com.aykerme.KlariVisionNative;
 				PRODUCT_NAME = KlariVision;
 				SWIFT_VERSION = 5.0;
@@ -262,12 +289,18 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
+				CODE_SIGN_ENTITLEMENTS = KlariVision.entitlements;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ARCHS = "arm64 x86_64";
+				ONLY_ACTIVE_ARCH = NO;
 				CLANG_CXX_LANGUAGE_STANDARD = "c++20";
 				HEADER_SEARCH_PATHS = "$(SRCROOT)/../../core/include";
 				DEVELOPMENT_TEAM = "";
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = Info.plist;
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MARKETING_VERSION = 0.6.0;
+				CURRENT_PROJECT_VERSION = 7;
 				PRODUCT_BUNDLE_IDENTIFIER = com.aykerme.KlariVisionNative;
 				PRODUCT_NAME = KlariVision;
 				SWIFT_VERSION = 5.0;

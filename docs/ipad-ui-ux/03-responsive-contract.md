@@ -2,13 +2,21 @@
 
 ## Genişlik sınıfları
 
-- **Geniş, ≥1000 pt:** 280 pt kalıcı kenar çubuğu; içerik bölünmüş çalışma
-  alanıdır. Dinleme medyası iç alanın `%32`si, grafik kalanı alır; aralık
-  16 pt'dir.
-- **Orta, 700–999 pt:** Navigasyon 320 pt drawer olur. Dinleme medyası üstte
-  220–360 pt, grafiğin yüksekliği en az 360 pt'dir. Çalma tüneri üst orta,
-  iki denetim grubu altında akar.
-- **Dar, <700 pt:** Tek sütun ve modal navigasyon kullanılır. Dinleme ve Çalma
+Referans iOS kodudur (`KlariVisioniPadApp.swift`, `iPadRootView`) ve yalnız
+**iki düzen** vardır; ara bir "orta" düzen yoktur. Karar
+`horizontalSizeClass` ile verilir. Android bu sınıfı ham ölçüden türettiği
+için sınırı 700 pt kabul eder. Ayrıntılar için
+`docs/ANDROID_IOS_UI_PARITY_PLAN.md` §1.1'e bakın.
+
+- **Geniş (iOS regular), ≥700 pt:** Kalıcı kenar çubuğu kullanılır: iOS'ta
+  `NavigationSplitView`, Android'de 280 pt. Kenar çubuğu çalışma alanı
+  açıkken de görünür. Dinleme çalışma alanında grafik üstte durur; kenar
+  boşluklu ve 16 pt yuvarlatılmıştır. Denetimler altta tam genişlikte bir
+  çubuktur. Çalma'da da grafik üstte, denetimler alttadır. Denetimler iki
+  düzende de yatay dizilir ve sığmayan alt satıra iner.
+  - *Android'e özgü:* Pencere yüksekliği 580 dp'nin altındaysa (yatay
+    telefon) dar düzene düşülür (kabul turu bulgusu B-10).
+- **Dar (iOS compact), <700 pt:** Tek sütun ve modal navigasyon kullanılır. Dinleme ve Çalma
   çalışma alanlarında grafik bütün yüzeyi kaplar (alt safe area'yı da aşar);
   denetimler sabit çubuk yerine grafiğin üstünde yüzen `.ultraThinMaterial`
   kart olarak durur. Çalma'da tüner, navigasyon çubuğunun altında ayrı bir

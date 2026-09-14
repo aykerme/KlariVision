@@ -6,6 +6,7 @@
 
 package com.aykerme.klarivision.ui
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -206,6 +207,7 @@ fun SettingsScreen(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .clickable { onOpenMakamIntervals(makam) }
                     .padding(vertical = 10.dp)
                     .semantics { contentDescription = "$name aralıklarını düzenle" },
                 horizontalArrangement = Arrangement.SpaceBetween,

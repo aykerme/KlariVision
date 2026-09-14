@@ -1,11 +1,12 @@
 // KlariVision Android — genişlik sınıfı eşiklerinin saf testi.
 //
 // `KvWidthClass` bir Compose tipine bağımlı değildir (yalnız `Dp`), bu yüzden
-// JVM testiyle koşar. Test edilen asıl şey [KvWidthClass.fromSize]'ın
-// yükseklik koşulu: yalnız genişliğe bakan eski karar, yatay çevrilmiş bir
-// telefonda ORTA/GENIS yerleşimini seçiyordu ve o yerleşimler dikey yığıldığı
-// için kontrol paneli tüm ekranı kaplayıp grafiği bir şeride sıkıştırıyordu
-// (fiziksel kabul turu bulgusu B-10).
+// JVM testiyle koşar. İki şey test edilir: iOS'un compact/regular ikilisine
+// karşılık gelen tek 700 pt eşiği ve [KvWidthClass.fromSize]'ın yükseklik
+// koşulu. Yalnız genişliğe bakan eski karar, yatay çevrilmiş bir telefonda
+// geniş yerleşimi seçiyordu ve o yerleşim dikey yığıldığı için denetimler
+// tüm ekranı kaplayıp grafiği bir şeride sıkıştırıyordu (fiziksel kabul
+// turu bulgusu B-10).
 
 package com.aykerme.klarivision.ui
 
@@ -15,18 +16,19 @@ import org.junit.Test
 
 class KvWidthClassTest {
 
+    /** iOS gibi yalnız iki düzen: 700 pt altı compact, üstü regular. */
     @Test
-    fun `genislik esikleri degismedi`() {
+    fun `tek genislik esigi 700 dp`() {
         assertEquals(KvWidthClass.DAR, KvWidthClass.fromWidth(699.dp))
-        assertEquals(KvWidthClass.ORTA, KvWidthClass.fromWidth(700.dp))
-        assertEquals(KvWidthClass.ORTA, KvWidthClass.fromWidth(999.dp))
+        assertEquals(KvWidthClass.GENIS, KvWidthClass.fromWidth(700.dp))
+        assertEquals(KvWidthClass.GENIS, KvWidthClass.fromWidth(999.dp))
         assertEquals(KvWidthClass.GENIS, KvWidthClass.fromWidth(1000.dp))
     }
 
     /** SM-A736B yatay: 2400×1080 piksel, 2,8125 yoğunlukta 853×384 dp. */
     @Test
     fun `yatay telefon DAR olur cunku yukseklik yetmez`() {
-        assertEquals(KvWidthClass.ORTA, KvWidthClass.fromWidth(853.dp))
+        assertEquals(KvWidthClass.GENIS, KvWidthClass.fromWidth(853.dp))
         assertEquals(KvWidthClass.DAR, KvWidthClass.fromSize(853.dp, 384.dp))
     }
 
@@ -36,10 +38,10 @@ class KvWidthClassTest {
         assertEquals(KvWidthClass.DAR, KvWidthClass.fromSize(384.dp, 853.dp))
     }
 
-    /** Tablet yatay: yükseklik yeterli, davranış DEĞİŞMEZ. */
+    /** Tablet dikey ve yatay: yükseklik yeterli, ikisi de geniş düzen (iPad regular). */
     @Test
-    fun `tablet yatayda genislik karari korunur`() {
-        assertEquals(KvWidthClass.ORTA, KvWidthClass.fromSize(834.dp, 1194.dp))
+    fun `tablet her iki yonde GENIS`() {
+        assertEquals(KvWidthClass.GENIS, KvWidthClass.fromSize(834.dp, 1194.dp))
         assertEquals(KvWidthClass.GENIS, KvWidthClass.fromSize(1194.dp, 834.dp))
     }
 

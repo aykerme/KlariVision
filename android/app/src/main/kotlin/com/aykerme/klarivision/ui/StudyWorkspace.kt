@@ -3,10 +3,10 @@
 // `state.StudyOrchestrator` yönetir; transport düğmeleri native'dir, oynatma
 // sayfanın (WebView) içindedir.
 //
-// Üç genişlik sınıfı (03-responsive-contract.md) LiveWorkspace ile aynı
-// mantığı paylaşır: GENIS'te 320 pt yan panel + 16 pt aralık, ORTA'da üstte
-// bant + altta en az 360 pt grafik, DAR'da grafik tüm yüzeyi kaplar ve
-// denetimler yüzen bir kart olur.
+// İki genişlik sınıfı, Swift'in iki düzeni (bkz. KvWidthClass): GENIS'te
+// grafik üstte, denetim çubuğu altta (`iPadStudyWorkspace`); DAR'da grafik
+// tüm yüzeyi kaplar ve denetimler yüzen bir kart olur
+// (`iPadCompactStudyWorkspace`).
 
 package com.aykerme.klarivision.ui
 
@@ -28,7 +28,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Fullscreen
@@ -53,6 +52,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
@@ -156,7 +156,7 @@ private fun FailedStudyState(message: String, onRetry: () -> Unit, modifier: Mod
         Icon(KvIcons.Error, contentDescription = null, tint = MaterialTheme.colorScheme.error)
         Text("Çalışma Açılamadı", style = MaterialTheme.typography.titleLarge)
         Text(message, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Button(onClick = onRetry) {
+        Button(onClick = onRetry, colors = kvButtonColors()) {
             Icon(KvIcons.Reanalyze, contentDescription = null, modifier = Modifier.size(18.dp))
             Spacer(modifier = Modifier.padding(horizontal = 4.dp))
             Text("Yeniden Dene")
@@ -179,8 +179,6 @@ private fun ReadyStudyWorkspace(
 ) {
     val uiState by orchestrator.uiState.collectAsState()
     val playback = uiState.playback
-    val isWide = widthClass != KvWidthClass.DAR
-
     var isVideoFullscreen by remember { mutableStateOf(false) }
     var isPresentingSettings by remember { mutableStateOf(false) }
     var isPresentingIntervalEditor by remember { mutableStateOf<Makam?>(null) }
@@ -226,10 +224,10 @@ private fun ReadyStudyWorkspace(
                 style = MaterialTheme.typography.titleMedium,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
-                modifier = if (isWide) Modifier.width(260.dp) else Modifier.weight(1f),
+                modifier = Modifier.weight(1f),
             )
             onClose?.let { close ->
-                Button(onClick = { orchestrator.pause(); close() }) { Text("Kapat") }
+                Button(onClick = { orchestrator.pause(); close() }, colors = kvButtonColors()) { Text("Kapat") }
             }
         }
 
@@ -237,51 +235,41 @@ private fun ReadyStudyWorkspace(
             time = playback?.time ?: 0.0,
             duration = playback?.duration ?: (study?.duration ?: 0.0),
             modifier = Modifier.fillMaxWidth(),
+            onSeek = orchestrator::seek,
         )
 
-        StudyTransportButtons(orchestrator = orchestrator, playback = playback, isWide = isWide) {
+        StudyTransportButtons(orchestrator = orchestrator, playback = playback) {
             WorkspaceSettingsButton(label = "Çalışma ayarları") { isPresentingSettings = true }
         }
 
         TogetherModeControls(
             togetherOrchestrator = togetherOrchestrator,
-            isWide = isWide,
             onRequestMicPermission = onRequestMicPermission,
         )
     }
 
     when (widthClass) {
-        KvWidthClass.GENIS -> Row(modifier = modifier.fillMaxSize()) {
-            Box(modifier = Modifier.weight(1f).fillMaxSize()) {
+        // Swift `iPadStudyWorkspace`: grafik üstte, kenar boşluklu ve 16 pt
+        // yuvarlatılmış; denetimler altta tam genişlikte bir çubuk.
+        KvWidthClass.GENIS -> Column(modifier = modifier.fillMaxSize()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f)
+                    .padding(KvSpacing.lg)
+                    .clip(RoundedCornerShape(KvRadius.panel)),
+            ) {
                 graphContent()
                 Box(modifier = Modifier.align(Alignment.TopEnd).padding(KvSpacing.lg)) { fullscreenToggle() }
             }
-            Spacer(modifier = Modifier.width(KvSpacing.lg))
-            Column(
-                modifier = Modifier
-                    .width(320.dp)
-                    .fillMaxSize()
-                    .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(KvRadius.panel))
-                    .padding(KvSpacing.lg),
-                verticalArrangement = Arrangement.spacedBy(KvSpacing.md),
-                content = transport,
-            )
-        }
-
-        KvWidthClass.ORTA -> Column(modifier = modifier.fillMaxSize()) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .heightIn(min = 220.dp, max = 360.dp)
-                    .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(KvRadius.panel))
+                    .background(MaterialTheme.colorScheme.surface)
                     .padding(KvSpacing.lg),
                 verticalArrangement = Arrangement.spacedBy(KvSpacing.md),
                 content = transport,
             )
-            Box(modifier = Modifier.fillMaxWidth().heightIn(min = KvGraphMinHeight).weight(1f)) {
-                graphContent()
-                Box(modifier = Modifier.align(Alignment.TopEnd).padding(KvSpacing.lg)) { fullscreenToggle() }
-            }
         }
 
         KvWidthClass.DAR -> Box(modifier = modifier.fillMaxSize()) {
@@ -355,18 +343,17 @@ private fun ReadyStudyWorkspace(
 }
 
 /**
- * Oynat/duraklat, A/B işaretleme, döngü, takip ve hız düğmeleri. Geniş
- * panelde dikey, dar şeritte yatay dizilir; `trailing` (ayar düğmesi) her
- * iki düzende de sona eklenir.
+ * Oynat/duraklat, A/B işaretleme, döngü, takip ve hız düğmeleri. Swift'teki
+ * gibi her iki düzende de yatay dizilir ve sığmayan alt satıra iner;
+ * `trailing` (ayar düğmesi) sona eklenir.
  */
 @Composable
 private fun StudyTransportButtons(
     orchestrator: StudyOrchestrator,
     playback: PlaybackSnapshot?,
-    isWide: Boolean,
     trailing: @Composable () -> Unit,
 ) {
-    FlowRowButtons(isWide) {
+    FlowRowButtons {
         IconButton(
             onClick = { orchestrator.playPause() },
             modifier = Modifier.semantics {
@@ -375,8 +362,8 @@ private fun StudyTransportButtons(
         ) {
             Icon(imageVector = if (playback?.isPlaying == true) Icons.Filled.Pause else KvIcons.Play, contentDescription = null)
         }
-        Button(onClick = { orchestrator.markA() }) { Text("A") }
-        Button(onClick = { orchestrator.markB() }) { Text("B") }
+        Button(onClick = { orchestrator.markA() }, colors = kvButtonColors()) { Text("A") }
+        Button(onClick = { orchestrator.markB() }, colors = kvButtonColors()) { Text("B") }
         FilledIconToggleButton(
             checked = playback?.loopEnabled == true,
             onCheckedChange = { orchestrator.toggleLoop() },
@@ -399,19 +386,18 @@ private fun StudyTransportButtons(
 /**
  * Birlikte Çal denetimleri: aç/kapa, sessize alma, izin/hata durumları ve
  * kulaklık önerisi. `transport` lambdası içine gömülür ki genişlik sınıfına
- * göre yerleşim (DAR'da yüzen kart, ORTA/GENIS'te denetim paneli) otomatik
+ * göre yerleşim (DAR'da yüzen kart, GENIS'te alt denetim çubuğu) otomatik
  * olarak StudyWorkspace'in mevcut düzen kararına uysun — burada ayrı bir
  * yerleşim kararı ALINMAZ.
  */
 @Composable
 private fun TogetherModeControls(
     togetherOrchestrator: TogetherOrchestrator,
-    isWide: Boolean,
     onRequestMicPermission: () -> Unit,
 ) {
     val uiState by togetherOrchestrator.uiState.collectAsState()
 
-    FlowRowButtons(isWide) {
+    FlowRowButtons {
         FilledIconToggleButton(
             checked = uiState.isRunning,
             onCheckedChange = { checked ->
@@ -467,7 +453,7 @@ private fun TogetherModeControls(
 
     if (uiState.permissionRequired) {
         StatusLine("Mikrofon izni gerekiyor.", isError = false)
-        Button(onClick = onRequestMicPermission) { Text("Mikrofon İzni İste") }
+        Button(onClick = onRequestMicPermission, colors = kvButtonColors()) { Text("Mikrofon İzni İste") }
     }
 
     uiState.errorMessage?.let { message -> StatusLine(message, isError = true) }

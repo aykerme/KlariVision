@@ -1,0 +1,3525 @@
+{
+  "sourceLanguage": "tr",
+  "strings": {
+    "Mikrofonu başlatıp klarnet çalmaya başla.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Start the microphone and begin playing the clarinet."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mikrofonu başlatıp klarnet çalmaya başla."
+          }
+        }
+      }
+    },
+    "İmleçte A işaretini oluştur": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Create mark A at cursor"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "İmleçte A işaretini oluştur"
+          }
+        }
+      }
+    },
+    "İmleçte B işaretini oluştur": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Create mark B at cursor"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "İmleçte B işaretini oluştur"
+          }
+        }
+      }
+    },
+    "Başa dön": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Back to start"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Başa dön"
+          }
+        }
+      }
+    },
+    "Görünüm, çalışma bağlamı ve makam aralıklarını buradan düzenleyebilirsin.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You can edit appearance, study context, and makam intervals here."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Görünüm, çalışma bağlamı ve makam aralıklarını buradan düzenleyebilirsin."
+          }
+        }
+      }
+    },
+    "Oynatma": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Playback"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Oynatma"
+          }
+        }
+      }
+    },
+    "Makam aralıkları": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Makam intervals"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Makam aralıkları"
+          }
+        }
+      }
+    },
+    "Yedi aralık toplamı bir oktavda 53 koma olmalıdır.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Seven intervals must sum to 53 koma in one octave."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Yedi aralık toplamı bir oktavda 53 koma olmalıdır."
+          }
+        }
+      }
+    },
+    "53 koma doğrulandı": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "53 koma confirmed"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "53 koma doğrulandı"
+          }
+        }
+      }
+    },
+    "Toplam %@ koma; 53 olmalı": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Total %@ koma; must be 53"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Toplam %@ koma; 53 olmalı"
+          }
+        }
+      }
+    },
+    "Takip": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Follow"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Takip"
+          }
+        }
+      }
+    },
+    "Pitch eğrisini dikeyde takip et": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Follow the pitch curve vertically"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pitch eğrisini dikeyde takip et"
+          }
+        }
+      }
+    },
+    "Çalma hızı": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Playback speed"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Çalma hızı"
+          }
+        }
+      }
+    },
+    "Oynatma Hızı": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Playback Speed"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Oynatma Hızı"
+          }
+        }
+      }
+    },
+    "Ses veya video dosyanızı yükleyin, pitch analizini başlatın.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Upload your audio or video file and start pitch analysis."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ses veya video dosyanızı yükleyin, pitch analizini başlatın."
+          }
+        }
+      }
+    },
+    "Güncel: %.1f dBFS": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Current: %.1f dBFS"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Güncel: %.1f dBFS"
+          }
+        }
+      }
+    },
+    "Çalma modu bekleniyor": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Waiting for playing mode"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Çalma modu bekleniyor"
+          }
+        }
+      }
+    },
+    "Kayıt başlatılamadı: Geçerli bir mikrofon biçimi bulunamadı.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recording could not be started: no valid microphone format was found."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kayıt başlatılamadı: Geçerli bir mikrofon biçimi bulunamadı."
+          }
+        }
+      }
+    },
+    "Motor testi çalışıyor · Mikrofon kullanılmıyor.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Engine test running · Microphone not in use."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Motor testi çalışıyor · Mikrofon kullanılmıyor."
+          }
+        }
+      }
+    },
+    "Seçilen dosya canlı motorla işleniyor · Mikrofon kullanılmıyor.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The selected file is being processed by the live engine · Microphone not in use."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Seçilen dosya canlı motorla işleniyor · Mikrofon kullanılmıyor."
+          }
+        }
+      }
+    },
+    "Mikrofon dinleniyor. Ses kaydedilmiyor.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Listening to microphone. Not recording audio."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mikrofon dinleniyor. Ses kaydedilmiyor."
+          }
+        }
+      }
+    },
+    "bilinmeyen hata": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "unknown error"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "bilinmeyen hata"
+          }
+        }
+      }
+    },
+    "Akıcı": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fluid"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Akıcı"
+          }
+        }
+      }
+    },
+    "Dengeli": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Balanced"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dengeli"
+          }
+        }
+      }
+    },
+    "Sabit nota": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fixed note"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sabit nota"
+          }
+        }
+      }
+    },
+    "Hızlı vibrato": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fast vibrato"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hızlı vibrato"
+          }
+        }
+      }
+    },
+    "Ses çıkarılıyor": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Extracting audio"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ses çıkarılıyor"
+          }
+        }
+      }
+    },
+    "Ses okunuyor": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Decoding audio"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ses okunuyor"
+          }
+        }
+      }
+    },
+    "Temel geçiş": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Causal filter"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Temel geçiş"
+          }
+        }
+      }
+    },
+    "Perde analizi": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pitch analysis"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Perde analizi"
+          }
+        }
+      }
+    },
+    "Sonuçlar yazılıyor": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Writing results"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sonuçlar yazılıyor"
+          }
+        }
+      }
+    },
+    "Görünüm oluşturuluyor": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Building viewer"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Görünüm oluşturuluyor"
+          }
+        }
+      }
+    },
+    "İşleniyor": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Processing"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "İşleniyor"
+          }
+        }
+      }
+    },
+    "Lütfen tekrar dene.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Please try again."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lütfen tekrar dene."
+          }
+        }
+      }
+    },
+    "Çözümleme motoru": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Analysis engine"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Çözümleme motoru"
+          }
+        }
+      }
+    },
+    "Çalma Ayarları": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Playing Settings"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Çalma Ayarları"
+          }
+        }
+      }
+    },
+    "Referans eğrisi eklendi · otomatik zaman eşleme: %+.3f sn": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reference curve added · automatic time alignment: %+.3f sec"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Referans eğrisi eklendi · otomatik zaman eşleme: %+.3f sn"
+          }
+        }
+      }
+    },
+    "Doğrulama: %d/%d kapsama · ortanca %@ cent · %%95 %@ cent · %d hata adayı · sessizlikte %d yanlış nokta · sesli hedefte %d eksik nokta": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Validation: %d/%d coverage · median %@ cent · %%95 %@ cent · %d error candidates · %d false points in silence · %d missing points at voiced target"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Doğrulama: %d/%d kapsama · ortanca %@ cent · %%95 %@ cent · %d hata adayı · sessizlikte %d yanlış nokta · sesli hedefte %d eksik nokta"
+          }
+        }
+      }
+    },
+    "Kalıcı büyük sapma veya eksik perde bulunmadı.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No persistent large deviation or missing pitch found."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kalıcı büyük sapma veya eksik perde bulunmadı."
+          }
+        }
+      }
+    },
+    "İncelenecek aralıklar: %@": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ranges to review: %@"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "İncelenecek aralıklar: %@"
+          }
+        }
+      }
+    },
+    "Ciddi doğrulama: yanlış sesli %d · eksik sesli %d · harmonik %d · diğer %d · yakın %d": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Serious validation: false voiced %d · missing voiced %d · harmonic %d · other %d · near %d"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ciddi doğrulama: yanlış sesli %d · eksik sesli %d · harmonik %d · diğer %d · yakın %d"
+          }
+        }
+      }
+    },
+    "Ham: yanlış %d · eksik %d · harmonik %d · diğer %d · geçiş toleransı %d · kısa tolerans %d · doğru ort. %@ cent": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Raw: false %d · missing %d · harmonic %d · other %d · transition tolerance %d · short tolerance %d · correct avg. %@ cent"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ham: yanlış %d · eksik %d · harmonik %d · diğer %d · geçiş toleransı %d · kısa tolerans %d · doğru ort. %@ cent"
+          }
+        }
+      }
+    },
+    "Mikrofonu başlatmaya hazır.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ready to start microphone."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mikrofonu başlatmaya hazır."
+          }
+        }
+      }
+    },
+    "Kaynak çalıyor; karşılaştırma eğrisini testten sonra hazırlayabilirsin.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Source is playing; you can prepare the comparison curve after the test."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kaynak çalıyor; karşılaştırma eğrisini testten sonra hazırlayabilirsin."
+          }
+        }
+      }
+    },
+    "Canlı motor matematiksel hedef eğriyle karşılaştırılıyor.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The live engine is being compared against the mathematical target curve."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Canlı motor matematiksel hedef eğriyle karşılaştırılıyor."
+          }
+        }
+      }
+    },
+    "Mikrofon dinleniyor. Kayıt yapılıyor.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Listening to microphone. Recording."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mikrofon dinleniyor. Kayıt yapılıyor."
+          }
+        }
+      }
+    },
+    "Kayıt başlatılamadı: %@": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recording could not be started: %@"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kayıt başlatılamadı: %@"
+          }
+        }
+      }
+    },
+    "Kayıt sırasında hata oluştu: %@": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "An error occurred while recording: %@"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kayıt sırasında hata oluştu: %@"
+          }
+        }
+      }
+    },
+    "Kaydı Sakla": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Save Recording"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kaydı Sakla"
+          }
+        }
+      }
+    },
+    "Kaydet": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Save"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kaydet"
+          }
+        }
+      }
+    },
+    "Kayıt kaydedilemedi": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recording could not be saved"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kayıt kaydedilemedi"
+          }
+        }
+      }
+    },
+    "Önce Kaynakla Test ile karşılaştırılacak dosyayı seç.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "First choose a file to compare with Test with Source."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Önce Kaynakla Test ile karşılaştırılacak dosyayı seç."
+          }
+        }
+      }
+    },
+    "Önce dosyadan motor testi için bir kaynak seç.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "First choose a source file for the engine test."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Önce dosyadan motor testi için bir kaynak seç."
+          }
+        }
+      }
+    },
+    "Motor testi kaydı uygulama içinde bulunamadı.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Engine test recording not found inside the app."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Motor testi kaydı uygulama içinde bulunamadı."
+          }
+        }
+      }
+    },
+    "Motor testi kaydı okunamadı.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Engine test recording could not be read."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Motor testi kaydı okunamadı."
+          }
+        }
+      }
+    },
+    "Motor testi kaydında ses örneği bulunamadı.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No audio sample found in the engine test recording."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Motor testi kaydında ses örneği bulunamadı."
+          }
+        }
+      }
+    },
+    "Motor testi kaydının örnekleme hızı geçersiz.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The engine test recording's sample rate is invalid."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Motor testi kaydının örnekleme hızı geçersiz."
+          }
+        }
+      }
+    },
+    "Motor testi başlatılamadı: %@": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Engine test could not be started: %@"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Motor testi başlatılamadı: %@"
+          }
+        }
+      }
+    },
+    "(value.title) seçildi. Mikrofonu başlattığında bu motor kullanılacak.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "(value.title) seçildi. Mikrofonu başlattığında bu motor kullanılacak."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "(value.title) seçildi. Mikrofonu başlattığında bu motor kullanılacak."
+          }
+        }
+      }
+    },
+    "Mikrofon izni verilmedi. Sistem Ayarları > Gizlilik ve Güvenlik > Mikrofon bölümünden KlariVision'a izin verebilirsin.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Microphone access was not granted. You can allow KlariVision from System Settings > Privacy & Security > Microphone."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mikrofon izni verilmedi. Sistem Ayarları > Gizlilik ve Güvenlik > Mikrofon bölümünden KlariVision'a izin verebilirsin."
+          }
+        }
+      }
+    },
+    "Motor testi tamamlandı.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Engine test completed."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Motor testi tamamlandı."
+          }
+        }
+      }
+    },
+    "Kullanılabilir bir mikrofon bulunamadı.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No available microphone was found."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kullanılabilir bir mikrofon bulunamadı."
+          }
+        }
+      }
+    },
+    "Seçilen kaynak dosya bulunamadı. Lütfen dosyayı yeniden seç.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The selected source file was not found. Please choose the file again."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Seçilen kaynak dosya bulunamadı. Lütfen dosyayı yeniden seç."
+          }
+        }
+      }
+    },
+    "Kaynak dosya hazırlanıyor…": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Preparing source file…"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kaynak dosya hazırlanıyor…"
+          }
+        }
+      }
+    },
+    "Canlı referans testi oynuyor: %@ · Ses kaydedilmiyor.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Live reference test is playing: %@ · Audio is not being recorded."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Canlı referans testi oynuyor: %@ · Ses kaydedilmiyor."
+          }
+        }
+      }
+    },
+    "Kaynak dosya oynatılamadı: %@": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Source file could not be played: %@"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kaynak dosya oynatılamadı: %@"
+          }
+        }
+      }
+    },
+    "Mikrofon başlatılamadı: %@": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Microphone could not be started: %@"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mikrofon başlatılamadı: %@"
+          }
+        }
+      }
+    },
+    "Kaynak referansı ve %@ aynı dosyada hazırlanıyor…": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Preparing source reference and %@ in the same file…"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kaynak referansı ve %@ aynı dosyada hazırlanıyor…"
+          }
+        }
+      }
+    },
+    "Pitch eğrisi okunamadı: %@": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pitch curve could not be read: %@"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pitch eğrisi okunamadı: %@"
+          }
+        }
+      }
+    },
+    "Kayıt Bulunmadı": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No Recordings"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kayıt Bulunmadı"
+          }
+        }
+      }
+    },
+    "Henüz analiz edilmiş bir çalışma yok.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No analysed study yet."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Henüz analiz edilmiş bir çalışma yok."
+          }
+        }
+      }
+    },
+    "Çalışmayı Düzenle": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Edit Study"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Çalışmayı Düzenle"
+          }
+        }
+      }
+    },
+    "Çalışmayı Sil": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete Study"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Çalışmayı Sil"
+          }
+        }
+      }
+    },
+    "Çalışmalar": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Studies"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Çalışmalar"
+          }
+        }
+      }
+    },
+    "Vazgeç": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cancel"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vazgeç"
+          }
+        }
+      }
+    },
+    "Sil": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sil"
+          }
+        }
+      }
+    },
+    "Çalışma silinsin mi?": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete study?"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Çalışma silinsin mi?"
+          }
+        }
+      }
+    },
+    "%@ listeden kaldırılır ve bu çalışmaya ait görünüm, ses kopyası ile pitch verileri silinir. Kendi seçtiğin özgün dosyaya dokunulmaz. Bu işlem geri alınamaz.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ will be removed from the list. The viewer, audio copy, and pitch data for this study will be deleted. Your original file will not be touched. This action cannot be undone."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ listeden kaldırılır ve bu çalışmaya ait görünüm, ses kopyası ile pitch verileri silinir. Kendi seçtiğin özgün dosyaya dokunulmaz. Bu işlem geri alınamaz."
+          }
+        }
+      }
+    },
+    "Pitch analizine nasıl başlamak istersiniz?": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "How would you like to start pitch analysis?"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pitch analizine nasıl başlamak istersiniz?"
+          }
+        }
+      }
+    },
+    "Dinleme Modu": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Listening Mode"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dinleme Modu"
+          }
+        }
+      }
+    },
+    "Dosya Seç / Yükle": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choose / Upload File"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dosya Seç / Yükle"
+          }
+        }
+      }
+    },
+    "Bir ses veya video dosyası seçin ya da bu karta sürükleyin.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choose an audio or video file or drag it to this card."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bir ses veya video dosyası seçin ya da bu karta sürükleyin."
+          }
+        }
+      }
+    },
+    "Çalma Modu": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Playing Mode"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Çalma Modu"
+          }
+        }
+      }
+    },
+    "Mikrofonunuzu kullanarak canlı, gerçek zamanlı pitch analizi yapın.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Use your microphone for live, real-time pitch analysis."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mikrofonunuzu kullanarak canlı, gerçek zamanlı pitch analizi yapın."
+          }
+        }
+      }
+    },
+    "Başlat": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Start"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Başlat"
+          }
+        }
+      }
+    },
+    "Mikrofonla canlı pitch analizini başlatır.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Starts live pitch analysis with microphone."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mikrofonla canlı pitch analizini başlatır."
+          }
+        }
+      }
+    },
+    "Birlikte Çal": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Play Together"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Birlikte Çal"
+          }
+        }
+      }
+    },
+    "Dosya çalarken kendi çalışınızı aynı grafikte, ikinci renkle görün.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "See your performance in the same graph in a second color while playing the file."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dosya çalarken kendi çalışınızı aynı grafikte, ikinci renkle görün."
+          }
+        }
+      }
+    },
+    "Dosya Seç": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choose File"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dosya Seç"
+          }
+        }
+      }
+    },
+    "Bir dosya seçin; dosya çalarken mikrofonunuzdaki perde aynı grafiğe eklenir.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choose a file; your microphone pitch will be added to the same graph while playing."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bir dosya seçin; dosya çalarken mikrofonunuzdaki perde aynı grafiğe eklenir."
+          }
+        }
+      }
+    },
+    "Hazır": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cached"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hazır"
+          }
+        }
+      }
+    },
+    "Çalışma adı": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Study name"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Çalışma adı"
+          }
+        }
+      }
+    },
+    "Makam / dizi": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Makam / Scale"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Makam / dizi"
+          }
+        }
+      }
+    },
+    "Karar": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Karar"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Karar"
+          }
+        }
+      }
+    },
+    "Majör": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Major"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Majör"
+          }
+        }
+      }
+    },
+    "Minör": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Minor"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Minör"
+          }
+        }
+      }
+    },
+    "Kürdi": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kürdi"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kürdi"
+          }
+        }
+      }
+    },
+    "Uşşak": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Uşşak"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Uşşak"
+          }
+        }
+      }
+    },
+    "Hicaz": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hicaz"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hicaz"
+          }
+        }
+      }
+    },
+    "Kürdilihicazkâr": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kürdilihicazkâr"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kürdilihicazkâr"
+          }
+        }
+      }
+    },
+    "Çalışma odaklı": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Focus"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Çalışma odaklı"
+          }
+        }
+      }
+    },
+    "Stüdyo": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Studio"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stüdyo"
+          }
+        }
+      }
+    },
+    "Sıcak klasik": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Warm Classic"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sıcak klasik"
+          }
+        }
+      }
+    },
+    "Dinleme durumu": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Listening status"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dinleme durumu"
+          }
+        }
+      }
+    },
+    "Çalma durumu": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Playing status"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Çalma durumu"
+          }
+        }
+      }
+    },
+    "Dosya alınamadı. Desteklenen bir ses veya video dosyası bırakın.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "File could not be read. Drop a supported audio or video file."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dosya alınamadı. Desteklenen bir ses veya video dosyası bırakın."
+          }
+        }
+      }
+    },
+    "Ses çözümlemesi Birleşik (Unified v1) motoruyla yapılır. Seçilebilir başka motor yoktur.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Audio analysis is performed with the Unified (Unified v1) engine. No other engine is available to choose."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ses çözümlemesi Birleşik (Unified v1) motoruyla yapılır. Seçilebilir başka motor yoktur."
+          }
+        }
+      }
+    },
+    "Birleşik (Unified v1)": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unified (Unified v1)"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Birleşik (Unified v1)"
+          }
+        }
+      }
+    },
+    "Bu dosya desteklenen bir ses veya video biçimi değil. WAV, MP3, M4A ya da desteklenen bir video seçin.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This file is not a supported audio or video format. Choose a WAV, MP3, M4A, or supported video file."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bu dosya desteklenen bir ses veya video biçimi değil. WAV, MP3, M4A ya da desteklenen bir video seçin."
+          }
+        }
+      }
+    },
+    "Bırakılan dosya desteklenmiyor. WAV, MP3, M4A veya video dosyası bırakın.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dropped file is not supported. Drop a WAV, MP3, M4A, or video file."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bırakılan dosya desteklenmiyor. WAV, MP3, M4A veya video dosyası bırakın."
+          }
+        }
+      }
+    },
+    "KlariVision analiz motoru bulunamadı. Uygulamayı yeniden kur.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "KlariVision analysis engine not found. Reinstall the app."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "KlariVision analiz motoru bulunamadı. Uygulamayı yeniden kur."
+          }
+        }
+      }
+    },
+    "KlariVision analiz motoru bulunamadı. Projeyi Xcode içinden açtığından emin ol.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "KlariVision analysis engine not found. Make sure you opened the project from Xcode."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "KlariVision analiz motoru bulunamadı. Projeyi Xcode içinden açtığından emin ol."
+          }
+        }
+      }
+    },
+    "Python çalışma ortamı bulunamadı.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Python virtual environment not found."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Python çalışma ortamı bulunamadı."
+          }
+        }
+      }
+    },
+    "Pitch analizi hazırlanıyor…": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Preparing pitch analysis…"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pitch analizi hazırlanıyor…"
+          }
+        }
+      }
+    },
+    "Analiz oluşturulamadı. %@": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Analysis could not be created. %@"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Analiz oluşturulamadı. %@"
+          }
+        }
+      }
+    },
+    "Pitch eğrisi hazır.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pitch curve ready."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pitch eğrisi hazır."
+          }
+        }
+      }
+    },
+    "Analiz motoru başlatılamadı: %@": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Analysis engine could not be started: %@"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Analiz motoru başlatılamadı: %@"
+          }
+        }
+      }
+    },
+    "Ses çözülemedi: %@": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Audio could not be decoded: %@"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ses çözülemedi: %@"
+          }
+        }
+      }
+    },
+    "Çalışma güncel arayüzle hazırlanıyor…": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Study being updated with current interface…"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Çalışma güncel arayüzle hazırlanıyor…"
+          }
+        }
+      }
+    },
+    "Seçili motorla yeniden analiz yalnız paketlenmiş C++ analiz motorunda kullanılabilir.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Re-analysis with the selected engine is only available with the bundled C++ analysis engine."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Seçili motorla yeniden analiz yalnız paketlenmiş C++ analiz motorunda kullanılabilir."
+          }
+        }
+      }
+    },
+    "%@ ile pitch eğrisi hazırlanıyor…": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Preparing pitch curve with %@…"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ ile pitch eğrisi hazırlanıyor…"
+          }
+        }
+      }
+    },
+    "Seçili motorla analiz yapılamadı. %@": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Analysis with the selected engine could not be completed. %@"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Seçili motorla analiz yapılamadı. %@"
+          }
+        }
+      }
+    },
+    "%@ pitch eğrisi hazır.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ pitch curve ready."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ pitch eğrisi hazır."
+          }
+        }
+      }
+    },
+    "Motor başlatılamadı: %@": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Engine could not be started: %@"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Motor başlatılamadı: %@"
+          }
+        }
+      }
+    },
+    "Güncel ses seviyesi": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Current audio level"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Güncel ses seviyesi"
+          }
+        }
+      }
+    },
+    "%1$.1f dBFS, eşik %2$.1f dBFS": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$.1f dBFS, threshold %2$.1f dBFS"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$.1f dBFS, eşik %2$.1f dBFS"
+          }
+        }
+      }
+    },
+    "Minimum işleme seviyesi": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Minimum processing level"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Minimum işleme seviyesi"
+          }
+        }
+      }
+    },
+    "Çubuğun eşik çizgisinin altında kaldığı kareler işlenmez ve grafikte boş bırakılır.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Frames where the bar stays below the threshold line are not processed and are left blank in the graph."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Çubuğun eşik çizgisinin altında kaldığı kareler işlenmez ve grafikte boş bırakılır."
+          }
+        }
+      }
+    },
+    "Uygulama teması": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "App theme"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Uygulama teması"
+          }
+        }
+      }
+    },
+    "Tema ana pencere, Dinleme, Çalma ve ayarlar için birlikte uygulanır.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The theme is applied together across the main window, Listening, Playing, and settings."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tema ana pencere, Dinleme, Çalma ve ayarlar için birlikte uygulanır."
+          }
+        }
+      }
+    },
+    "Varsayılan Çalma Hızı": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Default Playback Speed"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Varsayılan Çalma Hızı"
+          }
+        }
+      }
+    },
+    "Dinleme, Çalma ve Birlikte Çal aynı motoru kullanır. Daha önce başka bir motorla çözümlenmiş çalışmalar kendi sonuçlarını korur; yeniden çözümlenirse bu motorla çözümlenir.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Listening, Playing, and Play Together all use the same engine. Studies previously analysed with a different engine keep their own results; re-analysing switches them to this engine."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dinleme, Çalma ve Birlikte Çal aynı motoru kullanır. Daha önce başka bir motorla çözümlenmiş çalışmalar kendi sonuçlarını korur; yeniden çözümlenirse bu motorla çözümlenir."
+          }
+        }
+      }
+    },
+    "Pitch eğrisi": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pitch curve"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pitch eğrisi"
+          }
+        }
+      }
+    },
+    "Mikrofon eğrisi": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Microphone curve"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mikrofon eğrisi"
+          }
+        }
+      }
+    },
+    "Bu renkler hem Dinleme hem Birlikte Çal grafiğinde kullanılır. Mikrofon eğrisi, çalınan dosyanın eğrisinden ayırt edilebilsin diye ayrı bir renk taşır.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "These colors are used in both the Listening and Play Together graphs. The microphone curve has a separate color so it can be told apart from the file's curve."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bu renkler hem Dinleme hem Birlikte Çal grafiğinde kullanılır. Mikrofon eğrisi, çalınan dosyanın eğrisinden ayırt edilebilsin diye ayrı bir renk taşır."
+          }
+        }
+      }
+    },
+    "Çalma Modu Ayarları": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Playing Mode Settings"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Çalma Modu Ayarları"
+          }
+        }
+      }
+    },
+    "Önce Kaynakla Test ile bir ses veya video seç.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "First choose an audio or video file with Test with Source."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Önce Kaynakla Test ile bir ses veya video seç."
+          }
+        }
+      }
+    },
+    "Matematiksel hedef eklendi · ölçüm: mavi · hedef: koyu": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mathematical target added · measured: blue · target: dark"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Matematiksel hedef eklendi · ölçüm: mavi · hedef: koyu"
+          }
+        }
+      }
+    },
+    "Kaynak pYIN eğrisi hazırlanıyor…": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Preparing source pYIN curve…"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kaynak pYIN eğrisi hazırlanıyor…"
+          }
+        }
+      }
+    },
+    "Beklenen eğri dosyası bulunamadı; pYIN kullanılacak.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Expected curve file not found; pYIN will be used."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Beklenen eğri dosyası bulunamadı; pYIN kullanılacak."
+          }
+        }
+      }
+    },
+    "Kaynak ses çözülemedi: %@": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Source audio could not be decoded: %@"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kaynak ses çözülemedi: %@"
+          }
+        }
+      }
+    },
+    "Kaynak pYIN eğrisi bu çalışma ortamında hazırlanamadı.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Source pYIN curve could not be prepared in this development environment."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kaynak pYIN eğrisi bu çalışma ortamında hazırlanamadı."
+          }
+        }
+      }
+    },
+    "Kaynak pYIN eğrisi hazırlanamadı.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Source pYIN curve could not be prepared."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kaynak pYIN eğrisi hazırlanamadı."
+          }
+        }
+      }
+    },
+    "Kaynak pYIN verisi okunamadı.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Source pYIN data could not be read."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kaynak pYIN verisi okunamadı."
+          }
+        }
+      }
+    },
+    "Kaynak pYIN eğrisi eklendi · canlı: mavi · kaynak: koyu": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Source pYIN curve added · live: blue · source: dark"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kaynak pYIN eğrisi eklendi · canlı: mavi · kaynak: koyu"
+          }
+        }
+      }
+    },
+    "Bitti": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Done"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bitti"
+          }
+        }
+      }
+    },
+    "Uygula": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apply"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Uygula"
+          }
+        }
+      }
+    },
+    "Dinleme Modu Ayarları": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Listening Mode Settings"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dinleme Modu Ayarları"
+          }
+        }
+      }
+    },
+    "Görünüm": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Appearance"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Görünüm"
+          }
+        }
+      }
+    },
+    "Karar sesi": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Karar tone"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Karar sesi"
+          }
+        }
+      }
+    },
+    "Varsayılan renklere dön": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reset to default colors"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Varsayılan renklere dön"
+          }
+        }
+      }
+    },
+    "Çalışma bağlamı": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Study context"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Çalışma bağlamı"
+          }
+        }
+      }
+    },
+    "Makam Aralıkları": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Makam Intervals"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Makam Aralıkları"
+          }
+        }
+      }
+    },
+    "Makam": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Makam"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Makam"
+          }
+        }
+      }
+    },
+    "Aralık %lld": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Interval %lld"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aralık %lld"
+          }
+        }
+      }
+    },
+    "%lld koma": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld koma"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld koma"
+          }
+        }
+      }
+    },
+    "Toplam: %lld / 53 koma": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Total: %lld / 53 koma"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Toplam: %lld / 53 koma"
+          }
+        }
+      }
+    },
+    "Teoriye Dön": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reset to Theory"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Teoriye Dön"
+          }
+        }
+      }
+    },
+    "Grafik renkleri": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Graph colors"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Grafik renkleri"
+          }
+        }
+      }
+    },
+    "Sinyal Kapısı": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Signal Gate"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sinyal Kapısı"
+          }
+        }
+      }
+    },
+    "Çalışmalara Dön": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Back to Studies"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Çalışmalara Dön"
+          }
+        }
+      }
+    },
+    "Tekerlek: zaman yakınlaştır · Shift+tekerlek: dikey yakınlaştır": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wheel: zoom time · Shift+wheel: zoom pitch"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tekerlek: zaman yakınlaştır · Shift+tekerlek: dikey yakınlaştır"
+          }
+        }
+      }
+    },
+    "Ayarlar": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Settings"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ayarlar"
+          }
+        }
+      }
+    },
+    "Canlı sinyal eşiğini, ses seviyesini ve makam aralıklarını ayarla": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Adjust live signal threshold, audio level, and makam intervals"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Canlı sinyal eşiğini, ses seviyesini ve makam aralıklarını ayarla"
+          }
+        }
+      }
+    },
+    "Durdur": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stop"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Durdur"
+          }
+        }
+      }
+    },
+    "Mikrofonu Başlat": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Start Microphone"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mikrofonu Başlat"
+          }
+        }
+      }
+    },
+    "Kaydı Durdur": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stop Recording"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kaydı Durdur"
+          }
+        }
+      }
+    },
+    "Kayıt": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Record"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kayıt"
+          }
+        }
+      }
+    },
+    "Kaydı durdur ve kaydet": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stop and save recording"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kaydı durdur ve kaydet"
+          }
+        }
+      }
+    },
+    "Mikrofon sesini kaydet": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Record microphone audio"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mikrofon sesini kaydet"
+          }
+        }
+      }
+    },
+    "Eğriyi takip et": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Follow Curve"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eğriyi takip et"
+          }
+        }
+      }
+    },
+    "Canlı görünümü sıfırla": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reset live view"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Canlı görünümü sıfırla"
+          }
+        }
+      }
+    },
+    "Grafiğin zaman ve perde ölçeğini başlangıç değerlerine getirir.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Resets graph time and pitch scale to initial values."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Grafiğin zaman ve perde ölçeğini başlangıç değerlerine getirir."
+          }
+        }
+      }
+    },
+    "Seçili makam ve karar: %@": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Selected makam and karar: %@"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Seçili makam ve karar: %@"
+          }
+        }
+      }
+    },
+    "Çalışmalar listesine dön": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Return to studies list"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Çalışmalar listesine dön"
+          }
+        }
+      }
+    },
+    "Seçili motorla yeniden analiz et": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Re-analyze with selected engine"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Seçili motorla yeniden analiz et"
+          }
+        }
+      }
+    },
+    "Ayarlar'daki çalışma motoruyla yeni pitch eğrisi oluştur": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Create new pitch curve with the study engine in Settings"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ayarlar'daki çalışma motoruyla yeni pitch eğrisi oluştur"
+          }
+        }
+      }
+    },
+    "Dinleme modu görünümünü ve makam aralıklarını ayarla": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Adjust Listening mode appearance and makam intervals"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dinleme modu görünümünü ve makam aralıklarını ayarla"
+          }
+        }
+      }
+    },
+    "Çalışma adı, makam ve karar bilgisini düzenle": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Edit study name, makam, and karar information"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Çalışma adı, makam ve karar bilgisini düzenle"
+          }
+        }
+      }
+    },
+    "Oynatmayı başa al": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rewind to start"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Oynatmayı başa al"
+          }
+        }
+      }
+    },
+    "Medyanın zamanını sıfıra getirir.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Resets the media's time to zero."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Medyanın zamanını sıfıra getirir."
+          }
+        }
+      }
+    },
+    "Oynatma hızını azalt": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Decrease playback speed"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Oynatma hızını azalt"
+          }
+        }
+      }
+    },
+    "Oynatma hızını artır": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Increase playback speed"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Oynatma hızını artır"
+          }
+        }
+      }
+    },
+    "Ses çıkışını aç": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Turn on audio output"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ses çıkışını aç"
+          }
+        }
+      }
+    },
+    "Ses çıkışını kapat": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Turn off audio output"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ses çıkışını kapat"
+          }
+        }
+      }
+    },
+    "Mikrofon hizalaması": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Microphone alignment"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mikrofon hizalaması"
+          }
+        }
+      }
+    },
+    "Mikrofon eğrisini dosya eğrisine göre kaydırır. Sıfırlamak için tıklayın.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Shifts the microphone curve relative to the file curve. Click to reset."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mikrofon eğrisini dosya eğrisine göre kaydırır. Sıfırlamak için tıklayın."
+          }
+        }
+      }
+    },
+    "Mikrofon hizalamasını sıfırla": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reset microphone alignment"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mikrofon hizalamasını sıfırla"
+          }
+        }
+      }
+    },
+    "Kayıtta gezin": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Navigate in recording"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kayıtta gezin"
+          }
+        }
+      }
+    },
+    "Tekerlek: zaman yakınlaştır · Shift+tekerlek: dikey yakınlaştır · sürükle: kayıtta gezin": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wheel: zoom time · Shift+wheel: zoom pitch · drag: navigate recording"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tekerlek: zaman yakınlaştır · Shift+tekerlek: dikey yakınlaştır · sürükle: kayıtta gezin"
+          }
+        }
+      }
+    },
+    "Grafiğin dikey merkezini değiştir": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Change the graph's vertical center"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Grafiğin dikey merkezini değiştir"
+          }
+        }
+      }
+    },
+    "Eğri Takibi": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Follow Curve"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eğri Takibi"
+          }
+        }
+      }
+    },
+    "Tüner": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tuner"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tüner"
+          }
+        }
+      }
+    },
+    "Canlı pitch grafiği": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Live pitch graph"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Canlı pitch grafiği"
+          }
+        }
+      }
+    },
+    "Kaynakta ses parçası bulunamadı.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No audio track found in the source."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kaynakta ses parçası bulunamadı."
+          }
+        }
+      }
+    },
+    "Ses okuyucu kurulamadı: %@": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Audio reader could not be set up: %@"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ses okuyucu kurulamadı: %@"
+          }
+        }
+      }
+    },
+    "WAV yazılamadı: %@": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "WAV could not be written: %@"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "WAV yazılamadı: %@"
+          }
+        }
+      }
+    },
+    "Ses çıkışı okuyucuya eklenemedi.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Audio output could not be added to the reader."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ses çıkışı okuyucuya eklenemedi."
+          }
+        }
+      }
+    },
+    "PCM biçimi oluşturulamadı.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "PCM format could not be created."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "PCM biçimi oluşturulamadı."
+          }
+        }
+      }
+    },
+    "Bilinmeyen hata.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unknown error."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bilinmeyen hata."
+          }
+        }
+      }
+    },
+    "Ses örnekleri kopyalanamadı.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Audio samples could not be copied."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ses örnekleri kopyalanamadı."
+          }
+        }
+      }
+    },
+    "Nota adları": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Note names"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nota adları"
+          }
+        }
+      }
+    },
+    "Otomatik": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Automatic"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Otomatik"
+          }
+        }
+      }
+    },
+    "Geri sayımı iptal et": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cancel countdown"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Geri sayımı iptal et"
+          }
+        }
+      }
+    },
+    "Medya oynatmayı duraklat": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pause media playback"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Medya oynatmayı duraklat"
+          }
+        }
+      }
+    },
+    "Medyayı oynat": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Play media"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Medyayı oynat"
+          }
+        }
+      }
+    },
+    "İptal (%lld)": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cancel (%lld)"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "İptal (%lld)"
+          }
+        }
+      }
+    }
+  },
+  "version": "1.0"
+}
