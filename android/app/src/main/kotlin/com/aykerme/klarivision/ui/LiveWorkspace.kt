@@ -122,6 +122,11 @@ fun LiveWorkspace(
             }
         }
         FlowRowButtons {
+            LabeledToggle(
+                label = "Takip",
+                checked = uiState.followsCurve,
+                onCheckedChange = { orchestrator.toggleFollow() },
+            )
             WorkspaceSettingsButton(label = "Makam ve karar") { isPresentingSettings = true }
             RecordButton(
                 isRecording = uiState.isRecording,

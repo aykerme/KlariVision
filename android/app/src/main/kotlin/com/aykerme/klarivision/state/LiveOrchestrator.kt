@@ -60,6 +60,8 @@ data class LiveUiState(
      * tamamlanan kayıt durur.
      */
     val completedRecordingPath: String? = null,
+    /** "Takip" anahtarı. Swift karşılığı `iPadLiveState.followsCurve`. */
+    val followsCurve: Boolean = true,
 )
 
 /** Ekranın uykuya geçmemesi gereken aşamalar (bkz. görev notu "Boşta kalma politikası"). */
@@ -128,7 +130,7 @@ class LiveOrchestrator(
     private var makam: Makam = Makam.NIHAVEND
     private var karar: Karar = Karar.RE
     private var scaleDisplay: ScaleDisplay = ScaleDisplay.MAKAM
-    private var followsCurve: Boolean = true
+    private val followsCurve: Boolean get() = _uiState.value.followsCurve
 
     /** WebView'i barındıran köprüyü bağlar. UI, Compose `remember` ile sahipliği tutar. */
     fun attachBridge(bridge: LiveGraphBridge) {
@@ -215,6 +217,12 @@ class LiveOrchestrator(
         this.makam = makam
         this.karar = karar
         this.scaleDisplay = scaleDisplay
+        publishContext()
+    }
+
+    /** Grafiğin eğriyi dikeyde takip etmesini açar/kapatır. */
+    fun toggleFollow() {
+        _uiState.update { it.copy(followsCurve = !it.followsCurve) }
         publishContext()
     }
 
