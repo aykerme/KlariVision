@@ -12,6 +12,9 @@ package com.aykerme.klarivision.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.Arrangement
@@ -121,12 +124,11 @@ fun LiveWorkspace(
                 )
             }
         }
+        // Swift `iPadCompactLiveWorkspace.buttons` sırası: Takip · ayarlar ·
+        // kayıt · Durdur. "Durdur" iOS'taki gibi gri; dar düzende "Kapat" üst
+        // çubuktadır.
         FlowRowButtons {
-            LabeledToggle(
-                label = "Takip",
-                checked = uiState.followsCurve,
-                onCheckedChange = { orchestrator.toggleFollow() },
-            )
+            FollowToggleButton(checked = uiState.followsCurve, onToggle = { orchestrator.toggleFollow() })
             WorkspaceSettingsButton(label = "Makam ve karar") { isPresentingSettings = true }
             RecordButton(
                 isRecording = uiState.isRecording,
@@ -134,12 +136,14 @@ fun LiveWorkspace(
                 onClick = { orchestrator.toggleRecording() },
             )
             if (uiState.phase == LivePhase2.RUNNING || uiState.phase == LivePhase2.STARTING) {
-                Button(onClick = { orchestrator.stop() }, colors = kvButtonColors()) { Text("Durdur") }
+                Button(onClick = { orchestrator.stop() }, colors = kvButtonColors(KvColors.GraphGuide)) { Text("Durdur") }
             } else {
-                Button(onClick = { orchestrator.start() }, colors = kvButtonColors()) { Text("Başlat") }
+                Button(onClick = { orchestrator.start() }, colors = kvButtonColors()) { Text("Yeniden Başlat") }
             }
-            onClose?.let { close ->
-                Button(onClick = { orchestrator.stop(); close() }, colors = kvButtonColors()) { Text("Kapat") }
+            if (widthClass != KvWidthClass.DAR) {
+                onClose?.let { close ->
+                    Button(onClick = { orchestrator.stop(); close() }, colors = kvButtonColors()) { Text("Kapat") }
+                }
             }
         }
     }
@@ -166,41 +170,44 @@ fun LiveWorkspace(
             )
         }
 
-        KvWidthClass.DAR -> Box(modifier = modifier.fillMaxSize()) {
-            graphContent()
-            TunerBadge(
-                note = uiState.tunerNote,
-                cents = uiState.tunerCents,
-                modifier = Modifier
-                    .align(Alignment.TopCenter)
-                    .windowInsetsPadding(WindowInsets.safeDrawing)
-                    .padding(top = KvSpacing.md),
-            )
-            Column(
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    // Spesifikasyon (03-responsive-contract.md, "Güvenli alanlar"):
-                    // gezinme ve alt denetim çubuğu sistem güvenli alanının
-                    // İÇİNDE kalır; grafik ise tüm yüzeyi kaplar. targetSdk 35
-                    // ile Android 15+ kenardan kenara çizmeye zorladığı için
-                    // boşluk açıkça verilmeli — verilmezse denetimler sistem
-                    // gezinme çubuğunun altında kalıyor (cihazda gözlendi).
-                    .windowInsetsPadding(WindowInsets.safeDrawing)
-                    .padding(KvSpacing.md)
-                    .background(
-                        MaterialTheme.colorScheme.surface.copy(alpha = 0.92f),
-                        RoundedCornerShape(KvRadius.panel),
-                    )
-                    .padding(KvSpacing.md),
-                verticalArrangement = Arrangement.spacedBy(KvSpacing.sm),
-                content = controls,
-            )
+        // Swift `iPadCompactLiveWorkspace`: üstte "Kapat · Çalma" çubuğu,
+        // altında grafik; tüner rozeti ve denetim kartı grafiğin üstünde yüzer.
+        KvWidthClass.DAR -> Column(modifier = modifier.fillMaxSize()) {
+            WorkspaceTopBar(title = "Çalma", onClose = onClose?.let { close -> { orchestrator.stop(); close() } })
+            Box(modifier = Modifier.fillMaxWidth().weight(1f)) {
+                graphContent()
+                TunerBadge(
+                    note = uiState.tunerNote,
+                    cents = uiState.tunerCents,
+                    modifier = Modifier
+                        .align(Alignment.TopCenter)
+                        .padding(top = KvSpacing.md),
+                )
+                Column(
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        // Spesifikasyon (03-responsive-contract.md, "Güvenli alanlar"):
+                        // alt denetim çubuğu sistem güvenli alanının İÇİNDE
+                        // kalır; grafik ise alt kenara kadar uzanır. targetSdk 35
+                        // ile Android 15+ kenardan kenara çizmeye zorladığı için
+                        // boşluk açıkça verilmeli (cihazda gözlendi).
+                        .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom + WindowInsetsSides.Horizontal))
+                        .padding(horizontal = KvSpacing.md, vertical = KvSpacing.sm)
+                        .background(
+                            MaterialTheme.colorScheme.surface.copy(alpha = 0.92f),
+                            RoundedCornerShape(KvSpacing.xl),
+                        )
+                        .padding(horizontal = KvSpacing.md, vertical = KvSpacing.sm),
+                    verticalArrangement = Arrangement.spacedBy(KvSpacing.sm),
+                    content = controls,
+                )
+            }
         }
     }
 
     if (isPresentingSettings) {
         ModalBottomSheet(onDismissRequest = { isPresentingSettings = false }) {
-            Column(modifier = Modifier.fillMaxWidth().padding(KvSpacing.lg)) {
+            Column(modifier = Modifier.fillMaxWidth().navigationBarsPadding().padding(KvSpacing.lg)) {
                 Text("Çalma Ayarları", style = MaterialTheme.typography.titleLarge)
                 Spacer(modifier = Modifier.padding(KvSpacing.xs))
                 MusicContextSection(

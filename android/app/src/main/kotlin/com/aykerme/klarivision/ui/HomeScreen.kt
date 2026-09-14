@@ -81,6 +81,8 @@ fun HomeScreen(
             graphContent = liveGraphContent,
             widthClass = widthClass,
             modifier = modifier,
+            // Oturum durunca `liveActive` düşer ve Ana Sayfa kendiliğinden döner.
+            onClose = { liveOrchestrator.stop() },
             onAddRecordingToStudies = onAddRecordingToStudies,
             isRecordingImported = isRecordingImported,
             isImporting = isImporting,
